@@ -257,7 +257,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 
 ## Release plan
 
-v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-28, including playlists, titles on tiles and interface languages. The owner reordered what follows on 2026-09-28: per-kid profiles first, then SponsorBlock, channel subscriptions, manual splitting, smart splitting, and finally Tellybox's own Cast receiver. Each requirement's release is listed in its table above.
+v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-28, including playlists, titles on tiles and interface languages. The owner reordered what follows on 2026-09-28: per-kid profiles first, then SponsorBlock, channel subscriptions, manual splitting, smart splitting, and finally Tellybox's own Cast receiver. On 2026-09-29 the owner moved the receiver (v7) ahead of v3–v6. Each requirement's release is listed in its table above.
 
 | Phase | Scope | Gate to next phase |
 | --- | --- | --- |
@@ -288,7 +288,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 10. **Channel subscriptions (v4).** Subscribe, list existing uploads, scheduled checks, approval inbox, pause and remove.
 11. **Manual splitting (v5).** Scrub player, cut marking, chapter import, review screen, frame-accurate cutting.
 12. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection.
-13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card.
+13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of steps 9–12 by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
 
 ## Risks, assumptions and open questions
 

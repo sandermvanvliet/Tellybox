@@ -20,6 +20,11 @@ from typing import Protocol
 
 DEFAULT_MEDIA_RECEIVER = "CC1AD845"
 
+# The Tellybox receiver (v7, CR-1..CR-8). Its app id comes from settings.receiver_app_id; the
+# messages on this namespace are in docs/receiver-protocol.md.
+RECEIVER_NAMESPACE = "urn:x-cast:tellybox"
+RECEIVER_LAUNCH_TIMEOUT_S = 8.0  # launch + first status; the spike (S8, S9) may tune it
+
 
 class PlayerState(StrEnum):
     PLAYING = "PLAYING"
@@ -75,7 +80,14 @@ class LoadFailed:
     error_code: int | None = None
 
 
-DeviceEvent = ReceiverStatus | MediaStatus | ConnectionStatus | LoadFailed
+@dataclass(frozen=True)
+class ReceiverMessage:
+    """A JSON message from the Tellybox receiver on RECEIVER_NAMESPACE (CR-7)."""
+
+    payload: dict
+
+
+DeviceEvent = ReceiverStatus | MediaStatus | ConnectionStatus | LoadFailed | ReceiverMessage
 
 
 class CastDevice(Protocol):
@@ -103,8 +115,15 @@ class CastDevice(Protocol):
         """Last known media status (may belong to another app)."""
         ...
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0) -> None:
-        """Launch the Default Media Receiver if needed and load `url` as BUFFERED video/mp4."""
+    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+        """Load `url` as BUFFERED video/mp4. With `app_id` (the Tellybox receiver), launch that app first
+        if it isn't running and raise ReceiverUnavailable if it can't launch within
+        RECEIVER_LAUNCH_TIMEOUT_S (CR-6). Without, launch the Default Media Receiver if needed."""
+        ...
+
+    async def send_receiver_message(self, payload: dict) -> None:
+        """Send `payload` as JSON on RECEIVER_NAMESPACE. Fire and forget; does nothing unless the
+        Tellybox receiver is the running app (CR-7)."""
         ...
 
     async def pause(self) -> None: ...

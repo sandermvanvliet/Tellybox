@@ -1,0 +1,51 @@
+name: Publish receiver to GitHub Pages
+
+# The Tellybox Cast receiver (v7, CR-1) is static HTML, CSS and JS with no household data, so it
+# can be hosted publicly. Published at https://<owner>.github.io/<repo>/receiver/, the same path the
+# web service serves it on (/receiver/) for self-hosting over HTTPS instead.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tellybox/web/receiver/**"
+      - ".github/workflows/receiver-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}receiver/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage the receiver
+        run: |
+          mkdir -p _site/receiver
+          cp -r tellybox/web/receiver/. _site/receiver/
+          touch _site/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

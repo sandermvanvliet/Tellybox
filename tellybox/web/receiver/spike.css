@@ -1,0 +1,12 @@
+/* Step 13 spike only. */
+html, body { margin: 0; width: 100%; height: 100%; background: #10183a; overflow: hidden; }
+#video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+#sky { position: absolute; top: 4%; right: 3%; width: 12%; aspect-ratio: 5 / 3; border-radius: 14px; overflow: hidden;
+       background: linear-gradient(180deg, #6CC3FA 0%, #8FD3FF 55%, #C4EAFF 100%); border: 3px solid #1D2A4D; }
+#sky[hidden] { display: none; }
+#sun { position: absolute; left: 0; top: 0; width: 30%; aspect-ratio: 1; border-radius: 50%; background: #FFD23F; }
+#img { position: absolute; left: 3%; top: 4%; width: 18%; border-radius: 10px; }
+#img:not([src]) { display: none; }
+#log { position: absolute; left: 3%; bottom: 4%; margin: 0; max-width: 90%; color: #fff; background: rgba(0, 0, 0, .55);
+       font: 20px/1.35 monospace; padding: 10px 14px; border-radius: 8px; white-space: pre-wrap; }
+#log[hidden] { display: none; }

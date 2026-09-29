@@ -153,7 +153,9 @@ class FakeCastDevice:
         while True:
             yield await self.queue.get()
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0) -> None:
+    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+        if app_id is not None:
+            raise NotImplementedError  # step 13, part A
         self._command("play", url, start_s)
         if self._app.app_id != DEFAULT_MEDIA_RECEIVER:
             self._set_app("dmr", DEFAULT_MEDIA_RECEIVER, "Default Media Receiver")
@@ -180,6 +182,9 @@ class FakeCastDevice:
         self._command("resume")
         self._active("resume")
         self._set_state(PlayerState.PLAYING)
+
+    async def send_receiver_message(self, payload: dict) -> None:
+        raise NotImplementedError  # step 13, part A
 
     async def stop(self) -> None:
         self._command("stop")

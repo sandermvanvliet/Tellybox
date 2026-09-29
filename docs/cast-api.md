@@ -1,6 +1,6 @@
-# Cast service API contract (internal, step 8)
+# Cast service API contract (internal; profiles since step 8, receiver since step 13)
 
-The `cast` service listens on `127.0.0.1` only; the `web` service is its only client (`tellybox/web/cast_client.py`). Only the cast service writes timer, history and position tables. Fields marked **v2** are new in step 8 (kid profiles).
+The `cast` service listens on `127.0.0.1` only; the `web` service is its only client (`tellybox/web/cast_client.py`). Only the cast service writes timer, history and position tables. Fields marked **v2** are new in step 8 (kid profiles), **v7** in step 13 (Tellybox receiver, see `docs/receiver-protocol.md`).
 
 ## State
 
@@ -40,7 +40,13 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
       }
     ]
   },
-  "time_up": false                           // = not timer.can_start (the watchers' KA-9)
+  "time_up": false,                          // = not timer.can_start (the watchers' KA-9)
+  "receiver": {                              // v7 (CR-6)
+    "kind": "tellybox" | "default",          // what the next pick will use (or the current one uses)
+    "configured": true,                      // settings.receiver_app_id is set
+    "fallback_until": null | "ISO-8601 UTC", // Tellybox receiver failed; Default Media Receiver until then
+    "last_error": null | "launch timed out"  // why it failed, for the dashboard
+  }
 }
 ```
 

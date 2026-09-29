@@ -43,6 +43,10 @@ class CastCommandError(Exception):
     """A command could not be delivered to the Chromecast (not connected, timeout, refused)."""
 
 
+class ReceiverUnavailable(CastCommandError):
+    """The Tellybox receiver could not be launched; the caller falls back to the Default Media Receiver (CR-6)."""
+
+
 async def discover(timeout: float = 8.0, known_hosts: list[str] | None = None) -> list[DeviceInfo]:
     def run() -> list[DeviceInfo]:
         infos, browser = pychromecast.discovery.discover_chromecasts(timeout=timeout, known_hosts=known_hosts)
@@ -238,7 +242,9 @@ class PyChromecastDevice:
             log.warning("cast command %s failed: %r", name, exc)
             raise CastCommandError(f"{name}: {exc!r}") from exc
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0) -> None:
+    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+        if app_id is not None:
+            raise NotImplementedError  # step 13, part A
         # BUFFERED: pychromecast defaults to LIVE, which disables seeking (spike).
         await self._run(
             "play",
@@ -246,6 +252,9 @@ class PyChromecastDevice:
                 url, "video/mp4", title=title, stream_type="BUFFERED", current_time=start_s or None
             ),
         )
+
+    async def send_receiver_message(self, payload: dict) -> None:
+        raise NotImplementedError  # step 13, part A
 
     async def pause(self) -> None:
         await self._run("pause", lambda c: c.media_controller.pause())

@@ -92,10 +92,18 @@ def save_timer_snapshot(conn: sqlite3.Connection, snapshot: dict, now: datetime)
     )
 
 
-def log_override(conn: sqlite3.Connection, profile_id: int | None, day: date, kind: str, value: int | None, now: datetime) -> None:
+def log_override(
+    conn: sqlite3.Connection,
+    profile_id: int | None,
+    day: date,
+    kind: str,
+    value: int | None,
+    now: datetime,
+    source: str | None = None,
+) -> None:
     conn.execute(
-        "INSERT INTO override_log (profile_id, day, kind, value, created_at) VALUES (?, ?, ?, ?, ?)",
-        (profile_id, day.isoformat(), kind, value, to_db(now)),
+        "INSERT INTO override_log (profile_id, day, kind, value, created_at, source) VALUES (?, ?, ?, ?, ?, ?)",
+        (profile_id, day.isoformat(), kind, value, to_db(now), source),
     )
 
 

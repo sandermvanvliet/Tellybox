@@ -79,9 +79,14 @@ class CastClient:
     async def stop(self) -> dict:
         return self._json(await self._request("POST", "/stop"))
 
-    async def override(self, kind: str, value: int | None = None, profile_id: int | None = None) -> dict:
-        """WT-7: an admin override. A 422 (bad kind/value) raises ValueError."""
-        r = await self._request("POST", "/overrides", json={"kind": kind, "value": value, "profile_id": profile_id})
+    async def override(
+        self, kind: str, value: int | None = None, profile_ids: list[int] | None = None, source: str | None = None
+    ) -> dict:
+        """WT-7: an admin override for these profiles (None = every profile). `source` names the API token
+        that applied it (HA-7; None = the admin pages). A 422 (bad kind, value or profile) raises ValueError."""
+        body = {"kind": kind, "value": value, "profile_ids": None if profile_ids is None else list(profile_ids),
+                "source": source}
+        r = await self._request("POST", "/overrides", json=body)
         if r.status_code == 422:
             raise ValueError(self._detail(r))
         return self._json(r)

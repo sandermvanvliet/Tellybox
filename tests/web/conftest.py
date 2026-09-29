@@ -110,8 +110,9 @@ class FakeCast:
         self._check()
         return self.current
 
-    async def override(self, kind: str, value: int | None = None, profile_id: int | None = None) -> dict:
-        self.calls.append(("override", kind, value, profile_id))
+    async def override(self, kind: str, value: int | None = None, profile_ids: list[int] | None = None,
+                       source: str | None = None) -> dict:
+        self.calls.append(("override", kind, value, None if profile_ids is None else list(profile_ids), source))
         self._check()
         if self.mode == "invalid":
             raise ValueError(f"invalid override {kind!r}")

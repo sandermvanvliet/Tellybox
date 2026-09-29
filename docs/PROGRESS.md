@@ -148,7 +148,8 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × Home Assistant: upstream features & integration plan". It covers API tokens, the admin state and its event stream, override endpoints, the instance id and `/api/info`. The Home Assistant integration itself lives in separate repositories later.
 - Plan `docs/plans/step9-ha-api.md`, approved 2026-09-29. Subagent briefs: `docs/plans/step9-handoff.md`. Branch `step9/ha-api`.
 - Renumbered: SponsorBlock is now step 10, subscriptions 11, manual splitting 12, and smart splitting 14. The receiver keeps 13, because it's already in progress.
-- **Next:** the part 0 contract, then three subagents (cast service, JSON API, admin UI).
+- Contract (2026-09-29): migration 007 (`api_token`, `settings.instance_id`, `override_log.source`), `tellybox/api_tokens.py` with tests, `CastClient.override(kind, value, profile_ids, source)`, `docs/admin-api.md`, `docs/cast-api.md` (`profile_ids`, `source`, `clear`, `timer.next_reset`, `profiles[].session_elapsed_s`), PRD HA-1..HA-8 and A-16..A-18.
+- **Next:** three subagents in parallel: cast service (A), JSON API and hub (B), admin Integrations page and history (C).
 
 ### 13. Tellybox receiver (v7), in progress
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.

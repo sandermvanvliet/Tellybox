@@ -134,13 +134,14 @@ async def test_stop(client, behaviour):
 
 
 async def test_override(client, behaviour):
-    assert await client.override("extra_minutes", 15, profile_id=1) == STATE
-    assert behaviour["override_body"] == {"kind": "extra_minutes", "value": 15, "profile_id": 1}
+    assert await client.override("extra_minutes", 15, profile_ids=[1, 2], source="Home Assistant") == STATE
+    assert behaviour["override_body"] == {"kind": "extra_minutes", "value": 15, "profile_ids": [1, 2],
+                                          "source": "Home Assistant"}
 
 
 async def test_override_default_value_and_profile(client, behaviour):
     await client.override("stop_now")
-    assert behaviour["override_body"] == {"kind": "stop_now", "value": None, "profile_id": None}
+    assert behaviour["override_body"] == {"kind": "stop_now", "value": None, "profile_ids": None, "source": None}
 
 
 async def test_override_invalid_raises_value_error(client, behaviour):

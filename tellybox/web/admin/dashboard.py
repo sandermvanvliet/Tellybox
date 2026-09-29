@@ -144,7 +144,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         profile_id: int | None = Form(None),
     ) -> Response:
         try:
-            await ctx.cast.override(kind, value, profile_id)
+            await ctx.cast.override(kind, value, None if profile_id is None else [profile_id])
         except ValueError as exc:
             return see_other("/admin", flash=_(str(exc)))  # our own cast service's text: see OVERRIDE_ERRORS
         except CastUnavailable:

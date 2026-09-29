@@ -233,6 +233,11 @@ def list_jobs(
     return [_job(r) for r in rows]
 
 
+def count_by_status(conn: sqlite3.Connection) -> dict[str, int]:
+    """Jobs per status; statuses without jobs are left out (admin API, HA-2)."""
+    return {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) AS n FROM job GROUP BY status")}
+
+
 def has_pending(conn: sqlite3.Connection, type: JobType) -> bool:
     """Any queued or running job of this type (e.g. to avoid stacking yt-dlp updates)."""
     row = conn.execute(

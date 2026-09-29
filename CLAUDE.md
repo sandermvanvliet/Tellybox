@@ -29,7 +29,7 @@ Self-hosted app that lets young kids pick parent-approved videos on any device a
 
 ## How to work
 
-- Build in the order of "Build order after v1" in the PRD (v1 is done): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, Tellybox receiver. One step per branch or PR.
+- Build in the order of "Build order after v1" in the PRD (v1 is done): kid profiles, the admin API for Home Assistant (step 9), SponsorBlock, channel subscriptions, manual splitting, Tellybox receiver (step 13, moved ahead), smart splitting. One step per branch or PR.
 - Before coding a step, propose a short plan and wait for approval.
 - Write tests for timer logic (WT-*) with a fake clock and a fake Chromecast; no real device needed for unit tests.
 - Keep a running log in `docs/PROGRESS.md`: what's done, what's next, open decisions.
@@ -55,3 +55,4 @@ Self-hosted app that lets young kids pick parent-approved videos on any device a
 - Time is not counted during a restart or a lost connection. A lost connection ends the episode after 5 min, or on reconnect if our receiver session is gone.
 - Media URLs are HMAC-signed, valid 24 h and stable across restarts; our media is recognised by the `/media/{episode_id}/` path.
 - Only the `cast` service writes timer, history and position tables; the web app talks to it via its localhost API.
+- The admin API (`docs/admin-api.md`, HA-1..HA-8) uses bearer tokens with `read`/`control` scopes, stored as SHA-256 only; it is independent of the admin password (A-16) and every action goes through the cast service (HA-8).

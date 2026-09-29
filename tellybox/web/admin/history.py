@@ -15,6 +15,7 @@ OVERRIDE_LABELS = {
     "unlimited": N_("Unlimited today"),
     "block": N_("Block"),
     "stop_now": N_("Stop now"),
+    "clear": N_("Cleared unlimited and block"),  # HA-5
 }
 
 

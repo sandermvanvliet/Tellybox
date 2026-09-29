@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:03+0200\n"
+"POT-Creation-Date: 2026-09-29 14:31+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -61,7 +61,7 @@ msgstr "durch Neustart unterbrochen"
 msgid "failed to load"
 msgstr "Laden fehlgeschlagen"
 
-#: tellybox/history.py:134
+#: tellybox/history.py:135
 msgid "deleted episode"
 msgstr "gelöschte Folge"
 
@@ -235,23 +235,27 @@ msgstr "GB"
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:27
+#: tellybox/web/admin/dashboard.py:28
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes braucht einen positiven Wert"
 
-#: tellybox/web/admin/dashboard.py:152
+#: tellybox/web/admin/dashboard.py:28
+msgid "extra_minutes is at most 240"
+msgstr "extra_minutes darf höchstens 240 sein"
+
+#: tellybox/web/admin/dashboard.py:153
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde gestoppt."
 
-#: tellybox/web/admin/dashboard.py:153
+#: tellybox/web/admin/dashboard.py:154
 msgid "Stopped."
 msgstr "Gestoppt."
 
-#: tellybox/web/admin/dashboard.py:167
+#: tellybox/web/admin/dashboard.py:168
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Cast-Dienst nicht erreichbar; die Änderung wurde nicht übernommen."
 
-#: tellybox/web/admin/dashboard.py:168
+#: tellybox/web/admin/dashboard.py:169
 msgid "Done."
 msgstr "Erledigt."
 
@@ -274,6 +278,27 @@ msgstr "Sperren"
 #: tellybox/web/admin/templates/dashboard.html:91
 msgid "Stop now"
 msgstr "Jetzt stoppen"
+
+#: tellybox/web/admin/history.py:18
+msgid "Cleared unlimited and block"
+msgstr "Unbegrenzt und Sperre aufgehoben"
+
+#: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:66
+msgid "Enter a name."
+msgstr "Gib einen Namen ein."
+
+#: tellybox/web/admin/integrations.py:44 tellybox/web/admin/profiles_page.py:68
+#, python-format
+msgid "The name can be at most %(max)d characters."
+msgstr "Der Name darf höchstens %(max)d Zeichen lang sein."
+
+#: tellybox/web/admin/integrations.py:46
+msgid "Choose what the token may do."
+msgstr "Wähle, was das Token darf."
+
+#: tellybox/web/admin/integrations.py:56
+msgid "Token revoked."
+msgstr "Token widerrufen."
 
 #: tellybox/web/admin/jobs_page.py:44 tellybox/web/admin/js_strings.py:36
 #: tellybox/web/admin/templates/_labels.html:16
@@ -602,15 +627,6 @@ msgstr "Frosch"
 msgid "Penguin"
 msgstr "Pinguin"
 
-#: tellybox/web/admin/profiles_page.py:66
-msgid "Enter a name."
-msgstr "Gib einen Namen ein."
-
-#: tellybox/web/admin/profiles_page.py:68
-#, python-format
-msgid "The name can be at most %(max)d characters."
-msgstr "Der Name darf höchstens %(max)d Zeichen lang sein."
-
 #: tellybox/web/admin/profiles_page.py:70
 msgid "Choose one of the pictures."
 msgstr "Wähle eines der Bilder."
@@ -843,12 +859,18 @@ msgid "Settings"
 msgstr "Einstellungen"
 
 #: tellybox/web/admin/templates/base.html:20
+#: tellybox/web/admin/templates/integrations.html:2
+#: tellybox/web/admin/templates/integrations.html:4
+msgid "Integrations"
+msgstr "Integrationen"
+
+#: tellybox/web/admin/templates/base.html:21
 #: tellybox/web/admin/templates/history.html:3
 #: tellybox/web/admin/templates/history.html:5
 msgid "History"
 msgstr "Verlauf"
 
-#: tellybox/web/admin/templates/base.html:23
+#: tellybox/web/admin/templates/base.html:24
 msgid "Sign out"
 msgstr "Abmelden"
 
@@ -976,6 +998,108 @@ msgstr "an"
 msgid "off"
 msgstr "aus"
 
+#: tellybox/web/admin/templates/history.html:56
+#, python-format
+msgid "via %(name)s"
+msgstr "über %(name)s"
+
+#: tellybox/web/admin/templates/integrations.html:5
+msgid "API tokens let tools such as Home Assistant show what is playing and give parents' overrides. The API is described in the project docs (docs/admin-api.md)."
+msgstr "Mit API-Tokens können Tools wie Home Assistant anzeigen, was läuft, und die Eltern-Funktionen (Extra-Zeit, Sperren) nutzen. Die API ist in der Projektdokumentation beschrieben (docs/admin-api.md)."
+
+#: tellybox/web/admin/templates/integrations.html:6
+msgid "Home Assistant's own Cast entity bypasses the timer. Hide it from dashboards that kids can reach, and put the override buttons on an admin-only dashboard."
+msgstr "Die eigene Cast-Entität von Home Assistant umgeht den Timer. Blende sie in Dashboards aus, auf die Kinder zugreifen können, und lege die Schaltflächen für Extra-Zeit und Sperren auf ein Dashboard nur für Admins."
+
+#: tellybox/web/admin/templates/integrations.html:10
+#, python-format
+msgid "Token for %(name)s"
+msgstr "Token für %(name)s"
+
+#: tellybox/web/admin/templates/integrations.html:11
+msgid "Copy this token now; it won't be shown again."
+msgstr "Kopiere dieses Token jetzt; du siehst es danach nicht mehr."
+
+#: tellybox/web/admin/templates/integrations.html:13
+msgid "Token"
+msgstr "Token"
+
+#: tellybox/web/admin/templates/integrations.html:15
+msgid "Copied"
+msgstr "Kopiert"
+
+#: tellybox/web/admin/templates/integrations.html:16
+msgid "Copy"
+msgstr "Kopieren"
+
+#: tellybox/web/admin/templates/integrations.html:22
+msgid "New token"
+msgstr "Neues Token"
+
+#: tellybox/web/admin/templates/integrations.html:24
+#: tellybox/web/admin/templates/integrations.html:42
+#: tellybox/web/admin/templates/library.html:37
+#: tellybox/web/admin/templates/profiles.html:22
+#: tellybox/web/admin/templates/profiles.html:61
+msgid "Name"
+msgstr "Name"
+
+#: tellybox/web/admin/templates/integrations.html:25
+msgid "Home Assistant"
+msgstr "Home Assistant"
+
+#: tellybox/web/admin/templates/integrations.html:28
+#: tellybox/web/admin/templates/integrations.html:42
+msgid "Access"
+msgstr "Zugriff"
+
+#: tellybox/web/admin/templates/integrations.html:29
+#: tellybox/web/admin/templates/integrations.html:47
+msgid "Read and control"
+msgstr "Lesen und steuern"
+
+#: tellybox/web/admin/templates/integrations.html:30
+#: tellybox/web/admin/templates/integrations.html:47
+msgid "Read only"
+msgstr "Nur lesen"
+
+#: tellybox/web/admin/templates/integrations.html:32
+msgid "Create token"
+msgstr "Token erstellen"
+
+#: tellybox/web/admin/templates/integrations.html:37
+msgid "Tokens"
+msgstr "Tokens"
+
+#: tellybox/web/admin/templates/integrations.html:39
+msgid "No tokens yet."
+msgstr "Noch keine Tokens."
+
+#: tellybox/web/admin/templates/integrations.html:42
+msgid "Created"
+msgstr "Erstellt"
+
+#: tellybox/web/admin/templates/integrations.html:42
+msgid "Last used"
+msgstr "Zuletzt verwendet"
+
+#: tellybox/web/admin/templates/integrations.html:49
+msgid "never"
+msgstr "nie"
+
+#: tellybox/web/admin/templates/integrations.html:52
+#, python-format
+msgid "revoked %(when)s"
+msgstr "widerrufen %(when)s"
+
+#: tellybox/web/admin/templates/integrations.html:55
+msgid "Revoke this token? Whatever uses it stops working at once."
+msgstr "Dieses Token widerrufen? Alles, was es nutzt, funktioniert sofort nicht mehr."
+
+#: tellybox/web/admin/templates/integrations.html:56
+msgid "Revoke"
+msgstr "Widerrufen"
+
 #: tellybox/web/admin/templates/jobs.html:13
 msgid "version unknown"
 msgstr "Version unbekannt"
@@ -1058,12 +1182,6 @@ msgstr "Noch keine Serien. Füge zuerst ein Video hinzu."
 #: tellybox/web/admin/templates/library.html:35
 msgid "New show"
 msgstr "Neue Serie"
-
-#: tellybox/web/admin/templates/library.html:37
-#: tellybox/web/admin/templates/profiles.html:22
-#: tellybox/web/admin/templates/profiles.html:61
-msgid "Name"
-msgstr "Name"
 
 #: tellybox/web/admin/templates/library.html:38
 msgid "Show name"

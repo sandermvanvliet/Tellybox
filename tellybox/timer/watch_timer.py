@@ -195,6 +195,11 @@ class WatchTimer:
         self._watchers_all = everyone
         self._watchers = set(ids)
 
+    @property
+    def next_reset(self) -> datetime:
+        """The next daily reset (WT-1), kept in step with the settings."""
+        return self._next_reset
+
     def set_policies(self, settings: TimerSettings, policies: list[ProfilePolicy], now: datetime) -> None:
         now = self._sync(now)
         self._settings = settings

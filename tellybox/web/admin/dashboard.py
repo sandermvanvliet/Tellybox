@@ -20,11 +20,12 @@ from tellybox.i18n import N_, _
 from tellybox.library import disk_usage
 from tellybox.web.admin.common import AdminContext, render, see_other
 from tellybox.web.cast_client import CastUnavailable
+from tellybox.web.overrides import apply_override
 
 SSE_KEEPALIVE_S = 15.0
 # The cast service's 422 texts for a refused override (tellybox.cast.controller), flashed as-is;
 # listed so they get translated.
-OVERRIDE_ERRORS = (N_("extra_minutes needs a positive value"),)
+OVERRIDE_ERRORS = (N_("extra_minutes needs a positive value"), N_("extra_minutes is at most 240"))  # overrides.py
 _UNREACHABLE = object()  # sentinel: the relay's events() stream ended or the cast service is down
 
 
@@ -160,7 +161,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         profile_id: int | None = Form(None),
     ) -> Response:
         try:
-            await ctx.cast.override(kind, value, profile_id)
+            await apply_override(ctx.cast, kind, value, None if profile_id is None else [profile_id])
         except ValueError as exc:
             return see_other("/admin", flash=_(str(exc)))  # our own cast service's text: see OVERRIDE_ERRORS
         except CastUnavailable:

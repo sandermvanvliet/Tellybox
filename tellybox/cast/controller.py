@@ -269,25 +269,41 @@ class CastController:
     async def stop(self) -> None:
         await self._stop_current(EndReason.STOPPED)
 
-    async def override(self, kind: str, value: int | None = None, profile_id: int | None = None) -> None:
-        """Parent overrides for today (WT-7): extra_minutes, unlimited, block, stop_now."""
+    async def override(
+        self,
+        kind: str,
+        value: int | None = None,
+        profile_ids: Collection[int] | None = None,
+        source: str | None = None,
+    ) -> None:
+        """Parent overrides for today (WT-7, HA-3): extra_minutes, unlimited, block, stop_now, clear.
+        ``profile_ids`` None means every profile; stop_now ignores it. ``source`` names the API token (HA-7)."""
         now = self.clock.now()
         self._refresh_profiles(now)
-        profiles = [profile_id] if profile_id is not None else list(self._known_profiles)
+        if profile_ids is None:
+            profiles = list(self._known_profiles)
+        else:
+            profiles = sorted(set(profile_ids))
+            unknown = [p for p in profiles if p not in self._known_profiles]
+            if unknown:
+                raise UnknownProfile(unknown[0])
+        if kind == "extra_minutes" and (not value or value <= 0):
+            raise ValueError("extra_minutes needs a positive value")
+        if kind not in ("extra_minutes", "unlimited", "block", "stop_now", "clear"):
+            raise ValueError(f"unknown override {kind!r}")
         if kind == "stop_now":
             await self._stop_current(EndReason.PARENT_STOP)
         for p in profiles:
             if kind == "extra_minutes":
-                if not value or value <= 0:
-                    raise ValueError("extra_minutes needs a positive value")
                 self.timer.add_extra(now, p, value * 60.0)
             elif kind == "unlimited":
                 self.timer.set_unlimited(now, p, value is None or bool(value))
             elif kind == "block":
                 self.timer.set_blocked(now, p, value is None or bool(value))
-            elif kind != "stop_now":
-                raise ValueError(f"unknown override {kind!r}")
-            store.log_override(self.conn, p, self.timer.usage(p).day, kind, value, now)
+            elif kind == "clear":
+                self.timer.set_unlimited(now, p, False)
+                self.timer.set_blocked(now, p, False)
+            store.log_override(self.conn, p, self.timer.usage(p).day, kind, value, now, source)
         self._decision = self.timer.tick(now)
         await self._apply_decision(self._decision)
         self.persist(now)
@@ -672,6 +688,7 @@ class CastController:
                 "grace_deadline": to_db(d.grace_deadline),
                 "session_started_at": to_db(d.session_started_at),
                 "session_elapsed_s": None if d.session_elapsed_s is None else round(d.session_elapsed_s),
+                "next_reset": to_db(self.timer.next_reset),  # HA-2
                 "profiles": [self._profile_state(now, p) for p in self._known_profiles],
             },
             "time_up": not d.can_start,  # KA-9
@@ -797,6 +814,7 @@ class CastController:
             "remaining_s": None if status.remaining_s is None else round(status.remaining_s),
             "can_start": status.can_start,
             "reason": status.reason.value if status.reason else None,
+            "session_elapsed_s": None if status.session_elapsed_s is None else round(status.session_elapsed_s),
             # Watching means part of the episode on screen; the timer keeps the last group as its watchers.
             "watching": self.current is not None and profile_id in self.current.profile_ids,
         }

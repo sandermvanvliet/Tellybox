@@ -53,6 +53,7 @@
         {{ o.created_at.astimezone(tz).strftime("%H:%M") }} &mdash; {{ override_labels.get(o.kind, o.kind) }}
         {%- if o.profile %} &middot; {{ pf.picture(o.profile, 20) }} {{ o.profile.name }}{% endif %}
         {%- if o.kind == "extra_minutes" and o.value is not none %} ({{ _("+%(minutes)s min", minutes=o.value) }}){% elif o.value is not none %} ({{ _("on") if o.value else _("off") }}){% endif %}
+        {%- if o.source %} &middot; <span class="muted">{{ _("via %(name)s", name=o.source) }}</span>{% endif %}
       </li>
       {% endfor %}
     </ul>

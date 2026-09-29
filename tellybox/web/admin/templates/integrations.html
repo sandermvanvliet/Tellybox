@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Integrations") }}{% endblock %}
+{% block content %}
+<h1>{{ _("Integrations") }}</h1>
+<p class="muted">{{ _("API tokens let tools such as Home Assistant show what is playing and give parents' overrides. The API is described in the project docs (docs/admin-api.md).") }}</p>
+<p class="muted">{{ _("Home Assistant's own Cast entity bypasses the timer. Hide it from dashboards that kids can reach, and put the override buttons on an admin-only dashboard.") }}</p>
+
+{% if new_secret %}
+<section class="card" id="new-token">
+  <h2>{{ _("Token for %(name)s", name=new_name) }}</h2>
+  <p><strong>{{ _("Copy this token now; it won't be shown again.") }}</strong></p>
+  <div class="row">
+    <input type="text" id="new-secret" value="{{ new_secret }}" readonly size="52" aria-label="{{ _("Token") | forceescape }}">
+    <button class="btn small" type="button" id="copy-secret"
+            data-done="{{ _("Copied") | forceescape }}"
+            onclick="var i=document.getElementById('new-secret');i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).catch(function(){document.execCommand('copy')});this.textContent=this.dataset.done">{{ _("Copy") }}</button>
+  </div>
+</section>
+{% endif %}
+
+<section class="card" id="add-token">
+  <h2>{{ _("New token") }}</h2>
+  <form method="post" action="/admin/integrations" class="stack">
+    <label>{{ _("Name") }}
+      <input type="text" name="name" maxlength="{{ name_max }}" required placeholder="{{ _("Home Assistant") | forceescape }}">
+    </label>
+    <fieldset>
+      <legend>{{ _("Access") }}</legend>
+      <label><input type="radio" name="scope" value="control" checked> {{ _("Read and control") }}</label>
+      <label><input type="radio" name="scope" value="read"> {{ _("Read only") }}</label>
+    </fieldset>
+    <div class="row"><button class="btn primary" type="submit">{{ _("Create token") }}</button></div>
+  </form>
+</section>
+
+<section class="card" id="tokens">
+  <h2>{{ _("Tokens") }}</h2>
+  {% if not tokens %}
+  <p class="muted">{{ _("No tokens yet.") }}</p>
+  {% else %}
+  <table class="list">
+    <thead><tr><th>{{ _("Name") }}</th><th>{{ _("Access") }}</th><th>{{ _("Created") }}</th><th>{{ _("Last used") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for t in tokens %}
+      <tr{% if t.revoked %} class="muted"{% endif %}>
+        <td>{{ t.name }}</td>
+        <td>{{ _("Read and control") if t.control else _("Read only") }}</td>
+        <td>{{ t.created }}</td>
+        <td>{{ t.last_used or _("never") }}</td>
+        <td>
+          {% if t.revoked %}
+          <span class="badge bad">{{ _("revoked %(when)s", when=t.revoked_at) }}</span>
+          {% else %}
+          <form method="post" action="/admin/integrations/{{ t.id }}/revoke" class="inline"
+                onsubmit="return confirm({{ _("Revoke this token? Whatever uses it stops working at once.") | tojson | forceescape }})">
+            <button class="btn small danger" type="submit">{{ _("Revoke") }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

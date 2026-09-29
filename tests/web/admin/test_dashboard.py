@@ -100,7 +100,7 @@ def test_override_extra_minutes_calls_cast_with_kind_and_value(admin, admin_env)
         follow_redirects=False,
     )
     assert r.status_code == 303
-    assert ("override", "extra_minutes", 15, PROFILE) in admin_env.cast.calls
+    assert ("override", "extra_minutes", 15, [PROFILE], None) in admin_env.cast.calls
 
 
 def test_override_unlimited_toggle(admin, admin_env):
@@ -109,13 +109,13 @@ def test_override_unlimited_toggle(admin, admin_env):
         follow_redirects=False,
     )
     assert r.status_code == 303
-    assert ("override", "unlimited", 1, PROFILE) in admin_env.cast.calls
+    assert ("override", "unlimited", 1, [PROFILE], None) in admin_env.cast.calls
 
 
 def test_override_stop_now(admin, admin_env):
     r = admin.post("/admin/overrides", data={"kind": "stop_now", "profile_id": str(PROFILE)}, follow_redirects=False)
     assert r.status_code == 303
-    assert ("override", "stop_now", None, PROFILE) in admin_env.cast.calls
+    assert ("override", "stop_now", None, [PROFILE], None) in admin_env.cast.calls
 
 
 def test_override_refused_flashes_not_500(admin, admin_env):
@@ -190,7 +190,7 @@ def test_dashboard_per_profile_and_everyone_overrides(admin, admin_env):
     assert 'name="profile_id"' not in everyone and 'name="kind"' in everyone
     r = admin.post("/admin/overrides", data={"kind": "block", "value": "1"}, follow_redirects=False)
     assert r.status_code == 303
-    assert admin_env.cast.calls[-1] == ("override", "block", 1, None)
+    assert admin_env.cast.calls[-1] == ("override", "block", 1, None, None)
 
 
 def test_dashboard_profile_data_is_safe_to_embed(admin, admin_env):

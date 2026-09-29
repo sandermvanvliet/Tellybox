@@ -1,6 +1,6 @@
-# Cast service API contract (internal; profiles since step 8, receiver since step 13)
+# Cast service API contract (internal; profiles since step 8, receiver since step 13, admin API since step 9)
 
-The `cast` service listens on `127.0.0.1` only; the `web` service is its only client (`tellybox/web/cast_client.py`). Only the cast service writes timer, history and position tables. Fields marked **v2** are new in step 8 (kid profiles), **v7** in step 13 (Tellybox receiver, see `docs/receiver-protocol.md`).
+The `cast` service listens on `127.0.0.1` only; the `web` service is its only client (`tellybox/web/cast_client.py`). Only the cast service writes timer, history and position tables. Fields marked **v2** are new in step 8 (kid profiles), **v7** in step 13 (Tellybox receiver, see `docs/receiver-protocol.md`), **v2.1** in step 9 (admin API, see `docs/admin-api.md`).
 
 ## State
 
@@ -26,6 +26,7 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
     "grace_deadline": null | "ISO-8601 UTC",
     "session_started_at": null | "ISO-8601 UTC",   // earliest open session among watchers
     "session_elapsed_s": null | 1800,
+    "next_reset": "ISO-8601 UTC",            // v2.1: the next daily reset (WT-1)
     "profiles": [                            // every profile, in id order
       {
         "profile_id": 1,
@@ -35,6 +36,7 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
         "remaining_s": 1700 | null,          // v2: this profile alone; null = unlimited
         "can_start": true,                   // v2: could this profile start a pick on its own?
         "reason": null | "allowance" | "session_max" | "blocked",   // v2: why not
+        "session_elapsed_s": null | 1800,    // v2.1: this profile's open viewing session (WT-3, A-13); null = none
         "watching": true                     // v2: one of the current episode's profiles (now_playing.profile_ids);
                                              // false when nothing plays, even though the timer keeps the last group
       }
@@ -56,7 +58,7 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
 |---|---|---|---|
 | POST | `/play` | `{"episode_id": 4, "profile_ids": [1, 3]}` **v2**: 1–20 ids, required | 200 state. 404 no such episode. 409 `{"detail": {"error": "time_up", "reason": ...}}` when the group may not start (any member out of time, blocked or past its session max, PR-4). 422 empty, too long or unknown profile ids. 503 no Chromecast, 502 command failed. |
 | POST | `/pause`, `/resume`, `/stop` | none | 200 state; 503/502 as above |
-| POST | `/overrides` | `{"kind": "extra_minutes" \| "unlimited" \| "block" \| "stop_now", "value": int \| null, "profile_id": int \| null}` | 200 state; 422 bad value. `profile_id` null = every profile. Blocking a profile that isn't watching doesn't stop playback. |
+| POST | `/overrides` | `{"kind": "extra_minutes" \| "unlimited" \| "block" \| "stop_now" \| "clear", "value": int \| null, "profile_ids": [int] \| null, "profile_id": int \| null, "source": str \| null}` | 200 state; 422 bad kind or value, unknown profile ids, or both `profile_ids` and `profile_id`. **v2.1:** `profile_ids` (1–20 ids) replaces `profile_id`, which is still accepted; neither = every profile. `clear` sets unlimited and blocked back to false (extra minutes stay), logging one `clear` row per profile. `source` (≤ 64 chars) is written to `override_log.source`: the API token's name, or null for the admin pages (HA-7). Blocking a profile that isn't watching doesn't stop playback. |
 | GET | `/devices` | none | `{"selected": uuid \| null, "devices": [...]}` |
 | POST | `/devices/select` | `{"uuid": "..."}` | 200 state; 404 unknown device |
 

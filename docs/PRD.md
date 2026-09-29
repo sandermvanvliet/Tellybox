@@ -190,6 +190,21 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | AD-4 | Viewing history per profile: episode, start and end time, minutes counted, and overrides applied. | Must | v1 |
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
 
+### Admin API (Home Assistant)
+
+A token-authenticated JSON API lets a home-automation system (first Home Assistant) show Tellybox's live state and apply the parent overrides. It never becomes a way around the timer. Contract: `docs/admin-api.md`.
+
+| ID | Requirement | Priority | Release |
+| --- | --- | --- | --- |
+| HA-1 | The admin creates, names and revokes long-lived API tokens with a `read` or `read + control` scope; a token is shown once and only its hash is stored. | Must | v2.1 |
+| HA-2 | With a read token, the admin state is available as JSON in absolute units: now playing, per-profile allowance, extra, used and remaining time, session and grace, time up, TV reachability, job counts and disk use. | Must | v2.1 |
+| HA-3 | The same state streams as server-sent events on every change, with a keepalive. | Must | v2.1 |
+| HA-4 | With a control token, the overrides of WT-7 (extra minutes, unlimited today, block today, stop now) can be applied for everyone or for chosen profiles, through the same code path as the admin dashboard. | Must | v2.1 |
+| HA-5 | Today's unlimited and block can be cleared through the API; extra minutes stay. | Should | v2.1 |
+| HA-6 | Each installation has a stable instance id; an unauthenticated info endpoint gives the instance id, version and capabilities. | Must | v2.1 |
+| HA-7 | Overrides applied through the API are recorded with the token's name, and the history shows it. | Should | v2.1 |
+| HA-8 | Every API action goes through Tellybox's cast service; the API offers no way to cast directly or to start playback when time is up. | Must | v2.1 |
+
 ## Non-functional requirements
 
 The system must run unattended on a CPU-only home server and recover on its own from restarts and network blips.
@@ -263,6 +278,7 @@ v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-
 | --- | --- | --- |
 | v1 · Core loop | Kid picker (one profile), cast MP4, timer with grace cap and overrides, add by URL or playlist, download and encode, history with 21-day purge, English/Dutch/German | Shipped 2026-09-28 |
 | v2 · Kid profiles | "Who's watching" screen, per-kid allowance, usage, continue watching and history, watching together (PR-1..4) | Real-device checks pass; a week of daily use |
+| v2.1 · Admin API | API tokens, admin state and events, overrides over JSON, instance id: the Tellybox side of a Home Assistant integration (HA-1..8) | Running at home for a week before the integration builds on it |
 | v3 · SponsorBlock | Cut sponsor segments at download, categories per show, 7-day re-check (SB-1..5) | Real-device checks pass |
 | v4 · Channel subscriptions | Subscribe to a channel, scheduled checks, approval inbox (CS-1..4) | Real-device checks pass |
 | v5 · Manual splitting | Scrub player, cut marking, chapter import, review screen, frame-accurate cutting (ES-1, ES-2, ES-7, ES-8, SB-6) | Real-device checks pass |
@@ -284,11 +300,12 @@ v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-
 One step per branch or PR, each proposed as a plan first and closed with real-device checks.
 
 8. **Kid profiles (v2).** Profile management, "who's watching" screen, per-profile timer and history, watching together.
-9. **SponsorBlock (v3).** Cutting at download, settings and per-show categories, the 7-day re-check with position adjustment, removed-segment overview.
-10. **Channel subscriptions (v4).** Subscribe, list existing uploads, scheduled checks, approval inbox, pause and remove.
-11. **Manual splitting (v5).** Scrub player, cut marking, chapter import, review screen, frame-accurate cutting.
-12. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection.
-13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of steps 9–12 by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
+9. **Admin API for Home Assistant (v2.1).** API tokens, the admin state and its event stream, override endpoints, instance id and `/api/info` (HA-1..HA-8). Phase 0 of the owner's Home Assistant integration plan; the integration itself lives in separate repositories. (Inserted by the owner, 2026-09-29. Plan: `docs/plans/step9-ha-api.md`.)
+10. **SponsorBlock (v3).** Cutting at download, settings and per-show categories, the 7-day re-check with position adjustment, removed-segment overview.
+11. **Channel subscriptions (v4).** Subscribe, list existing uploads, scheduled checks, approval inbox, pause and remove.
+12. **Manual splitting (v5).** Scrub player, cut marking, chapter import, review screen, frame-accurate cutting.
+13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of SponsorBlock, subscriptions and splitting by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
+14. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection. (Renumbered from 12 when the admin API was inserted as step 9 and the receiver kept 13, 2026-09-29.)
 
 ## Risks, assumptions and open questions
 
@@ -331,6 +348,9 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-13 | The maximum session length (WT-3) applies per profile: each kid has their own viewing session and break (owner, 2026-09-29). |
 | A-14 | A profile picture is a built-in avatar or an uploaded photo (owner, 2026-09-29). |
 | A-15 | The v1 household profile becomes the first kid's profile (renamed by the admin) and keeps its history; profiles can be deleted, except the last one (owner, 2026-09-29). |
+| A-16 | API tokens are independent of the admin password: changing the password doesn't revoke them. Revoked tokens stay listed (owner, 2026-09-29). |
+| A-17 | Extra minutes through the API are capped at 240 per call, with no daily cap: a control token carries the parent's authority (owner, 2026-09-29). |
+| A-18 | The kid app doesn't show where an override came from (owner, 2026-09-29). |
 
 ### Open questions
 

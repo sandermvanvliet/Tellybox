@@ -64,6 +64,7 @@ class HistoryOverride:
     value: int | None
     created_at: datetime
     profile: HistoryProfile | None = None  # None = everyone (or a profile that has been deleted)
+    source: str | None = None  # API token name (HA-7); None = the admin pages
 
 
 @dataclass(frozen=True)
@@ -141,7 +142,7 @@ def history_days(
         ))
 
     orows = conn.execute(
-        "SELECT profile_id, day, kind, value, created_at FROM override_log WHERE day >= ? ORDER BY created_at",
+        "SELECT profile_id, day, kind, value, created_at, source FROM override_log WHERE day >= ? ORDER BY created_at",
         (earliest_day.isoformat(),),
     ).fetchall()
     for r in orows:
@@ -153,7 +154,7 @@ def history_days(
             continue
         bucket.overrides.append(HistoryOverride(
             profile_id=r["profile_id"], kind=r["kind"], value=r["value"], created_at=from_db(r["created_at"]),
-            profile=profiles.get(r["profile_id"]),
+            profile=profiles.get(r["profile_id"]), source=r["source"],
         ))
 
     return [by_day[d] for d in sorted(by_day, reverse=True)]

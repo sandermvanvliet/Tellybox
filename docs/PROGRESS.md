@@ -129,7 +129,14 @@ Plan: `docs/plans/i18n.md`. The foundation was built first, then subagents did t
 
 ## Next
 
-The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, then the Tellybox Cast receiver. The decisions from that session are PRD A-7..A-11, SB-1..SB-6 and CR-1..CR-8.
+The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, then the Tellybox Cast receiver. The decisions from that session are PRD A-7..A-11, SB-1..SB-6 and CR-1..CR-8. On 2026-09-29 the owner moved the receiver ahead (it keeps step 13) and inserted the admin API for Home Assistant as step 9. The current order is:
+- 8: profiles;
+- 9: admin API;
+- 13: receiver, in progress;
+- 10: SponsorBlock;
+- 11: subscriptions;
+- 12: manual splitting;
+- 14: smart splitting.
 
 ### 8. Kid profiles (v2), deployed; device checks open
 "Who's watching" screen, per-profile allowance, usage, continue watching and history, watching together (PR-1..PR-4). There's no PIN, and every profile sees the whole library.
@@ -179,10 +186,23 @@ Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × 
   - 401 after revoke;
   - no token in the access log.
 - 999 tests.
-- **Open:** the owner's device checks after deploy (plan, "Real-device checks").
+- **Open:**
+  - review and merge PR #3; CI then deploys it;
+  - the owner's device checks after deploy (`docs/plans/step9-ha-api.md`, "Real-device checks").
+  - v2.1 is done when they pass. The PRD's gate is that it runs at home for a week before the integration builds on it.
+- **After step 9, outside this repository:** Phase 1 of the owner's Home Assistant plan. That is a `pytellybox` async client and an `ha-tellybox` custom integration (HACS), built against `docs/admin-api.md`. It gives:
+  - a media player;
+  - time-left and time-used sensors;
+  - time-up and last-five binary sensors;
+  - override buttons and services;
+  - reauth when a token is revoked.
+- **Deferred from the Home Assistant plan** (owner, 2026-09-29: Phase 0 only):
+  - F4 typed events (`time_up`, `last_five`, `override_applied`, `download_ready`…) on the admin stream; today an integration has to diff the state;
+  - opt-in zeroconf advertisement (`_tellybox._tcp`);
+  - F6: settings `GET`/`PATCH`, daily history, and publishing held downloads from Home Assistant (opt-in).
 
 ### 13. Tellybox receiver (v7), in progress
-Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
+Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29. It keeps number 13, and its branch `step13/receiver` conflicts with step 9 only in this file. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
 - Waiting on the owner: registering the receiver in the Google Cast SDK Developer Console and the Chromecast as a test device, then the spike on the TV.
 
@@ -200,4 +220,10 @@ Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13
 - Deleting an episode also deletes its source video and file once nothing else uses it (v1 episodes share the source MP4).
 - `compose.yml` is untested (no compose plugin on the dev box); test it on the server (step 6).
 - Measure cold-start latency on the server over wired Ethernet (step 6); add a receiver warm-up only if needed.
+- Admin API (step 9) notes:
+  - The SSE tests in `tests/web/api/` reach into FastAPI's router internals (`original_router.routes`, `body_iterator`), because `TestClient` buffers streams. They need updating if FastAPI changes these.
+  - The admin hub's job and disk refresh runs synchronously on the event loop every 10 s, as the kid hub's DB reads do. Move it to a thread if the media disk walk gets slow.
+  - Open questions from the Home Assistant plan:
+    - Should Home Assistant eventually go into HA core, or stay HACS-only?
+    - Should per-kid profiles be sub-devices in Home Assistant?
 - PRD open questions still apply: picture PIN, viewing hours, keep source after split, deploy-flow conventions.

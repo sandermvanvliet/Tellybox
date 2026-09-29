@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:12+0200\n"
+"POT-Creation-Date: 2026-09-29 14:18+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -110,8 +110,12 @@ msgid "Wrong password."
 msgstr "Onjuist wachtwoord."
 
 #: tellybox/web/admin/add.py:25
-msgid "Channel URLs are for subscriptions, which come in a later version. Paste a video or playlist URL."
-msgstr "Kanaal-URL's zijn voor abonnementen, en die komen in een latere versie. Plak een URL van een video of afspeellijst."
+msgid ""
+"Channel URLs are for subscriptions, which come in a later version. Paste "
+"a video or playlist URL."
+msgstr ""
+"Kanaal-URL's zijn voor abonnementen, en die komen in een latere versie. "
+"Plak een URL van een video of afspeellijst."
 
 #: tellybox/web/admin/add.py:26
 msgid "That preview has expired; fetch it again."
@@ -235,23 +239,27 @@ msgstr "GB"
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:26
+#: tellybox/web/admin/dashboard.py:27
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes moet een positief getal zijn"
 
-#: tellybox/web/admin/dashboard.py:136
+#: tellybox/web/admin/dashboard.py:27
+msgid "extra_minutes is at most 240"
+msgstr "extra_minutes mag hoogstens 240 zijn"
+
+#: tellybox/web/admin/dashboard.py:137
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Castservice onbereikbaar; er is niets gestopt."
 
-#: tellybox/web/admin/dashboard.py:137
+#: tellybox/web/admin/dashboard.py:138
 msgid "Stopped."
 msgstr "Gestopt."
 
-#: tellybox/web/admin/dashboard.py:151
+#: tellybox/web/admin/dashboard.py:152
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Castservice onbereikbaar; de wijziging is niet doorgevoerd."
 
-#: tellybox/web/admin/dashboard.py:152
+#: tellybox/web/admin/dashboard.py:153
 msgid "Done."
 msgstr "Klaar."
 
@@ -274,6 +282,10 @@ msgstr "Blokkeren"
 #: tellybox/web/admin/templates/dashboard.html:87
 msgid "Stop now"
 msgstr "Nu stoppen"
+
+#: tellybox/web/admin/history.py:18
+msgid "Cleared unlimited and block"
+msgstr "Onbeperkt en blokkeren opgeheven"
 
 #: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:66
 msgid "Enter a name."
@@ -790,8 +802,12 @@ msgstr[0] "%(num)d video"
 msgstr[1] "%(num)d video's"
 
 #: tellybox/web/admin/templates/add.html:82
-msgid "Add the rest later by adding the playlist again; videos already added are skipped."
-msgstr "Voeg de rest later toe door de afspeellijst opnieuw toe te voegen; video's die er al zijn worden overgeslagen."
+msgid ""
+"Add the rest later by adding the playlist again; videos already added are"
+" skipped."
+msgstr ""
+"Voeg de rest later toe door de afspeellijst opnieuw toe te voegen; "
+"video's die er al zijn worden overgeslagen."
 
 #: tellybox/web/admin/templates/add.html:84
 msgid "Each video goes to its own channel's show."
@@ -972,12 +988,24 @@ msgid "via %(name)s"
 msgstr "via %(name)s"
 
 #: tellybox/web/admin/templates/integrations.html:5
-msgid "API tokens let tools such as Home Assistant show what is playing and give parents' overrides. The API is described in the project docs (docs/admin-api.md)."
-msgstr "Met API-tokens kunnen tools zoals Home Assistant laten zien wat er speelt en de ouderopties (extra tijd, blokkeren) gebruiken. De API staat beschreven in de projectdocumentatie (docs/admin-api.md)."
+msgid ""
+"API tokens let tools such as Home Assistant show what is playing and give"
+" parents' overrides. The API is described in the project docs (docs"
+"/admin-api.md)."
+msgstr ""
+"Met API-tokens kunnen tools zoals Home Assistant laten zien wat er speelt"
+" en de ouderopties (extra tijd, blokkeren) gebruiken. De API staat "
+"beschreven in de projectdocumentatie (docs/admin-api.md)."
 
 #: tellybox/web/admin/templates/integrations.html:6
-msgid "Home Assistant's own Cast entity bypasses the timer. Hide it from dashboards that kids can reach, and put the override buttons on an admin-only dashboard."
-msgstr "De eigen Cast-entiteit van Home Assistant omzeilt de timer. Verberg die op dashboards waar kinderen bij kunnen, en zet de knoppen voor extra tijd en blokkeren op een dashboard alleen voor beheerders."
+msgid ""
+"Home Assistant's own Cast entity bypasses the timer. Hide it from "
+"dashboards that kids can reach, and put the override buttons on an admin-"
+"only dashboard."
+msgstr ""
+"De eigen Cast-entiteit van Home Assistant omzeilt de timer. Verberg die "
+"op dashboards waar kinderen bij kunnen, en zet de knoppen voor extra tijd"
+" en blokkeren op een dashboard alleen voor beheerders."
 
 #: tellybox/web/admin/templates/integrations.html:10
 #, python-format
@@ -1165,8 +1193,13 @@ msgstr "Series samenvoegen"
 
 #: tellybox/web/admin/templates/library.html:47
 #, python-format
-msgid "Every episode and source video of \"%(source)s\" moves to the end of \"%(target)s\", and \"%(source)s\" is deleted. This cannot be undone."
-msgstr "Alle afleveringen en bronvideo's van \"%(source)s\" gaan naar het eind van \"%(target)s\", en \"%(source)s\" wordt verwijderd. Dit kan niet ongedaan worden gemaakt."
+msgid ""
+"Every episode and source video of \"%(source)s\" moves to the end of "
+"\"%(target)s\", and \"%(source)s\" is deleted. This cannot be undone."
+msgstr ""
+"Alle afleveringen en bronvideo's van \"%(source)s\" gaan naar het eind "
+"van \"%(target)s\", en \"%(source)s\" wordt verwijderd. Dit kan niet "
+"ongedaan worden gemaakt."
 
 #: tellybox/web/admin/templates/library.html:47
 #: tellybox/web/admin/templates/library.html:50
@@ -1244,8 +1277,12 @@ msgid "Password"
 msgstr "Wachtwoord"
 
 #: tellybox/web/admin/templates/profiles.html:6
-msgid "The kids who watch. Each has their own time, continue watching and viewing session. Allowance and session length are in Settings."
-msgstr "De kinderen die kijken. Ieder heeft een eigen tijd, doorkijklijst en kijksessie. Speeltijd en sessielengte staan bij Instellingen."
+msgid ""
+"The kids who watch. Each has their own time, continue watching and "
+"viewing session. Allowance and session length are in Settings."
+msgstr ""
+"De kinderen die kijken. Ieder heeft een eigen tijd, doorkijklijst en "
+"kijksessie. Speeltijd en sessielengte staan bij Instellingen."
 
 #: tellybox/web/admin/templates/profiles.html:25
 #: tellybox/web/admin/templates/profiles.html:64

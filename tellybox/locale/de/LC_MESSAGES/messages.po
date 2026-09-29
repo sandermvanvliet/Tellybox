@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:12+0200\n"
+"POT-Creation-Date: 2026-09-29 14:18+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -94,7 +94,9 @@ msgstr "Datei ist kein JPEG-, PNG- oder WebP-Bild"
 #: tellybox/jobs.py:185
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
-msgstr "Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich wiederholen"
+msgstr ""
+"Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich "
+"wiederholen"
 
 #: tellybox/web/admin/__init__.py:76
 msgid "This sign-in form must be sent from this page."
@@ -110,8 +112,12 @@ msgid "Wrong password."
 msgstr "Falsches Passwort."
 
 #: tellybox/web/admin/add.py:25
-msgid "Channel URLs are for subscriptions, which come in a later version. Paste a video or playlist URL."
-msgstr "Kanal-URLs sind für Abos gedacht, die in einer späteren Version kommen. Füge die URL eines Videos oder einer Playlist ein."
+msgid ""
+"Channel URLs are for subscriptions, which come in a later version. Paste "
+"a video or playlist URL."
+msgstr ""
+"Kanal-URLs sind für Abos gedacht, die in einer späteren Version kommen. "
+"Füge die URL eines Videos oder einer Playlist ein."
 
 #: tellybox/web/admin/add.py:26
 msgid "That preview has expired; fetch it again."
@@ -235,23 +241,27 @@ msgstr "GB"
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:26
+#: tellybox/web/admin/dashboard.py:27
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes braucht einen positiven Wert"
 
-#: tellybox/web/admin/dashboard.py:136
+#: tellybox/web/admin/dashboard.py:27
+msgid "extra_minutes is at most 240"
+msgstr "extra_minutes darf höchstens 240 sein"
+
+#: tellybox/web/admin/dashboard.py:137
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde gestoppt."
 
-#: tellybox/web/admin/dashboard.py:137
+#: tellybox/web/admin/dashboard.py:138
 msgid "Stopped."
 msgstr "Gestoppt."
 
-#: tellybox/web/admin/dashboard.py:151
+#: tellybox/web/admin/dashboard.py:152
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Cast-Dienst nicht erreichbar; die Änderung wurde nicht übernommen."
 
-#: tellybox/web/admin/dashboard.py:152
+#: tellybox/web/admin/dashboard.py:153
 msgid "Done."
 msgstr "Erledigt."
 
@@ -274,6 +284,10 @@ msgstr "Sperren"
 #: tellybox/web/admin/templates/dashboard.html:87
 msgid "Stop now"
 msgstr "Jetzt stoppen"
+
+#: tellybox/web/admin/history.py:18
+msgid "Cleared unlimited and block"
+msgstr "Unbegrenzt und Sperre aufgehoben"
 
 #: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:66
 msgid "Enter a name."
@@ -629,7 +643,9 @@ msgstr "Das ist das letzte Profil; du kannst es nicht löschen."
 
 #: tellybox/web/admin/profiles_page.py:136
 msgid "Cast service unreachable; can't tell whether this profile is watching."
-msgstr "Cast-Dienst nicht erreichbar; ich kann nicht prüfen, ob dieses Profil gerade schaut."
+msgstr ""
+"Cast-Dienst nicht erreichbar; ich kann nicht prüfen, ob dieses Profil "
+"gerade schaut."
 
 #: tellybox/web/admin/profiles_page.py:138
 msgid "This profile is watching right now. Stop the TV first."
@@ -790,8 +806,12 @@ msgstr[0] "%(num)d Video"
 msgstr[1] "%(num)d Videos"
 
 #: tellybox/web/admin/templates/add.html:82
-msgid "Add the rest later by adding the playlist again; videos already added are skipped."
-msgstr "Füge den Rest später hinzu, indem du die Playlist noch einmal hinzufügst; vorhandene Videos werden übersprungen."
+msgid ""
+"Add the rest later by adding the playlist again; videos already added are"
+" skipped."
+msgstr ""
+"Füge den Rest später hinzu, indem du die Playlist noch einmal hinzufügst;"
+" vorhandene Videos werden übersprungen."
 
 #: tellybox/web/admin/templates/add.html:84
 msgid "Each video goes to its own channel's show."
@@ -972,12 +992,25 @@ msgid "via %(name)s"
 msgstr "über %(name)s"
 
 #: tellybox/web/admin/templates/integrations.html:5
-msgid "API tokens let tools such as Home Assistant show what is playing and give parents' overrides. The API is described in the project docs (docs/admin-api.md)."
-msgstr "Mit API-Tokens können Tools wie Home Assistant anzeigen, was läuft, und die Eltern-Funktionen (Extra-Zeit, Sperren) nutzen. Die API ist in der Projektdokumentation beschrieben (docs/admin-api.md)."
+msgid ""
+"API tokens let tools such as Home Assistant show what is playing and give"
+" parents' overrides. The API is described in the project docs (docs"
+"/admin-api.md)."
+msgstr ""
+"Mit API-Tokens können Tools wie Home Assistant anzeigen, was läuft, und "
+"die Eltern-Funktionen (Extra-Zeit, Sperren) nutzen. Die API ist in der "
+"Projektdokumentation beschrieben (docs/admin-api.md)."
 
 #: tellybox/web/admin/templates/integrations.html:6
-msgid "Home Assistant's own Cast entity bypasses the timer. Hide it from dashboards that kids can reach, and put the override buttons on an admin-only dashboard."
-msgstr "Die eigene Cast-Entität von Home Assistant umgeht den Timer. Blende sie in Dashboards aus, auf die Kinder zugreifen können, und lege die Schaltflächen für Extra-Zeit und Sperren auf ein Dashboard nur für Admins."
+msgid ""
+"Home Assistant's own Cast entity bypasses the timer. Hide it from "
+"dashboards that kids can reach, and put the override buttons on an admin-"
+"only dashboard."
+msgstr ""
+"Die eigene Cast-Entität von Home Assistant umgeht den Timer. Blende sie "
+"in Dashboards aus, auf die Kinder zugreifen können, und lege die "
+"Schaltflächen für Extra-Zeit und Sperren auf ein Dashboard nur für "
+"Admins."
 
 #: tellybox/web/admin/templates/integrations.html:10
 #, python-format
@@ -1062,7 +1095,9 @@ msgstr "widerrufen %(when)s"
 
 #: tellybox/web/admin/templates/integrations.html:55
 msgid "Revoke this token? Whatever uses it stops working at once."
-msgstr "Dieses Token widerrufen? Alles, was es nutzt, funktioniert sofort nicht mehr."
+msgstr ""
+"Dieses Token widerrufen? Alles, was es nutzt, funktioniert sofort nicht "
+"mehr."
 
 #: tellybox/web/admin/templates/integrations.html:56
 msgid "Revoke"
@@ -1165,8 +1200,13 @@ msgstr "Serien zusammenführen"
 
 #: tellybox/web/admin/templates/library.html:47
 #, python-format
-msgid "Every episode and source video of \"%(source)s\" moves to the end of \"%(target)s\", and \"%(source)s\" is deleted. This cannot be undone."
-msgstr "Alle Folgen und Quellvideos aus „%(source)s“ kommen ans Ende von „%(target)s“, und „%(source)s“ wird gelöscht. Das lässt sich nicht rückgängig machen."
+msgid ""
+"Every episode and source video of \"%(source)s\" moves to the end of "
+"\"%(target)s\", and \"%(source)s\" is deleted. This cannot be undone."
+msgstr ""
+"Alle Folgen und Quellvideos aus „%(source)s“ kommen ans Ende von "
+"„%(target)s“, und „%(source)s“ wird gelöscht. Das lässt sich nicht "
+"rückgängig machen."
 
 #: tellybox/web/admin/templates/library.html:47
 #: tellybox/web/admin/templates/library.html:50
@@ -1244,8 +1284,13 @@ msgid "Password"
 msgstr "Passwort"
 
 #: tellybox/web/admin/templates/profiles.html:6
-msgid "The kids who watch. Each has their own time, continue watching and viewing session. Allowance and session length are in Settings."
-msgstr "Die Kinder, die schauen. Jedes hat eigene Zeit, eigene Weiterschauen-Liste und eigene Schausitzung. Zeitkontingent und Sitzungslänge findest du unter Einstellungen."
+msgid ""
+"The kids who watch. Each has their own time, continue watching and "
+"viewing session. Allowance and session length are in Settings."
+msgstr ""
+"Die Kinder, die schauen. Jedes hat eigene Zeit, eigene Weiterschauen-"
+"Liste und eigene Schausitzung. Zeitkontingent und Sitzungslänge findest "
+"du unter Einstellungen."
 
 #: tellybox/web/admin/templates/profiles.html:25
 #: tellybox/web/admin/templates/profiles.html:64

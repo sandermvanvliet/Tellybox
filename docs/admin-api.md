@@ -30,8 +30,8 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   "instance_id": "3f2a…",                // HA-6: stable per installation (32 hex chars)
   "version": "2026.09.29.3",             // config.version ("dev" locally)
   "api": 1,
-  "day": {"date": "2026-09-29",          // the timer day (WT-1), the first profile's
-          "resets_at": "ISO-8601 UTC"},  // the next daily reset (cast timer.next_reset)
+  "day": {"date": "2026-09-29" | null,   // the timer day (WT-1), the first profile's
+          "resets_at": "ISO-8601 UTC" | null},  // the next daily reset (cast timer.next_reset)
   "tv": {
     "connection": "CONNECTED" | … | "unreachable",   // the cast state's connection; "unreachable" = cast service down
     "reachable": true,                   // connection == "CONNECTED"
@@ -78,8 +78,12 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
 
 - **The cast service is unreachable:**
   - `tv.connection` is `"unreachable"`, `tv.reachable` is false and `now_playing` is null;
-  - `group` and `profiles` keep their last known values;
-  - on a cold start, `profiles` is built from the DB with null timer fields.
+  - `group` and `profiles` keep their last known values, with `watching` false;
+  - `GET /api/admin/state` still answers 200. Only the overrides return 503.
+- **Cold start**, before the web service has seen any cast state:
+  - `profiles` comes from the DB, with `used_s`, `extra_s`, `remaining_s`, `can_start` and `reason` null, and `unlimited`, `blocked` and `watching` false;
+  - `day.date` and `day.resets_at` are null.
+  - The same holds for a profile the cast state doesn't list yet, such as one just added.
 - **Refreshing:** `jobs` and `disk` are refreshed at most every 10 s.
 
 ## Endpoints

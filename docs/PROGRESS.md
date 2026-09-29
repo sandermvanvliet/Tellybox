@@ -144,13 +144,42 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - Merged as PR #1 (PR numbers restarted in the public repository) and deployed (version 2026.09.29.2). The owner checked the admin pages and the kid app's screens on the devices: fine.
 - **Open:** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`. v2 is done when they pass.
 
-### 9. Admin API for Home Assistant (v2.1), in progress
+### 9. Admin API for Home Assistant (v2.1), built; PR open, device checks open
 Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × Home Assistant: upstream features & integration plan". It covers API tokens, the admin state and its event stream, override endpoints, the instance id and `/api/info`. The Home Assistant integration itself lives in separate repositories later.
 - Plan `docs/plans/step9-ha-api.md`, approved 2026-09-29. Subagent briefs: `docs/plans/step9-handoff.md`. Branch `step9/ha-api`.
 - Renumbered: SponsorBlock is now step 10, subscriptions 11, manual splitting 12, and smart splitting 14. The receiver keeps 13, because it's already in progress.
 - Contract (2026-09-29): migration 007 (`api_token`, `settings.instance_id`, `override_log.source`), `tellybox/api_tokens.py` with tests, `CastClient.override(kind, value, profile_ids, source)`, `docs/admin-api.md`, `docs/cast-api.md` (`profile_ids`, `source`, `clear`, `timer.next_reset`, `profiles[].session_elapsed_s`), PRD HA-1..HA-8 and A-16..A-18.
 - **Cast service (A), merged:** `/overrides` takes `profile_ids` (1–20, `profile_id` still accepted), `source` and the new `clear` kind; unknown ids are a 422 and nothing is applied; `override_log.source`; the state gains `timer.next_reset` (from the timer, no extra DB read) and `profiles[].session_elapsed_s`. 905 tests.
-- **Running:** JSON API and hub (B), admin Integrations page and history (C).
+- **JSON API and hub (B), merged:**
+  - `TokenGuard` (401 with `WWW-Authenticate`, 403 for the wrong scope);
+  - `/api/info`, `/api/admin/state`, `/api/admin/events` (a shared admin hub, the kid hub generalised with `unreachable`, `initial` and `refresh_s`; job and disk figures cached for 10 s);
+  - the override routes, including `DELETE /today`;
+  - `tellybox/web/overrides.py` (`apply_override`), shared with the dashboard's buttons, which now also refuse more than 240 minutes;
+  - `jobs.count_by_status`, `library.count_held_ready`.
+- **Admin Integrations page and history (C), merged:**
+  - `/admin/integrations`: create (the secret shown once in the POST response, `no-store`), list, revoke;
+  - the Home Assistant Cast warning;
+  - history shows "via <token>";
+  - nl and de.
+- **Controller review fixes:**
+  - `next_reset` from the timer;
+  - a history label for `clear`;
+  - the dashboard's 240-minute message translated;
+  - integer `allowance_s` and `max_session_s`;
+  - the cold-start and unreachable states documented.
+- **Smoke test** on a real uvicorn web and cast service, with no Chromecast:
+  - `/api/info`;
+  - 401 without a token;
+  - tokens created on the page;
+  - a read-only token gets a 403 on overrides;
+  - +15, block, clear;
+  - the SSE first event;
+  - `override_log.source`;
+  - history "via Home Assistant";
+  - 401 after revoke;
+  - no token in the access log.
+- 999 tests.
+- **Open:** the owner's device checks after deploy (plan, "Real-device checks").
 
 ### 13. Tellybox receiver (v7), in progress
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.

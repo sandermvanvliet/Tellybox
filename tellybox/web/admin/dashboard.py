@@ -24,7 +24,7 @@ from tellybox.web.overrides import apply_override
 SSE_KEEPALIVE_S = 15.0
 # The cast service's 422 texts for a refused override (tellybox.cast.controller), flashed as-is;
 # listed so they get translated.
-OVERRIDE_ERRORS = (N_("extra_minutes needs a positive value"),)
+OVERRIDE_ERRORS = (N_("extra_minutes needs a positive value"), N_("extra_minutes is at most 240"))  # overrides.py
 _UNREACHABLE = object()  # sentinel: the relay's events() stream ended or the cast service is down
 
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:12+0200\n"
+"POT-Creation-Date: 2026-09-29 14:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -235,23 +235,27 @@ msgstr ""
 msgid "%(size)s B"
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:26
+#: tellybox/web/admin/dashboard.py:27
 msgid "extra_minutes needs a positive value"
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:136
-msgid "Cast service unreachable; nothing was stopped."
+#: tellybox/web/admin/dashboard.py:27
+msgid "extra_minutes is at most 240"
 msgstr ""
 
 #: tellybox/web/admin/dashboard.py:137
+msgid "Cast service unreachable; nothing was stopped."
+msgstr ""
+
+#: tellybox/web/admin/dashboard.py:138
 msgid "Stopped."
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:151
+#: tellybox/web/admin/dashboard.py:152
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:152
+#: tellybox/web/admin/dashboard.py:153
 msgid "Done."
 msgstr ""
 
@@ -273,6 +277,10 @@ msgstr ""
 #: tellybox/web/admin/templates/dashboard.html:72
 #: tellybox/web/admin/templates/dashboard.html:87
 msgid "Stop now"
+msgstr ""
+
+#: tellybox/web/admin/history.py:18
+msgid "Cleared unlimited and block"
 msgstr ""
 
 #: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:66

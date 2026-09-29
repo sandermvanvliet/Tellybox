@@ -14,9 +14,10 @@ Casting YouTube to the TV for young kids goes wrong in predictable ways. There a
 Tellybox is a small self-hosted app that replaces all of that:
 
 - **You pick the videos.** Add a YouTube video or a whole playlist from the admin page. Tellybox downloads it to your home server, and nothing appears for the kids until you approve it.
-- **Kids pick without reading.** They get big thumbnails and show artwork on any phone, tablet or laptop. One tap starts the episode on the TV.
+- **Kids pick without reading.** They tap their own picture on a "who's watching?" screen, then pick from big thumbnails and show artwork on any phone, tablet or laptop. One tap starts the episode on the TV.
 - **The TV only plays your files.** Tellybox casts plain MP4 files from your server to a Chromecast. The YouTube app is never involved, so there are no ads, no recommendations and no "up next" you didn't choose.
-- **The day's time runs out gently.** The sky in the kid app is the timer: the sun sinks as the allowance runs down, and it's night when time is up. The current episode gets to finish, then the TV stops. You can add time, give an unlimited day, or stop the TV from your phone, wherever you are.
+- **The day's time runs out gently.** Each kid has their own daily allowance, and the sky in the kid app is the timer: the sun sinks as the allowance runs down, and it's night when time is up. The current episode gets to finish, then the TV stops. You can add time, give an unlimited day, or stop the TV from your phone, wherever you are.
+- **It fits in your smart home.** A [Home Assistant integration](https://github.com/sandermvanvliet/ha-tellybox) shows what's on and each kid's time left, and puts the parent controls on your dashboards and automations.
 - **It stays at home.** It runs in Docker on your own server and is reachable only on your network (and your Tailscale tailnet). There are no accounts, no cloud and no telemetry.
 
 ## What the kids see
@@ -36,6 +37,7 @@ Tellybox is a small self-hosted app that replaces all of that:
   </tr>
 </table>
 
+- **Who's watching?** Each kid picks their own picture before choosing, and several kids can watch together. With a single profile the question is skipped.
 - **Nothing to read.** Everything works from thumbnails, show artwork and icons. Each episode and show also has a small title under its picture. That's for the grown-ups: when a kid explains which one they want, you can find it quickly.
 - **One tap to the TV.** Tapping an episode plays it on the TV and replaces whatever was on. The bar at the bottom shows what's playing and has one pause/resume button. There's no seeking, no volume and no skipping to fight over.
 - **Continue watching.** Tellybox remembers where each episode stopped and resumes there. The next episode of a show plays automatically, and you can turn that off per show.
@@ -68,8 +70,10 @@ The admin pages are designed for a phone first and sit behind a password. They s
   - Videos are grouped into a show per YouTube channel. Shows can be renamed and merged; episodes can be renamed, reordered and moved between shows.
   - Artwork can be set from an upload or a frame of the video. Anything can be hidden without deleting it.
   - Disk use is shown per show.
+- **Profiles:** a profile per kid with a name and a picture (one of the built-in avatars or a photo), each with their own allowance, continue watching and history.
+- **Integrations:** API tokens for [Home Assistant](#home-assistant) and similar tools, read-only or with parent controls, revocable at any time.
 - **Settings:** the daily allowance and how time is counted, the longest single viewing session, when the day resets, and which Chromecast to use.
-- **History:** what was watched, when and for how long, plus the overrides you applied, for the last 21 days.
+- **History:** what was watched, by whom, when and for how long, plus the overrides applied (and whether they came from Home Assistant), for the last 21 days.
 
 ## The timer, in detail
 
@@ -77,15 +81,26 @@ Kids are masters of the loophole, so the rules are explicit:
 
 | Rule | Default |
 | --- | --- |
-| Daily allowance | 60 minutes, resets at 04:00 |
+| Daily allowance | 60 minutes per kid, resets at 04:00 |
 | What counts | Only time actually playing (pauses don't count). A "wall clock" mode that counts pauses is available. |
 | Longest viewing session | 90 minutes of wall-clock time, even if allowance is left. Nothing playing for 15 minutes ends the session. |
 | Time runs out mid-episode | The episode finishes, then the TV stops and autoplay is suppressed. |
 | Finishing grace | At most 15 minutes, so an hour-long video can't run on forever. |
 | Rewatching | Counts like anything else. |
-| Parent overrides | Extra minutes, unlimited today (lifts the session limit too), block today, and stop now. Block and stop now take effect immediately, without grace. |
+| Watching together | Time counts for every kid watching, and an episode starts only if all of them have time left. |
+| Parent overrides | Extra minutes, unlimited today (lifts the session limit too), block today, and stop now, for everyone or for one kid. Block and stop now take effect immediately, without grace. |
 | Restarts and Wi-Fi blips | Timer state survives restarts. Time isn't counted while Tellybox can't see the TV. |
 | Other apps casting | Ignored. Only playback that Tellybox started is timed or stopped. |
+
+## Home Assistant
+
+[**ha-tellybox**](https://github.com/sandermvanvliet/ha-tellybox) is a Home Assistant integration for Tellybox, installed through HACS. It needs Home Assistant 2026.4 or later and a Tellybox token from **Admin → Integrations**.
+
+- **A Tellybox device:** a media player with what's on, sensors for the time left and downloads awaiting approval, and buttons for stop now, extra time, unlimited today and block today.
+- **A device per kid:** time left and used today, whether they're watching, and their own override buttons.
+- **Actions** for automations: a spoken "five more minutes", the TV off when time is up, a bedtime block, or chores that earn extra minutes.
+
+It never becomes a way around the timer: every action goes through Tellybox, and playing from Home Assistant is refused when a kid is out of time. The API it uses is documented in [docs/admin-api.md](docs/admin-api.md), and the Python client is [pytellybox](https://github.com/sandermvanvliet/pytellybox).
 
 ## How it works
 
@@ -93,6 +108,7 @@ Kids are masters of the loophole, so the rules are explicit:
 flowchart LR
   kid[Kid app<br/>any browser] --> web
   admin[Admin pages<br/>phone or laptop] --> web
+  ha[Home Assistant<br/>ha-tellybox] -- admin API --> web
   yt[YouTube] -- yt-dlp --> worker
   subgraph server[Your home server · Docker Compose]
     web[web<br/>pages, live updates,<br/>signed MP4 URLs]
@@ -113,7 +129,7 @@ flowchart LR
   - yt-dlp updates itself every night, or from a button on the Jobs page, without rebuilding the image.
 - **Casting:** the Chromecast's standard Default Media Receiver plays the files straight from your server. It works on the original 2013 Chromecast; a tap typically reaches the TV in about 4 seconds.
 - **Media links:** the links given to the Chromecast are HMAC-signed and expire after 24 hours, because a Chromecast can't log in.
-- **Timer:** one service owns the Chromecast connection and the timer. It pushes every state change to all open pages over Server-Sent Events.
+- **Timer:** one service owns the Chromecast connection and the timer. It pushes every state change to all open pages, and to Home Assistant, over Server-Sent Events.
 - **Storage:** everything lives in one SQLite file plus a media folder, so a backup is a single file. A built-in `tellybox backup` command makes a consistent copy while everything keeps running.
 
 **Stack:** Python 3.12, FastAPI, pychromecast, yt-dlp, ffmpeg and SQLite. The frontend is vanilla JavaScript and CSS with no build step, and the admin pages are server-rendered Jinja templates.
@@ -149,11 +165,12 @@ Tellybox is used daily by one family. What's done and what's next:
 - [x] Adding videos and playlists, hold for approval, library management, history
 - [x] Docker deployment with CI, nightly backups and self-updating yt-dlp
 - [x] English, Dutch and German, chosen per browser
-- [ ] **Profiles per kid:** a "who's watching?" screen with a picture per kid, and an allowance and history for each
+- [x] **Profiles per kid:** a "who's watching?" screen with a picture per kid, and an allowance and history for each
+- [x] **Home Assistant:** an admin API with tokens, and the [ha-tellybox](https://github.com/sandermvanvliet/ha-tellybox) integration
+- [ ] **Tellybox on the TV itself** *(in progress)*: its own Cast receiver shows the sinking sun in a corner, a goodnight screen when time is up, show artwork while loading, and an up-next card. The standard receiver stays as a fallback.
 - [ ] **No sponsor segments:** sponsor parts, self-promotion and "like and subscribe" reminders are cut out of the file at download, using [SponsorBlock](https://github.com/ajayyy/SponsorBlock)
 - [ ] **Channel subscriptions:** new uploads from a channel land in an approval inbox
 - [ ] **Episode splitting:** cut long compilation videos into single episodes. It starts with manual cut points and YouTube chapters, and later comes automatic title-card detection.
-- [ ] **Tellybox on the TV itself:** its own Cast receiver shows the sinking sun in a corner, a goodnight screen when time is up, show artwork while loading, and an up-next card. The standard receiver stays as a fallback.
 
 The full product requirements are in [docs/PRD.md](docs/PRD.md), and the build log is in [docs/PROGRESS.md](docs/PROGRESS.md).
 
@@ -161,11 +178,11 @@ The full product requirements are in [docs/PRD.md](docs/PRD.md), and the build l
 
 ```sh
 python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/pytest -q                                          # ~700 tests, no network or Chromecast needed
+.venv/bin/pytest -q                                          # ~1000 tests, no network or Chromecast needed
 .venv/bin/python scripts/kid_mock_server.py --port 8099      # the kid app against a mock API, every state scriptable
 ```
 
-The timer and cast controller are tested with a fake clock and a fake Chromecast. [docs/kid-api.md](docs/kid-api.md) describes the kid app's API.
+The timer and cast controller are tested with a fake clock and a fake Chromecast. [docs/kid-api.md](docs/kid-api.md) describes the kid app's API, [docs/admin-api.md](docs/admin-api.md) the admin API for Home Assistant, and [docs/cast-api.md](docs/cast-api.md) the internal API of the cast service.
 
 The logo, favicon and home-screen icon are SVGs in [docs/images/brand/](docs/images/brand/) and `tellybox/web/static/`. After changing one, run `scripts/brand.sh` to regenerate the outlined logos, the social preview and the PNG and ICO files. It needs Inkscape, ImageMagick and the [Fredoka](https://fonts.google.com/specimen/Fredoka) font.
 

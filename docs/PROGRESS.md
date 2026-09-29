@@ -129,6 +129,13 @@ Plan: `docs/plans/i18n.md`. The foundation was built first, then subagents did t
 
 ## Next
 
+## Resume here (2026-09-29)
+
+Two steps are open. Neither is merged to `main` except where noted.
+
+1. **Step 13, Tellybox receiver (v7):** in progress on `step13/receiver`, which is pushed but has no PR yet. The contract (PR #2) is on `main`, and GitHub Pages serves the spike page at `https://sandermvanvliet.github.io/Tellybox/receiver/spike.html`. **Blocked on the owner:** registering in the Google Cast SDK Developer Console. The next steps are under "13." below.
+2. **Step 8, kid profiles (v2):** deployed. The owner's playback checks on the real TV are open: `docs/plans/step8-device-checks.md`.
+
 The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, then the Tellybox Cast receiver. The decisions from that session are PRD A-7..A-11, SB-1..SB-6 and CR-1..CR-8.
 
 ### 8. Kid profiles (v2), deployed; device checks open
@@ -144,7 +151,7 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - Merged as PR #1 (PR numbers restarted in the public repository) and deployed (version 2026.09.29.2). The owner checked the admin pages and the kid app's screens on the devices: fine.
 - **Open:** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`. v2 is done when they pass.
 
-### 13. Tellybox receiver (v7), in progress
+### 13. Tellybox receiver (v7), in progress on `step13/receiver`
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
 - Contract merged as PR #2; GitHub Pages publishes `tellybox/web/receiver/` at `…/receiver/`.
@@ -169,7 +176,36 @@ Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13
     - nl and de;
     - an installation guide section.
 - **Controller fix:** with no app id (or during a fallback), `play` now moves any other running media app, such as the Tellybox receiver after its app id was cleared, to the Default Media Receiver first. Before, our media would have loaded into it and counted as taken over.
-- **Waiting on the owner:** registering the receiver in the Google Cast SDK Developer Console and the Chromecast as a test device, then the spike on the TV. The spike may change the launch in the adapter and `receiver/cast.js`.
+- TV screenshots from `receiver/dev.html` were shown to the owner (private artifact page).
+- **Next steps, in order:**
+  1. **The owner registers:**
+     - in the Google Cast SDK Developer Console (US$5 one-time), add a Custom Receiver, unpublished, with the URL `https://sandermvanvliet.github.io/Tellybox/receiver/spike.html`;
+     - add the Chromecast's serial number as a test device;
+     - wait about 15 minutes, then reboot the Chromecast;
+     - send the app ID. It is never committed; it goes into admin Settings later.
+  2. **Spike (S1..S9 in the plan)**, from the dev box on the same LAN, with the owner watching the TV's on-screen log. On `step13/receiver`, run a dev web service with a test clip, using data and media dirs outside the repository, because `./data` and `./media` belong to uid 1500:
+     ```bash
+     export TELLYBOX_DATA_DIR=~/tellybox-spike/data TELLYBOX_MEDIA_DIR=~/tellybox-spike/media
+     .venv/bin/tellybox migrate && .venv/bin/tellybox dev make-clips 2 && .venv/bin/tellybox dev seed dev-show
+     .venv/bin/python -m tellybox.web &     # serves /media and /img on http://<lan ip>:8080
+     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id CC1AD845 --episode 1  # baseline (S9)
+     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --episode 1 --overlay on
+     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --episode 1 --overlay off  # S6
+     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --no-play --seconds 660 --quit  # S7
+     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id 00000000 --episode 1  # S8
+     ```
+     - If CAF doesn't run (S2), point the console at `spike-v2.html`.
+     - If HTTP media or images are blocked from the HTTPS page (S3), switch to the home-server hosting: a public DNS name for the server's LAN address with a real certificate, set up in the owner's infrastructure repository, with media over HTTPS.
+     - Record the findings in `docs/spike-receiver.md`.
+  3. **Adapt the seams** to the findings: `_launch_receiver` in `tellybox/cast/pychromecast_device.py` (the readiness check and `RECEIVER_LAUNCH_TIMEOUT_S`) and `tellybox/web/receiver/cast.js` (SDK calls and event names). Also add a line on HTTP media to the installation guide's receiver section.
+  4. Point the console's app URL at `…/receiver/index.html`, and remove `spike*.html`, `spike-common.js`, `spike.css` and `scripts/receiver_spike.py`.
+  5. Open the PR, merge, and deploy. Set the app ID in admin Settings. Then run the real-device checks in the plan with the owner.
+- **Open follow-ups from the subagents:**
+  - The CAF calls in `receiver/cast.js` are unverified on a device: `setMediaElement`, the event names `BUFFERING`, `MEDIA_FINISHED`, `TIME_UPDATE` and `PAUSE`, `getPlayerState()`, and the frame counters.
+  - The receiver shows the loading layer from LOAD_START even before a `loading` message (documented in the protocol). The corner sky is drawn at night while a last episode finishes after time's up.
+  - A parent stop-now keeps the night screen only when the day is already out of time; otherwise it quits as in v1.
+  - `_sky()` in the controller runs one small profile query per tick while the receiver runs; cache it if it shows up.
+  - No lint was run (ruff isn't in the venv).
 
 ### Then
 9. SponsorBlock (v3) · 10. Channel subscriptions (v4) · 11. Manual splitting (v5) · 12. Smart splitting (v6).

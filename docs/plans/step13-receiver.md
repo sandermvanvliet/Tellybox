@@ -1,6 +1,6 @@
 # Step 13: Tellybox receiver (v7, CR-1..CR-8)
 
-Status: approved 2026-09-29. Branches: `step13/receiver-contract` (part 0, merged first so GitHub Pages can publish the spike page), then `step13/receiver`.
+Status: approved 2026-09-29. Part 0 merged as PR #2 (`step13/receiver-contract`); parts A, B and C built and merged on `step13/receiver` (pushed, no PR yet). Waiting for the spike; see "Resume here" in `docs/PROGRESS.md`.
 
 ## Why now
 

@@ -147,7 +147,29 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 ### 13. Tellybox receiver (v7), in progress
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
-- Waiting on the owner: registering the receiver in the Google Cast SDK Developer Console and the Chromecast as a test device, then the spike on the TV.
+- Contract merged as PR #2; GitHub Pages publishes `tellybox/web/receiver/` at `…/receiver/`.
+- Built by three Sonnet subagents and merged on `step13/receiver` (2026-09-29). 946 tests.
+  - **Cast service (A):**
+    - the receiver launch with `ReceiverUnavailable`;
+    - the `urn:x-cast:tellybox` controller;
+    - WT-9 with both app ids;
+    - the fallback to the Default Media Receiver for 30 minutes;
+    - `state` pushes (throttled, and on `hello`), with `loading` before each load and `up_next` only when autoplay will continue;
+    - the 10-minute night hold through a new `stop_media()`;
+    - stats logging, and the `receiver` block in the state.
+  - **Receiver page (B):**
+    - `index.html`, `receiver.css`, `ui.js` (pure) and `cast.js` (the CAF glue, our own `<video>` through `setMediaElement`), plus `dev.html`;
+    - old-Chrome-safe code;
+    - static gradients;
+    - no animation over the video.
+  - **Web and admin (C):**
+    - `/receiver/` served with `no-cache`;
+    - the app ID setting;
+    - the dashboard's "TV receiver" line;
+    - nl and de;
+    - an installation guide section.
+- **Controller fix:** with no app id (or during a fallback), `play` now moves any other running media app, such as the Tellybox receiver after its app id was cleared, to the Default Media Receiver first. Before, our media would have loaded into it and counted as taken over.
+- **Waiting on the owner:** registering the receiver in the Google Cast SDK Developer Console and the Chromecast as a test device, then the spike on the TV. The spike may change the launch in the adapter and `receiver/cast.js`.
 
 ### Then
 9. SponsorBlock (v3) · 10. Channel subscriptions (v4) · 11. Manual splitting (v5) · 12. Smart splitting (v6).

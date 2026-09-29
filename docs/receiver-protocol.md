@@ -36,8 +36,8 @@ One message type, always the complete state, so a receiver that missed messages 
   },
   "time_up": false,                         // no more picks today, or blocked (CR-3)
   "loading": null | {                       // CR-4: set just before a load, cleared once PLAYING
-    "artwork": "http://…/img/show/2.jpg" | null,
-    "thumb": "http://…/img/episode/4.jpg"
+    "artwork": "http://…/img/show/2.jpg" | null,   // null when the show has no artwork
+    "thumb": "http://…/img/episode/4.jpg"          // always set; a missing image just leaves the layer plain
   },
   "up_next": null | {                       // CR-5: set only when autoplay will continue after this episode
     "thumb": "http://…/img/episode/5.jpg"
@@ -58,10 +58,14 @@ The receiver combines the last `state` with its own player state (from `PlayerMa
 
 | # | Condition | Screen |
 |---|---|---|
-| 1 | `loading` set, and the player is not yet PLAYING | **Loading** (CR-4): full screen, the show artwork large (or a plain sky if null) with the episode thumbnail, and a slow opacity pulse. It also shows between autoplay episodes, when the cast service sends `loading` for the next episode. |
+| 1 | `loading` set, or a load has started (LOAD_START), and the player is not yet PLAYING | **Loading** (CR-4): full screen, the show artwork large (or a plain sky if null) with the episode thumbnail, and a slow opacity pulse. It also shows between autoplay episodes, when the cast service sends `loading` for the next episode. |
 | 2 | Player PLAYING, PAUSED or BUFFERING | **Video**, plus the **corner sky** (CR-2) in the top-right corner, about 12% of the screen width: the sun at `sunPosition()`, with the dusk colours when `last_five`. It's hidden when `sky.unlimited`. The **up-next card** (CR-5) shows in the bottom-right in the last 10 s of media when `up_next` is set. |
-| 3 | `time_up` and the player is IDLE | **Night** (CR-3): full screen, a navy sky with the moon and a few stars over the hill. The cast service quits the app after 10 minutes. |
+| 3 | `time_up` and the player is IDLE | **Night** (CR-3): full screen, a navy sky with the moon and a few stars over the hill. The cast service quits the app after 10 minutes, or earlier when a new pick loads. |
 | 4 | Otherwise (IDLE) | **Idle**: a full-screen day sky with the sun, and nothing else. |
+
+**When the night hold applies (CR-3).** It applies only while the Tellybox receiver is the running app, and only when an episode ends because time is up: the allowance or session max ran out (after the grace), a block, or a parent stop-now on a day that's already out of time. The cast service then stops the media but keeps the app up (`stop_media`). Other ends, such as the end of a show or a stop with time left, quit the app as in v1.
+
+**On a cold launch** the receiver isn't up yet when the cast service first sends `loading`. The reply to its `hello` carries the full state, including `loading`.
 
 The sky states and colours are the kid app's (`tellybox/web/static/sky.js`, `app.css`), so kids recognise the same picture on the TV.
 

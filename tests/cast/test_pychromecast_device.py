@@ -236,6 +236,19 @@ async def test_play_uses_buffered_mp4(cast):
     ]
 
 
+async def test_play_without_app_id_leaves_another_media_app(cast):  # PB-2, WT-9
+    """Our media only ever loads into the Default Media Receiver without an app id, even when another app
+    that speaks the media namespace (the Tellybox receiver after its app id was cleared) is running."""
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.app_id = "ABCD1234"
+    await dev.play("http://x/a.mp4")
+    assert ("start_app", mod.DEFAULT_MEDIA_RECEIVER, mod.RECEIVER_LAUNCH_TIMEOUT_S) in cast.calls
+    cast.calls.clear()
+    await dev.play("http://x/b.mp4")  # the Default Media Receiver runs now: no relaunch
+    assert not [c for c in cast.calls if c[0] == "start_app"]
+
+
 async def test_simple_commands(cast):
     dev = PyChromecastDevice(INFO)
     await dev.connect()

@@ -23,6 +23,6 @@ def test_receiver_files_are_served_uncached(config, fake_cast, tmp_path, monkeyp
 
 def test_real_receiver_directory_is_mounted(config, fake_cast):
     client = TestClient(create_app(config, conn=db.open_db(config.db_path), cast=fake_cast))
-    r = client.get("/receiver/spike.css")  # a file of the contract commit; index.html arrives with the page
+    r = client.get("/receiver/index.html")
     assert r.status_code == 200
     assert r.headers["cache-control"] == "no-cache"

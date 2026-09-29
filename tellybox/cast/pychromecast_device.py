@@ -27,6 +27,7 @@ from pychromecast.error import NotConnected, PyChromecastError, RequestFailed
 from tellybox.cast.device import (
     ConnectionState,
     ConnectionStatus,
+    DEFAULT_MEDIA_RECEIVER,
     DeviceEvent,
     DeviceInfo,
     LoadFailed,
@@ -273,6 +274,10 @@ class PyChromecastDevice:
         def run(c: Any) -> None:
             if app_id is not None:
                 self._launch_receiver(c, app_id)
+            elif c.app_id not in (None, DEFAULT_MEDIA_RECEIVER) and c.media_controller.is_active:
+                # The media controller loads into any running app that speaks the media namespace (e.g. the
+                # Tellybox receiver after its app id was cleared); our media belongs in the DMR (PB-2, WT-9).
+                c.start_app(DEFAULT_MEDIA_RECEIVER, timeout=RECEIVER_LAUNCH_TIMEOUT_S)
             # BUFFERED: pychromecast defaults to LIVE, which disables seeking (spike).
             c.media_controller.play_media(
                 url, "video/mp4", title=title, stream_type="BUFFERED", current_time=start_s or None

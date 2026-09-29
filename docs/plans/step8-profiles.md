@@ -1,6 +1,6 @@
 # Step 8: Kid profiles (v2, PR-1..PR-4)
 
-Status: proposed 2026-09-29, waiting for the owner's approval. Branch: `step8/profiles`.
+Status: approved 2026-09-29; merged as PR #1 and deployed. The playback checks on the real TV are open in `docs/plans/step8-device-checks.md`.
 
 ## Decisions (owner, 2026-09-29)
 

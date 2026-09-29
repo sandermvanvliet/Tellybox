@@ -22,7 +22,7 @@ from tellybox.clock import Clock, SystemClock
 from tellybox.config import Config
 from tellybox.media_urls import verify
 from tellybox.ytdlp import YtDlp
-from tellybox.web import kid
+from tellybox.web import api, kid
 from tellybox.web.admin import mount_admin
 from tellybox.web.admin.common import AdminContext
 from tellybox.web.cast_client import CastClient
@@ -32,6 +32,7 @@ from tellybox.web.locale import LocaleMiddleware
 log = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+ADMIN_REFRESH_S = 10.0  # the admin hub re-reduces this often (jobs, disk, profile settings)
 
 
 def resolve_media_file(media_dir: Path, file_path: str) -> Path | None:
@@ -64,19 +65,32 @@ def create_app(
     static_dir = static_dir or STATIC_DIR
     ytdlp = ytdlp if ytdlp is not None else YtDlp(config.data_dir / "tools" / "yt-dlp")
     hub = KidHub(cast, partial(kid.kid_state, conn))
+    # HA-3: the same relay, reduced to the admin API's state; refreshed so jobs, disk and names keep up.
+    counts = api.Counts(conn, config.media_dir)
+    admin_hub = KidHub(
+        cast,
+        lambda cast_state: api.build_admin_state(conn, config, cast_state, counts.get()),
+        unreachable=api.unreachable,
+        initial=lambda: api.build_admin_state(conn, config, None, counts.get()),
+        refresh_s=ADMIN_REFRESH_S,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         hub.start()  # KA-7: relay the cast service's live state to kid pages
+        admin_hub.start()  # HA-3: and to the admin API's event stream
         try:
             yield
         finally:
+            await admin_hub.stop()
             await hub.stop()
             if owns_cast:
                 await cast.aclose()
 
     app = FastAPI(title="Tellybox", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.hub = hub
+    app.state.admin_hub = admin_hub
+    app.state.admin_counts = counts
     # A reverse proxy such as nginx on the same host may serve Tellybox over HTTPS. Trust
     # its X-Forwarded-For/-Proto, and only from 127.0.0.1: the login throttle then sees each
     # device's own address, and devices talking to the port directly can't spoof one.
@@ -105,6 +119,9 @@ def create_app(
 
     # Kid app (KA-1..KA-9); no login (NF-1).
     app.include_router(kid.create_router(config, conn, cast, hub, resolve_media_file))
+
+    # Admin JSON API (HA-1..HA-8); bearer tokens, no cookies.
+    app.include_router(api.create_router(config, conn, clock, cast, admin_hub, counts))
 
     def static_file(name: str, **kwargs) -> FileResponse:
         path = static_dir / name

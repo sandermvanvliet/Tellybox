@@ -32,9 +32,10 @@ from tellybox.cast.device import (
     LoadFailed,
     MediaStatus,
     PlayerState,
+    ReceiverMessage,
     ReceiverStatus,
 )
-from tellybox.cast.pychromecast_device import CastCommandError
+from tellybox.cast.pychromecast_device import CastCommandError, ReceiverUnavailable
 from tellybox.clock import Clock
 from tellybox.db import to_db
 from tellybox.library import Episode
@@ -48,6 +49,11 @@ STATUS_POLL_EVERY_S = 30.0   # drift check; the device sends nothing while playi
 RECOVERY_WAIT_S = 10.0       # NF-7: how long to wait for our media to show up after a restart
 RECONNECT_WAIT_S = 300.0     # PB-5: how long a lost connection may last before the session is ended
 RESUME_TAIL_S = 10.0         # don't resume within the last seconds of an episode
+RECEIVER_FALLBACK_S = 30 * 60.0  # CR-6: after a failed launch, stay on the Default Media Receiver this long
+NIGHT_HOLD_S = 600.0         # CR-3: how long the night screen stays on the TV before the app quits
+RECEIVER_PUSH_EVERY_S = 30.0  # CR-7: at least one state message this often while our receiver runs
+FRACTION_STEP = 0.01         # CR-2: send a new state when the sky moves this much
+LAST_FIVE_S = 300.0          # KA-8, as in the kid app
 
 
 class EndReason(StrEnum):
@@ -135,6 +141,14 @@ class CastController:
             store.load_timer_snapshot(conn),
         )
         self._known_profiles = store.profile_ids(conn)
+        # Tellybox receiver (v7). receiver_app_id follows the admin setting (each persist); None = Default Media Receiver only.
+        self.receiver_app_id = store.receiver_app_id(conn)
+        self.fallback_until: datetime | None = None  # CR-6
+        self.receiver_error: str | None = None
+        self._rx_loading: dict | None = None  # CR-4: set from the pick until the episode plays
+        self._rx_sent: dict | None = None
+        self._rx_sent_at: datetime | None = None
+        self._night_until: datetime | None = None  # CR-3
         self._decision = self.timer.tick(now)
         self._lost_at: datetime | None = None
         self._reconnected = False  # first receiver status after a reconnect decides between resume and PB-5
@@ -190,6 +204,7 @@ class CastController:
                 await self.device.close()
         self.device = device
         self.connection = ConnectionState.DISCONNECTED
+        self._night_until, self._rx_sent = None, None
         self._device_task = asyncio.create_task(self._device_loop(device), name="cast-device")
         self._broadcast()
 
@@ -276,6 +291,7 @@ class CastController:
         self._decision = self.timer.tick(now)
         await self._apply_decision(self._decision)
         self.persist(now)
+        await self._push_receiver()
         self._broadcast()
 
     # ------------------------------------------------------------------ periodic
@@ -300,7 +316,18 @@ class CastController:
                 await self.device.request_status()
         if (now - self._last_persist).total_seconds() >= PERSIST_EVERY_S:
             self.persist(now)
+        await self._end_night(now)
+        await self._push_receiver()
         self._broadcast()
+
+    async def _end_night(self, now: datetime) -> None:
+        """CR-3: the night screen has been up long enough; quit our app so the TV can sleep."""
+        if self._night_until is None or now < self._night_until:
+            return
+        self._night_until = None
+        if self.current is None and self.device and self._receiver_running():  # never quit somebody else's app (WT-9)
+            with contextlib.suppress(CastCommandError):
+                await self.device.stop()
 
     def persist(self, now: datetime) -> None:
         """Write timer state, usage, history heartbeat and position (WT-8, PB-4)."""
@@ -337,6 +364,9 @@ class CastController:
                 if self.current and not self.current.stopping:
                     log.warning("load failed: %s", event.error_code)
                     self._end_current(EndReason.LOAD_FAILED)
+            case ReceiverMessage(payload=payload):
+                await self._on_receiver_message(payload)
+        await self._push_receiver()
         self._broadcast()
 
     def _on_connection(self, state: ConnectionState, now: datetime) -> None:
@@ -357,7 +387,7 @@ class CastController:
         if c is None or c.stopping:
             return
         if c.cast_session_id is None:
-            if event.app_id == DEFAULT_MEDIA_RECEIVER and event.session_id:
+            if self._is_ours(event.app_id) and event.session_id:
                 self._adopt_cast_session(c, event.session_id)
             return
         if event.session_id != c.cast_session_id:
@@ -387,7 +417,7 @@ class CastController:
 
         if c.cast_session_id is None and self.device and self.device.receiver:
             r = self.device.receiver
-            if r.app_id == DEFAULT_MEDIA_RECEIVER and r.session_id:
+            if self._is_ours(r.app_id) and r.session_id:
                 self._adopt_cast_session(c, r.session_id)
 
         state = event.player_state
@@ -400,6 +430,8 @@ class CastController:
             activity = Activity.PAUSED if state == PlayerState.PAUSED else Activity.PLAYING
             self._decision = self.timer.set_activity(now, activity)
             c.player_state = state  # BUFFERING doesn't advance the extrapolated position
+            if state == PlayerState.PLAYING:
+                self._rx_loading = None  # CR-4: the loading screen has done its job
         elif state == PlayerState.IDLE:
             if event.idle_reason == "FINISHED":
                 await self._on_finished(now)
@@ -430,8 +462,18 @@ class CastController:
                 await self._start_episode(nxt, now, c.profile_ids)
                 return
         if self.device:
+            if not self._decision.can_start and await self._hold_night():
+                return  # CR-3: time's up, so the TV keeps the night screen
             with contextlib.suppress(CastCommandError):
                 await self.device.stop()  # back to the TV's idle screen
+
+    async def _hold_night(self) -> bool:
+        """CR-3: with our receiver on screen, time's up keeps the app up for NIGHT_HOLD_S instead of quitting it."""
+        if not self._receiver_running():
+            return False
+        self._night_until = self.clock.now() + timedelta(seconds=NIGHT_HOLD_S)
+        await self._push_receiver(force=True)  # time_up
+        return True
 
     # ------------------------------------------------------------------ internals
 
@@ -456,18 +498,51 @@ class CastController:
             position_at=now,
             duration_s=episode.duration_s,
         )
-        receiver = self.device.receiver
-        if receiver and receiver.app_id == DEFAULT_MEDIA_RECEIVER and receiver.session_id:
-            self._adopt_cast_session(self.current, receiver.session_id)  # warm receiver: no new session event
-            if self.device.media is not None:
-                self.current.replaced_media_session_id = self.device.media.media_session_id
+        self._night_until = None  # a new load ends the night hold (CR-3)
+        app_id = self.receiver_app_id if self.receiver_app_id and not self._fallback_active(now) else None
+        self._rx_loading = self._loading(episode) if app_id else None
+        await self._push_receiver()  # CR-4: the loading screen goes up before the load
         log.info("playing episode %s from %.0f s", episode.id, start_s)
         try:
-            await self.device.play(url, title=episode.title, start_s=start_s)
+            try:
+                self._adopt_warm(self.current, app_id or DEFAULT_MEDIA_RECEIVER)
+                await self.device.play(url, title=episode.title, start_s=start_s, app_id=app_id)
+                if app_id:
+                    self.receiver_error = None
+            except ReceiverUnavailable as exc:  # CR-6: same pick on the Default Media Receiver, at once
+                self.receiver_error = str(exc)
+                self.fallback_until = self.clock.now() + timedelta(seconds=RECEIVER_FALLBACK_S)
+                self._rx_loading = None
+                log.warning("Tellybox receiver unavailable (%s); using the Default Media Receiver until %s",
+                            exc, self.fallback_until)
+                self._adopt_warm(self.current, DEFAULT_MEDIA_RECEIVER)
+                await self.device.play(url, title=episode.title, start_s=start_s, app_id=None)
         except CastCommandError:
             self._end_current(EndReason.LOAD_FAILED)
             raise
         self._broadcast()
+
+    def _adopt_warm(self, c: Current, app_id: str) -> None:
+        """A receiver that already runs `app_id` sends no new session event when we load into it."""
+        c.cast_session_id, c.replaced_media_session_id = None, None
+        receiver = self.device.receiver if self.device else None
+        if receiver and receiver.session_id and self._is_ours(receiver.app_id):
+            if receiver.app_id == app_id:
+                self._adopt_cast_session(c, receiver.session_id)
+            # Also when we move between our two receivers: the media left behind may report late.
+            if self.device.media is not None:
+                c.replaced_media_session_id = self.device.media.media_session_id
+
+    def _is_ours(self, app_id: str | None) -> bool:
+        """WT-9: the receiver app that plays our media is the Default Media Receiver or the Tellybox receiver."""
+        return app_id is not None and (app_id == DEFAULT_MEDIA_RECEIVER or app_id == self.receiver_app_id)
+
+    def _fallback_active(self, now: datetime) -> bool:
+        return self.fallback_until is not None and now < self.fallback_until
+
+    def _receiver_running(self) -> bool:
+        r = self.device.receiver if self.device else None
+        return bool(self.receiver_app_id and r and r.app_id == self.receiver_app_id)
 
     def _adopt_cast_session(self, c: Current, cast_session_id: str) -> None:
         c.cast_session_id = cast_session_id
@@ -478,12 +553,22 @@ class CastController:
         if c is None:
             return
         c.stopping = True
+        night = reason in (EndReason.TIME_UP, EndReason.BLOCKED) or (
+            reason == EndReason.PARENT_STOP and not self._decision.can_start
+        )
+        held = False
         if self.device:
             try:
-                await self.device.stop()
+                if night and self._receiver_running():
+                    await self.device.stop_media()  # CR-3: the app stays up and shows the night
+                    held = True
+                else:
+                    await self.device.stop()
             except CastCommandError:
                 log.warning("stop command failed; ending the session anyway")
         self._end_current(reason)
+        if held:
+            await self._hold_night()
 
     def _end_current(self, reason: EndReason, ended_at: datetime | None = None) -> None:
         c = self.current
@@ -499,6 +584,7 @@ class CastController:
         store.close_watch_session(self.conn, c.watch_session_id, reason, ended_at or now, counted)
         log.info("episode %s ended: %s at %.0f s", c.episode.id, reason, pos)
         self.current = None
+        self._rx_loading = None
         self.persist(now)
 
     async def _apply_decision(self, decision: Decision) -> None:
@@ -527,7 +613,7 @@ class CastController:
                 url=event.content_id,
                 watch_session_id=rs.id,
                 profile_ids=watchers,
-                cast_session_id=receiver.session_id if receiver and receiver.app_id == DEFAULT_MEDIA_RECEIVER else rs.cast_session_id,
+                cast_session_id=receiver.session_id if receiver and self._is_ours(receiver.app_id) else rs.cast_session_id,
                 duration_s=episode.duration_s,
             )
             self._recovering = None
@@ -546,6 +632,8 @@ class CastController:
         """Follow profiles added or deleted in the admin: the timer learns the new set, and a
         deleted profile leaves the current episode (its rows are gone, so no more positions)."""
         ids = store.profile_ids(self.conn)
+        if force:
+            self.receiver_app_id = store.receiver_app_id(self.conn)
         if ids != self._known_profiles or force:
             self.timer.set_policies(store.timer_settings(self.conn, self.tz), store.profile_policies(self.conn), now)
             self._known_profiles = ids
@@ -587,7 +675,115 @@ class CastController:
                 "profiles": [self._profile_state(now, p) for p in self._known_profiles],
             },
             "time_up": not d.can_start,  # KA-9
+            "receiver": self._receiver_state(now),
         }
+
+    def _receiver_state(self, now: datetime) -> dict:
+        fallback = self._fallback_active(now)
+        return {
+            "kind": "tellybox" if self.receiver_app_id and not fallback else "default",
+            "configured": self.receiver_app_id is not None,
+            "fallback_until": to_db(self.fallback_until) if fallback else None,
+            "last_error": self.receiver_error,
+        }
+
+    # ------------------------------------------------------------------ Tellybox receiver messages (CR-2..CR-8)
+
+    async def _on_receiver_message(self, payload: dict) -> None:
+        match payload.get("type"):
+            case "hello":
+                log.info("receiver connected: %s", payload.get("ua"))
+                await self._push_receiver(force=True)  # a receiver that just (re)started needs the whole state
+            case "stats":  # CR-8
+                log.info("receiver stats: dropped=%s total=%s state=%s",
+                         payload.get("dropped"), payload.get("total"), payload.get("state"))
+            case "log":
+                level = logging.ERROR if payload.get("level") == "error" else logging.INFO
+                log.log(level, "receiver: %s", payload.get("msg"))
+            case other:
+                log.debug("unknown receiver message %r", other)
+
+    def _loading(self, episode: Episode) -> dict:
+        base = self.media_base_url.rstrip("/")
+        show = library.get_show(self.conn, episode.show_id)
+        return {
+            "artwork": f"{base}/img/show/{episode.show_id}.jpg" if show and show.artwork_path else None,
+            "thumb": f"{base}/img/episode/{episode.id}.jpg",
+        }
+
+    def _up_next(self) -> dict | None:
+        """CR-5: the next thumbnail, only when autoplay will actually continue."""
+        c = self.current
+        if c is None or c.stopping or not self._decision.autoplay_allowed:
+            return None
+        show = library.get_show(self.conn, c.episode.show_id)
+        nxt = library.next_episode(self.conn, c.episode.id) if show and show.autoplay else None
+        return {"thumb": f"{self.media_base_url.rstrip('/')}/img/episode/{nxt.id}.jpg"} if nxt else None
+
+    def _sky(self, now: datetime) -> dict:
+        """The watchers' sky, as the kid app's KidState.sky (tellybox/web/kid.py::_fraction_left)."""
+        remaining = self._decision.remaining_s
+        if remaining is None:
+            return {"fraction_left": None, "last_five": False, "unlimited": True}
+        allowance = {
+            r["id"]: r["daily_allowance_min"] * 60.0
+            for r in self.conn.execute("SELECT id, daily_allowance_min FROM profile ORDER BY id")
+        }
+        entries = [self._profile_state(now, p) for p in self._known_profiles if p in allowance]
+        watchers = [p for p in entries if p["watching"]]
+        limited = [p for p in (watchers or entries) if not p["unlimited"]]
+
+        def fraction(left: float, total: float) -> float:
+            return min(max(left / total, 0.0), 1.0) if total > 0 else 0.0
+
+        if len(limited) > 1:  # several profiles watching; the one with the least left decides
+            left = min(fraction(p["remaining_s"], allowance[p["profile_id"]] + p["extra_s"]) for p in limited)
+        elif limited:
+            left = fraction(remaining, allowance[limited[0]["profile_id"]] + limited[0]["extra_s"])
+        else:
+            left = fraction(remaining, allowance.get(self._known_profiles[0], 0.0) if self._known_profiles else 0.0)
+        return {"fraction_left": round(left, 3), "last_five": remaining <= LAST_FIVE_S, "unlimited": False}
+
+    def _receiver_message(self, now: datetime) -> dict:
+        return {
+            "type": "state", "v": 1,
+            "sky": self._sky(now),
+            "time_up": not self._decision.can_start,
+            "loading": self._rx_loading,
+            "up_next": self._up_next(),
+        }
+
+    def _rx_due(self, msg: dict, now: datetime) -> bool:
+        last = self._rx_sent
+        if last is None or self._rx_sent_at is None:
+            return True
+        if any(last[k] != msg[k] for k in ("time_up", "loading", "up_next")):
+            return True
+        a, b = last["sky"], msg["sky"]
+        if a["last_five"] != b["last_five"] or a["unlimited"] != b["unlimited"]:
+            return True
+        if (a["fraction_left"] is None) != (b["fraction_left"] is None):
+            return True
+        if a["fraction_left"] is not None and abs(a["fraction_left"] - b["fraction_left"]) >= FRACTION_STEP - 1e-9:
+            return True
+        return (now - self._rx_sent_at).total_seconds() >= RECEIVER_PUSH_EVERY_S
+
+    async def _push_receiver(self, force: bool = False) -> None:
+        """Send the receiver its state when something it shows changed (CR-2, CR-7).
+        `force` (a hello, a load, time up) skips the throttle, and for a hello also the running check."""
+        if self.device is None or not self.receiver_app_id:
+            self._rx_sent = None  # no receiver configured: exactly the v1 behaviour, nothing is sent
+            return
+        if not force and not self._receiver_running():
+            self._rx_sent = None  # the next time it runs it needs the whole state
+            return
+        now = self.clock.now()
+        msg = self._receiver_message(now)
+        if not force and not self._rx_due(msg, now):
+            return
+        self._rx_sent, self._rx_sent_at = msg, now
+        with contextlib.suppress(CastCommandError):
+            await self.device.send_receiver_message(msg)
 
     def _profile_state(self, now: datetime, profile_id: int) -> dict:
         u, status = self.timer.usage(profile_id), self.timer.profile_status(now, profile_id)

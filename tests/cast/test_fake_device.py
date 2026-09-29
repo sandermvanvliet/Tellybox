@@ -8,10 +8,11 @@ from tellybox.cast.device import (
     ConnectionStatus,
     MediaStatus,
     PlayerState,
+    ReceiverMessage,
     ReceiverStatus,
 )
 from tellybox.cast.fake import BACKDROP_APP, YOUTUBE_APP, FakeCastDevice
-from tellybox.cast.pychromecast_device import CastCommandError
+from tellybox.cast.pychromecast_device import CastCommandError, ReceiverUnavailable
 from tellybox.clock import FakeClock
 
 URL = "http://srv/media/ep1.mp4"
@@ -261,3 +262,70 @@ async def test_close(dev):
     await connected(dev)
     await dev.close()
     assert not dev.connected and dev.calls[-1] == ("close",)
+
+
+# --------------------------------------------------------------------------- Tellybox receiver (v7)
+
+TB = "ABCD1234"
+
+
+async def test_play_with_app_id_launches_our_receiver_and_says_hello(dev):  # CR-1
+    await connected(dev)
+    await dev.play(URL, app_id=TB)
+    events = dev.drain()
+    assert ReceiverStatus(TB, "tellybox-1", "Tellybox") in events
+    hello = [e for e in events if isinstance(e, ReceiverMessage)]
+    assert len(hello) == 1 and hello[0].payload["type"] == "hello" and hello[0].payload["v"] == 1
+    assert events.index(hello[0]) < events.index(next(e for e in events if isinstance(e, MediaStatus)))
+    assert dev.receiver.app_id == TB and dev.media.player_state == P
+    assert dev.play_app_ids == [TB]
+
+
+async def test_warm_receiver_is_not_relaunched(dev):
+    await connected(dev)
+    await dev.play(URL, app_id=TB)
+    dev.drain()
+    await dev.play("http://srv/media/ep2.mp4", app_id=TB)
+    events = dev.drain()
+    assert not [e for e in events if isinstance(e, (ReceiverStatus, ReceiverMessage))]
+    assert dev.receiver.session_id == "tellybox-1"
+
+
+async def test_launch_failure_injection(dev):  # CR-6
+    await connected(dev)
+    dev.fail_launch = True
+    with pytest.raises(ReceiverUnavailable):
+        await dev.play(URL, app_id=TB)
+    assert dev.drain() == [] and dev.receiver.app_id == BACKDROP_APP
+    dev.fail_launch = False
+    await dev.play(URL)  # the Default Media Receiver is unaffected
+    assert dev.receiver.app_id == DMR
+
+
+async def test_messages_are_recorded_only_while_our_receiver_runs(dev):
+    await connected(dev)
+    await dev.send_receiver_message({"type": "state"})
+    assert dev.sent_messages == []
+    await dev.play(URL, app_id=TB)
+    await dev.send_receiver_message({"type": "state", "n": 1})
+    assert dev.sent_messages == [{"type": "state", "n": 1}]
+    await dev.stop()
+    await dev.send_receiver_message({"type": "state", "n": 2})
+    assert len(dev.sent_messages) == 1
+
+
+async def test_stop_media_keeps_the_app(dev):
+    await connected(dev)
+    await dev.play(URL, app_id=TB)
+    dev.drain()
+    await dev.stop_media()
+    assert dev.receiver.app_id == TB
+    assert dev.drain() == [MediaStatus(I, URL, 0.0, 600.0, "CANCELLED", 1)]
+
+
+async def test_receiver_says_hello_on_demand(dev):
+    await connected(dev)
+    await dev.play(URL, app_id=TB)
+    dev.drain()
+    dev.hello()
+    assert [e.payload["type"] for e in dev.drain()] == ["hello"]

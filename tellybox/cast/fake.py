@@ -23,9 +23,10 @@ from tellybox.cast.device import (
     DeviceInfo,
     MediaStatus,
     PlayerState,
+    ReceiverMessage,
     ReceiverStatus,
 )
-from tellybox.cast.pychromecast_device import CastCommandError
+from tellybox.cast.pychromecast_device import CastCommandError, ReceiverUnavailable
 from tellybox.clock import FakeClock
 
 BACKDROP_APP = "E8C28D3C"
@@ -52,10 +53,15 @@ class FakeCastDevice:
         self.calls: list[tuple] = []
         self.connected = False
         self.fail_next_command = False
+        # Tellybox receiver (v7): launch failure injection, the app id we launched, what the cast service sent.
+        self.fail_launch = False
+        self.play_app_ids: list[str | None] = []
+        self.sent_messages: list[dict] = []
+        self._tellybox_app_id: str | None = None
         self._queue: asyncio.Queue[DeviceEvent] | None = None
         self._receiver: ReceiverStatus | None = None
         self._media_status: MediaStatus | None = None
-        self._n = {"backdrop": 1, "dmr": 0, "foreign": 0, "media": 0}
+        self._n = {"backdrop": 1, "dmr": 0, "tellybox": 0, "foreign": 0, "media": 0}
         self._app = ReceiverStatus(BACKDROP_APP, "backdrop-1", "Backdrop")
         self._m: _Media | None = None
         self._frozen = False
@@ -154,10 +160,17 @@ class FakeCastDevice:
             yield await self.queue.get()
 
     async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
-        if app_id is not None:
-            raise NotImplementedError  # step 13, part A
         self._command("play", url, start_s)
-        if self._app.app_id != DEFAULT_MEDIA_RECEIVER:
+        self.play_app_ids.append(app_id)
+        if app_id is not None:
+            if self._app.app_id != app_id:
+                if self.fail_launch:
+                    raise ReceiverUnavailable("launch timed out")
+                self._tellybox_app_id = app_id
+                self._set_app("tellybox", app_id, "Tellybox")
+                self._emit(self._app)
+                self.hello()
+        elif self._app.app_id != DEFAULT_MEDIA_RECEIVER:
             self._set_app("dmr", DEFAULT_MEDIA_RECEIVER, "Default Media Receiver")
             self._emit(self._app)
         replaced = self._m if self._m is not None and self._m.state != PlayerState.IDLE else None
@@ -184,7 +197,19 @@ class FakeCastDevice:
         self._set_state(PlayerState.PLAYING)
 
     async def send_receiver_message(self, payload: dict) -> None:
-        raise NotImplementedError  # step 13, part A
+        if self.receiver_running:  # like the real device: nothing reaches a receiver that isn't ours
+            self.sent_messages.append(payload)
+            self.calls.append(("receiver_message", payload))
+
+    @property
+    def receiver_running(self) -> bool:
+        return self._tellybox_app_id is not None and self._app.app_id == self._tellybox_app_id
+
+    async def stop_media(self) -> None:
+        self._command("stop_media")
+        if self._m is not None and self._m.state != PlayerState.IDLE:
+            self._set_state(PlayerState.IDLE, "CANCELLED")
+        self._m = None
 
     async def stop(self) -> None:
         self._command("stop")
@@ -199,6 +224,13 @@ class FakeCastDevice:
         self._emit_media()
 
     # ------------------------------------------------------------------ test helpers
+
+    def hello(self) -> None:
+        """The Tellybox receiver reports a connected sender (docs/receiver-protocol.md)."""
+        self._emit(ReceiverMessage({"type": "hello", "v": 1, "ua": "FakeReceiver/1.0"}))
+
+    def receiver_message(self, payload: dict) -> None:
+        self._emit(ReceiverMessage(payload))
 
     def finish(self) -> None:
         self._set_state(PlayerState.IDLE, "FINISHED")
@@ -244,9 +276,18 @@ class FakeCastDevice:
         self._emit_media()
 
     def preload(
-        self, url: str, position_s: float, state: PlayerState = PlayerState.PLAYING, duration_s: float | None = None
+        self,
+        url: str,
+        position_s: float,
+        state: PlayerState = PlayerState.PLAYING,
+        duration_s: float | None = None,
+        app_id: str | None = None,
     ) -> None:
-        self._set_app("dmr", DEFAULT_MEDIA_RECEIVER, "Default Media Receiver")
+        if app_id is not None:  # already playing in the Tellybox receiver
+            self._tellybox_app_id = app_id
+            self._set_app("tellybox", app_id, "Tellybox")
+        else:
+            self._set_app("dmr", DEFAULT_MEDIA_RECEIVER, "Default Media Receiver")
         self._n["media"] += 1
         duration = duration_s if duration_s is not None else self._duration(url)
         self._m = _Media(url, state, position_s, self._t(), duration, session_id=self._n["media"])

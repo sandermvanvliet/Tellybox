@@ -134,6 +134,10 @@ class CastDevice(Protocol):
         """Stop media and quit the receiver app, so the TV returns to its idle screen."""
         ...
 
+    async def stop_media(self) -> None:
+        """Stop the media but keep the receiver app running (the night screen after time's up, CR-3)."""
+        ...
+
     async def request_status(self) -> None:
         """Ask the device for a fresh media status (result arrives as an event)."""
         ...

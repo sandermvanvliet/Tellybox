@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tellybox</title>
+<link rel="stylesheet" href="receiver.css">
+</head>
+<body>
+<!-- Tellybox receiver (v7, CR-1..CR-8). No text anywhere (KA-2). Relative paths only: hosted at
+     /receiver/ on the home server and at /Tellybox/receiver/ on GitHub Pages. -->
+
+<!-- Our own <video>, handed to the Cast framework with setMediaElement, so no player UI shows. -->
+<video id="video"></video>
+
+<!-- Corner sky (CR-2): the kid app's sky, small, over the video. Static; the sun moves by transform. -->
+<div id="corner" class="scene corner" hidden></div>
+
+<!-- Full-screen layers. Each is opaque, so it is only shown while no video frame is (CR-8). -->
+<div id="loading" class="layer layer-loading" hidden>
+  <div class="pulse">
+    <img id="artwork" class="artwork" alt="">
+    <img id="thumb" class="thumb" alt="">
+  </div>
+</div>
+<div id="scene" class="layer scene big" hidden></div>
+
+<!-- Up-next card (CR-5): the next episode's picture, bottom right, in the last 10 s. -->
+<div id="upnext" class="upnext" hidden>
+  <img id="upnext-img" alt="">
+  <svg class="play" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#FFC93C"/><path d="M15 11l16 9-16 9Z" fill="#1E2A5A"/></svg>
+</div>
+
+<template id="scene-tpl">
+  <div class="sky-layer sky-day"></div>
+  <div class="sky-layer sky-dusk"></div>
+  <div class="sky-layer sky-night"></div>
+  <div class="stars" aria-hidden="true">
+    <svg viewBox="0 0 20 20" style="left:8%;top:22%;width:2.2vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:19%;top:42%;width:1.5vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:31%;top:14%;width:1.9vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:44%;top:34%;width:1.3vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:56%;top:12%;width:2.4vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:66%;top:38%;width:1.5vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+    <svg viewBox="0 0 20 20" style="left:90%;top:44%;width:1.8vw"><path d="M10 1q1.6 7.4 9 9-7.4 1.6-9 9-1.6-7.4-9-9 7.4-1.6 9-9Z"/></svg>
+  </div>
+  <svg class="moon" viewBox="0 0 60 60" aria-hidden="true"><path d="M40 6a24 24 0 1 0 14 38A20 20 0 0 1 40 6Z"/></svg>
+  <div class="sun"><i class="halo"></i><i class="warm"></i></div>
+  <svg class="far-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
+    <path class="far-hill-back" d="M0 34C50 10 110 8 170 26s120 4 170-10 60 6 60 6V60H0Z"/>
+    <path class="far-hill-front" d="M0 44c60-16 130-18 200-4s140 10 200-6V60H0Z"/>
+  </svg>
+</template>
+
+<script src="ui.js"></script>
+<script src="cast.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tellybox receiver (dev harness)</title>
+<style>
+  body { margin: 16px; font: 14px system-ui, sans-serif; background: #eee; }
+  #stage { width: 1280px; height: 720px; border: 0; display: block; background: #000; }
+  .row { margin: 10px 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  button { padding: 6px 12px; }
+</style>
+</head>
+<body>
+<!-- Desktop harness: index.html with ?dev (no Cast SDK), driven through TellyboxUI.
+     Serve this folder with `python3 -m http.server` and open dev.html. Dev only. -->
+<iframe id="stage" src="index.html?dev"></iframe>
+<div class="row" id="buttons"></div>
+<div class="row">
+  <label>time left in episode (s) <input id="left" type="number" value="120" style="width:5em"></label>
+  <label>fraction left <input id="frac" type="range" min="0" max="1" step="0.01" value="0.62"></label>
+</div>
+<script>
+"use strict";
+var stage = document.getElementById("stage");
+if (/[?&]bare\b/.test(location.search)) { document.body.style.margin = "0"; document.querySelectorAll(".row").forEach(function (r) { r.hidden = true; }); } // for screenshots
+
+// Placeholder images as SVG data URLs, so the harness needs nothing else.
+function pic(c1, c2, shape) {
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></linearGradient></defs>' +
+    '<rect width="160" height="90" fill="url(#g)"/>' + shape + '</svg>';
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+var ART = pic("#FF9E7A", "#FFD36E", '<circle cx="80" cy="45" r="26" fill="#fff" opacity=".85"/><circle cx="70" cy="40" r="5" fill="#1E2A5A"/><circle cx="90" cy="40" r="5" fill="#1E2A5A"/>');
+var THUMB = pic("#7AD3A0", "#3FA7D6", '<rect x="40" y="25" width="80" height="40" rx="10" fill="#fff" opacity=".85"/>');
+var NEXT = pic("#B58CFF", "#FF7AA8", '<path d="M60 22l50 23-50 23Z" fill="#fff" opacity=".9"/>');
+
+var base = function () {
+  return {
+    type: "state", v: 1,
+    sky: { fraction_left: +document.getElementById("frac").value, last_five: false, unlimited: false },
+    time_up: false, loading: null, up_next: null,
+  };
+};
+var scenes = {
+  day: function () { return { tb: base(), p: "PLAYING" }; },
+  dusk: function () { var t = base(); t.sky.fraction_left = 0.06; t.sky.last_five = true; return { tb: t, p: "PLAYING" }; },
+  unlimited: function () { var t = base(); t.sky.fraction_left = null; t.sky.unlimited = true; return { tb: t, p: "PLAYING" }; },
+  loading: function () { var t = base(); t.loading = { artwork: ART, thumb: THUMB }; return { tb: t, p: "IDLE" }; },
+  "loading (no artwork)": function () { var t = base(); t.loading = { artwork: null, thumb: THUMB }; return { tb: t, p: "IDLE" }; },
+  "up-next": function () { var t = base(); t.up_next = { thumb: NEXT }; return { tb: t, p: "PLAYING", left: 6 }; },
+  night: function () { var t = base(); t.time_up = true; t.sky = { fraction_left: 0, last_five: false, unlimited: false }; return { tb: t, p: "IDLE" }; },
+  idle: function () { return { tb: base(), p: "IDLE" }; },
+};
+
+function show(name) {
+  var s = scenes[name]();
+  var w = stage.contentWindow;
+  var doc = stage.contentDocument;
+  // A coloured placeholder for the video frame.
+  doc.getElementById("video").style.background = "linear-gradient(135deg, #3b6b5a 0%, #c98b3d 50%, #6a4a8c 100%)";
+  var left = s.left != null ? s.left : +document.getElementById("left").value;
+  w.TellyboxUI.setState(s.tb);
+  w.TellyboxUI.setPlayer({ state: s.p, currentTime: 600 - left, duration: 600 });
+}
+
+var box = document.getElementById("buttons");
+Object.keys(scenes).forEach(function (name) {
+  var b = document.createElement("button");
+  b.textContent = name;
+  b.onclick = function () { show(name); };
+  box.appendChild(b);
+});
+stage.onload = function () {
+  var q = /[?&]scene=([^&]+)/.exec(location.search);
+  show(q ? decodeURIComponent(q[1]) : "day");
+};
+</script>
+</body>
+</html>

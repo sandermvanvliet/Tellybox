@@ -1,7 +1,7 @@
 // Dashboard (AD-3): the TV/timer/connection parts update live from /admin/events (SSE);
 // jobs, yt-dlp version and disk usage are polled every 5 s from /admin/api/dashboard (JSON).
 
-import { t, tn } from "./i18n.js";
+import { lang, t, tn } from "./i18n.js";
 
 // Chromecast connection (tellybox.cast.device.ConnectionState), plus our own "unreachable".
 const CONNECTION_LABELS = {
@@ -90,6 +90,25 @@ function watcherNames(np) {
   return profilesMeta().filter((m) => ids.has(m.id)).map((m) => m.name);
 }
 
+// The TV receiver line (CR-6); the same three messages as dashboard.html. A fallback that has
+// ended is stale state, so it is ignored, and the time is shown in the admin's own locale.
+function updateReceiver(state) {
+  const row = document.getElementById("receiver-row");
+  const el = document.getElementById("receiver");
+  if (!row || !el) return;
+  const rc = state && state.receiver;
+  row.hidden = !rc;
+  if (!rc) return;
+  const until = rc.fallback_until ? new Date(rc.fallback_until) : null;
+  if (until && until > new Date()) {
+    const time = until.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+    el.textContent = t("Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)",
+      { time, reason: rc.last_error || "" });
+  } else {
+    el.textContent = rc.kind === "tellybox" ? t("Tellybox receiver") : t("Default Media Receiver");
+  }
+}
+
 function updateNowPlaying(state) {
   const block = document.getElementById("now-playing-content");
   if (!block) return;
@@ -150,6 +169,7 @@ function connectEvents() {
       return;
     }
     updateConnection(state);
+    updateReceiver(state);
     updateNowPlaying(state);
     updateProfiles(state);
   };

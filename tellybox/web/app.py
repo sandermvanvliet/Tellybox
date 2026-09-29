@@ -32,6 +32,14 @@ from tellybox.web.locale import LocaleMiddleware
 log = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+RECEIVER_DIR = Path(__file__).parent / "receiver"  # the Tellybox Cast receiver page (CR-1)
+
+
+class _NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def resolve_media_file(media_dir: Path, file_path: str) -> Path | None:
@@ -125,4 +133,7 @@ def create_app(
     mount_admin(app, AdminContext(config=config, conn=conn, clock=clock, cast=cast, ytdlp=ytdlp))
 
     app.mount("/static", StaticFiles(directory=static_dir, check_dir=False), name="static")
+    # The receiver page for self-hosters who don't use GitHub Pages; no login, like the kid app.
+    # The TV must always fetch the current version, so nothing is cached.
+    app.mount("/receiver", _NoCacheStaticFiles(directory=RECEIVER_DIR, check_dir=False), name="receiver")
     return app

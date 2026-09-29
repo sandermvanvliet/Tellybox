@@ -4,6 +4,7 @@ global reset time/grace cap/session break, and the Chromecast picker.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import datetime, time
 
@@ -36,6 +37,10 @@ def _parse_time(raw: str | None) -> time | None:
         return None
 
 
+# A Cast app ID (CR-1) as the Google Cast SDK Developer Console shows it.
+_APP_ID = re.compile(r"[0-9A-F]{8}")
+
+
 def create_router(ctx: AdminContext) -> APIRouter:
     router = APIRouter()
     conn = ctx.conn
@@ -47,7 +52,10 @@ def create_router(ctx: AdminContext) -> APIRouter:
         ).fetchall()
 
     def global_settings() -> sqlite3.Row:
-        return conn.execute("SELECT reset_time, grace_cap_min, session_break_min FROM settings WHERE id = 1").fetchone()
+        return conn.execute(
+            "SELECT reset_time, grace_cap_min, session_break_min, receiver_app_id"
+            " FROM settings WHERE id = 1"
+        ).fetchone()
 
     def default_values() -> dict[str, str]:
         values: dict[str, str] = {}
@@ -59,6 +67,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         values["reset_time"] = s["reset_time"]
         values["grace_cap_min"] = str(s["grace_cap_min"])
         values["session_break_min"] = str(s["session_break_min"])
+        values["receiver_app_id"] = s["receiver_app_id"] or ""
         return values
 
     def devices_context() -> dict:
@@ -111,6 +120,10 @@ def create_router(ctx: AdminContext) -> APIRouter:
         if err:
             errors["session_break_min"] = err
 
+        receiver_app_id = (form.get("receiver_app_id") or "").strip().upper()
+        if receiver_app_id and not _APP_ID.fullmatch(receiver_app_id):
+            errors["receiver_app_id"] = _("Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty.")
+
         if errors or len(parsed_profiles) != len(profiles()):
             return render(request, "settings.html", 422, nav="settings",
                           **page_context(values=values, errors=errors))
@@ -122,8 +135,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
                     (allowance, mode, max_session, pid),
                 )
             conn.execute(
-                "UPDATE settings SET reset_time = ?, grace_cap_min = ?, session_break_min = ? WHERE id = 1",
-                (reset_time.strftime("%H:%M"), grace_cap, session_break),
+                "UPDATE settings SET reset_time = ?, grace_cap_min = ?, session_break_min = ?,"
+                " receiver_app_id = ? WHERE id = 1",
+                (reset_time.strftime("%H:%M"), grace_cap, session_break, receiver_app_id or None),
             )
         return see_other("/admin/settings", flash=_("Saved. The TV picks this up within 15 s."))
 

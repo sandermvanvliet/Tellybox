@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 11:17+0200\n"
+"POT-Creation-Date: 2026-09-29 14:03+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -41,7 +41,7 @@ msgstr "gestopt door ouder"
 msgid "time was up"
 msgstr "tijd was op"
 
-#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:65
+#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:69
 msgid "blocked"
 msgstr "geblokkeerd"
 
@@ -207,51 +207,51 @@ msgstr "Die selectie past niet bij het voorbeeld; haal het opnieuw op."
 msgid "Tick at least one video to add."
 msgstr "Vink minstens één video aan."
 
-#: tellybox/web/admin/common.py:43 tellybox/web/admin/js_strings.py:43
+#: tellybox/web/admin/common.py:43 tellybox/web/admin/js_strings.py:46
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr "%(hours)s u %(minutes)s min"
 
-#: tellybox/web/admin/common.py:44 tellybox/web/admin/js_strings.py:44
+#: tellybox/web/admin/common.py:44 tellybox/web/admin/js_strings.py:47
 #: tellybox/web/admin/templates/history.html:40
 #, python-format
 msgid "%(minutes)s min"
 msgstr "%(minutes)s min"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:46
+#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:49
 msgid "KB"
 msgstr "KB"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:47
+#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:50
 msgid "MB"
 msgstr "MB"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:48
+#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:51
 msgid "GB"
 msgstr "GB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:45
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:48
 #, python-format
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:26
+#: tellybox/web/admin/dashboard.py:27
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes moet een positief getal zijn"
 
-#: tellybox/web/admin/dashboard.py:136
+#: tellybox/web/admin/dashboard.py:152
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Castservice onbereikbaar; er is niets gestopt."
 
-#: tellybox/web/admin/dashboard.py:137
+#: tellybox/web/admin/dashboard.py:153
 msgid "Stopped."
 msgstr "Gestopt."
 
-#: tellybox/web/admin/dashboard.py:151
+#: tellybox/web/admin/dashboard.py:167
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Castservice onbereikbaar; de wijziging is niet doorgevoerd."
 
-#: tellybox/web/admin/dashboard.py:152
+#: tellybox/web/admin/dashboard.py:168
 msgid "Done."
 msgstr "Klaar."
 
@@ -260,8 +260,8 @@ msgid "Added time"
 msgstr "Extra tijd"
 
 #: tellybox/web/admin/history.py:15
-#: tellybox/web/admin/templates/dashboard.html:70
-#: tellybox/web/admin/templates/dashboard.html:83
+#: tellybox/web/admin/templates/dashboard.html:74
+#: tellybox/web/admin/templates/dashboard.html:87
 msgid "Unlimited today"
 msgstr "Vandaag onbeperkt"
 
@@ -270,8 +270,8 @@ msgid "Block"
 msgstr "Blokkeren"
 
 #: tellybox/web/admin/history.py:17
-#: tellybox/web/admin/templates/dashboard.html:72
-#: tellybox/web/admin/templates/dashboard.html:87
+#: tellybox/web/admin/templates/dashboard.html:76
+#: tellybox/web/admin/templates/dashboard.html:91
 msgid "Stop now"
 msgstr "Nu stoppen"
 
@@ -347,53 +347,53 @@ msgstr "gepauzeerd"
 
 #: tellybox/web/admin/js_strings.py:26
 #: tellybox/web/admin/templates/dashboard.html:14
-#: tellybox/web/admin/templates/dashboard.html:110
+#: tellybox/web/admin/templates/dashboard.html:114
 msgid "unknown"
 msgstr "onbekend"
 
 #: tellybox/web/admin/js_strings.py:27
-#: tellybox/web/admin/templates/dashboard.html:37
+#: tellybox/web/admin/templates/dashboard.html:41
 msgid "Nothing is playing."
 msgstr "Er speelt niets."
 
 #: tellybox/web/admin/js_strings.py:28
-#: tellybox/web/admin/templates/dashboard.html:35
+#: tellybox/web/admin/templates/dashboard.html:39
 msgid "Stop"
 msgstr "Stoppen"
 
 #: tellybox/web/admin/js_strings.py:29
-#: tellybox/web/admin/templates/dashboard.html:32
+#: tellybox/web/admin/templates/dashboard.html:36
 #, python-format
 msgid "Watching: %(names)s"
 msgstr "Kijkt: %(names)s"
 
 #: tellybox/web/admin/js_strings.py:30
-#: tellybox/web/admin/templates/dashboard.html:61
+#: tellybox/web/admin/templates/dashboard.html:65
 #: tellybox/web/admin/templates/profiles.html:15
 #, python-format
 msgid "%(time)s used"
 msgstr "%(time)s gebruikt"
 
 #: tellybox/web/admin/js_strings.py:31
-#: tellybox/web/admin/templates/dashboard.html:61
+#: tellybox/web/admin/templates/dashboard.html:65
 #, python-format
 msgid "%(time)s left"
 msgstr "%(time)s over"
 
 #: tellybox/web/admin/js_strings.py:32
-#: tellybox/web/admin/templates/dashboard.html:112
+#: tellybox/web/admin/templates/dashboard.html:116
 #, python-format
 msgid "Media on disk: %(size)s"
 msgstr "Media op schijf: %(size)s"
 
 #: tellybox/web/admin/js_strings.py:33
-#: tellybox/web/admin/templates/dashboard.html:112
+#: tellybox/web/admin/templates/dashboard.html:116
 #, python-format
 msgid "Free space: %(size)s"
 msgstr "Vrij: %(size)s"
 
 #: tellybox/web/admin/js_strings.py:34
-#: tellybox/web/admin/templates/dashboard.html:101
+#: tellybox/web/admin/templates/dashboard.html:105
 msgid "Nothing downloading."
 msgstr "Er wordt niets gedownload."
 
@@ -402,31 +402,47 @@ msgstr "Er wordt niets gedownload."
 msgid "download"
 msgstr "download"
 
+#: tellybox/web/admin/js_strings.py:37
+#: tellybox/web/admin/templates/dashboard.html:19
+msgid "Tellybox receiver"
+msgstr "Tellybox-ontvanger"
+
 #: tellybox/web/admin/js_strings.py:38
+#: tellybox/web/admin/templates/dashboard.html:19
+msgid "Default Media Receiver"
+msgstr "Standaard mediaontvanger"
+
+#: tellybox/web/admin/js_strings.py:39
+#: tellybox/web/admin/templates/dashboard.html:19
+#, python-format
+msgid "Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"
+msgstr "Standaard mediaontvanger (Tellybox-ontvanger niet beschikbaar tot %(time)s: %(reason)s)"
+
+#: tellybox/web/admin/js_strings.py:41
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "queued"
 msgstr "in wachtrij"
 
-#: tellybox/web/admin/js_strings.py:39
+#: tellybox/web/admin/js_strings.py:42
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "downloading"
 msgstr "downloaden"
 
-#: tellybox/web/admin/js_strings.py:40
+#: tellybox/web/admin/js_strings.py:43
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "processing"
 msgstr "verwerken"
 
-#: tellybox/web/admin/js_strings.py:41
+#: tellybox/web/admin/js_strings.py:44
 #: tellybox/web/admin/templates/_labels.html:12
 msgid "ready"
 msgstr "klaar"
 
-#: tellybox/web/admin/js_strings.py:49
+#: tellybox/web/admin/js_strings.py:52
 msgid "TB"
 msgstr "TB"
 
-#: tellybox/web/admin/js_strings.py:54
+#: tellybox/web/admin/js_strings.py:57
 #: tellybox/web/admin/templates/add.html:116
 #, python-format
 msgid "Add %(num)d video"
@@ -434,8 +450,8 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] "%(num)d video toevoegen"
 msgstr[1] "%(num)d video's toevoegen"
 
-#: tellybox/web/admin/js_strings.py:55
-#: tellybox/web/admin/templates/dashboard.html:95
+#: tellybox/web/admin/js_strings.py:58
+#: tellybox/web/admin/templates/dashboard.html:99
 #, python-format
 msgid "%(num)d failed job"
 msgid_plural "%(num)d failed jobs"
@@ -631,49 +647,53 @@ msgstr "Dit profiel kijkt op dit moment. Stop eerst de tv."
 msgid "Profile deleted."
 msgstr "Profiel verwijderd."
 
-#: tellybox/web/admin/settings_page.py:26
+#: tellybox/web/admin/settings_page.py:27
 msgid "Enter a whole number of minutes."
 msgstr "Vul een heel aantal minuten in."
 
-#: tellybox/web/admin/settings_page.py:28
+#: tellybox/web/admin/settings_page.py:29
 #, python-format
 msgid "Enter a number between %(lo)d and %(hi)d."
 msgstr "Vul een getal tussen %(lo)d en %(hi)d in."
 
-#: tellybox/web/admin/settings_page.py:97
+#: tellybox/web/admin/settings_page.py:106
 msgid "Choose a counting mode."
 msgstr "Kies hoe er geteld wordt."
 
-#: tellybox/web/admin/settings_page.py:106
+#: tellybox/web/admin/settings_page.py:115
 msgid "Enter a time as HH:MM."
 msgstr "Vul een tijd in als UU:MM."
 
-#: tellybox/web/admin/settings_page.py:128
+#: tellybox/web/admin/settings_page.py:125
+msgid "Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty."
+msgstr "Vul de 8 tekens (0-9, A-F) van de app-ID in, of laat het leeg."
+
+#: tellybox/web/admin/settings_page.py:142
 msgid "Saved. The TV picks this up within 15 s."
 msgstr "Opgeslagen. De tv neemt dit binnen 15 s over."
 
-#: tellybox/web/admin/settings_page.py:135
+#: tellybox/web/admin/settings_page.py:149
 msgid "Cast service unreachable; couldn't search for devices."
 msgstr "Castservice onbereikbaar; zoeken naar apparaten lukte niet."
 
-#: tellybox/web/admin/settings_page.py:138
+#: tellybox/web/admin/settings_page.py:152
 msgid "No Chromecasts found."
 msgstr "Geen Chromecasts gevonden."
 
-#: tellybox/web/admin/settings_page.py:140
+#: tellybox/web/admin/settings_page.py:154
 #, python-format
 msgid "Found: %(names)s."
 msgstr "Gevonden: %(names)s."
 
-#: tellybox/web/admin/settings_page.py:147
+#: tellybox/web/admin/settings_page.py:161
 msgid "Unknown device; search again."
 msgstr "Onbekend apparaat; zoek opnieuw."
 
-#: tellybox/web/admin/settings_page.py:149
+#: tellybox/web/admin/settings_page.py:163
 msgid "Cast service unreachable; nothing was changed."
 msgstr "Castservice onbereikbaar; er is niets gewijzigd."
 
-#: tellybox/web/admin/settings_page.py:150
+#: tellybox/web/admin/settings_page.py:164
 msgid "Chromecast selected."
 msgstr "Chromecast gekozen."
 
@@ -836,65 +856,69 @@ msgstr "Uitloggen"
 msgid "What's on the TV"
 msgstr "Wat is er op tv"
 
-#: tellybox/web/admin/templates/dashboard.html:17
+#: tellybox/web/admin/templates/dashboard.html:18
+msgid "TV receiver"
+msgstr "Tv-ontvanger"
+
+#: tellybox/web/admin/templates/dashboard.html:21
 msgid "Cast service unreachable"
 msgstr "Castservice onbereikbaar"
 
-#: tellybox/web/admin/templates/dashboard.html:19
+#: tellybox/web/admin/templates/dashboard.html:23
 msgid "Time's up — finishing this episode"
 msgstr "Tijd is op — deze aflevering wordt afgemaakt"
 
-#: tellybox/web/admin/templates/dashboard.html:21
+#: tellybox/web/admin/templates/dashboard.html:25
 msgid "Time's up"
 msgstr "Tijd is op"
 
-#: tellybox/web/admin/templates/dashboard.html:58
+#: tellybox/web/admin/templates/dashboard.html:62
 #: tellybox/web/admin/templates/profiles.html:16
 msgid "watching"
 msgstr "kijkt"
 
-#: tellybox/web/admin/templates/dashboard.html:64
+#: tellybox/web/admin/templates/dashboard.html:68
 msgid "unlimited today"
 msgstr "vandaag onbeperkt"
 
-#: tellybox/web/admin/templates/dashboard.html:68
-#: tellybox/web/admin/templates/dashboard.html:69
-#: tellybox/web/admin/templates/dashboard.html:81
-#: tellybox/web/admin/templates/dashboard.html:82
+#: tellybox/web/admin/templates/dashboard.html:72
+#: tellybox/web/admin/templates/dashboard.html:73
+#: tellybox/web/admin/templates/dashboard.html:85
+#: tellybox/web/admin/templates/dashboard.html:86
 #: tellybox/web/admin/templates/history.html:55
 #, python-format
 msgid "+%(minutes)s min"
 msgstr "+%(minutes)s min"
 
-#: tellybox/web/admin/templates/dashboard.html:70
-#: tellybox/web/admin/templates/dashboard.html:84
+#: tellybox/web/admin/templates/dashboard.html:74
+#: tellybox/web/admin/templates/dashboard.html:88
 msgid "Turn off unlimited"
 msgstr "Onbeperkt uitzetten"
 
-#: tellybox/web/admin/templates/dashboard.html:71
-#: tellybox/web/admin/templates/dashboard.html:85
+#: tellybox/web/admin/templates/dashboard.html:75
+#: tellybox/web/admin/templates/dashboard.html:89
 msgid "Block today"
 msgstr "Vandaag blokkeren"
 
-#: tellybox/web/admin/templates/dashboard.html:71
-#: tellybox/web/admin/templates/dashboard.html:86
+#: tellybox/web/admin/templates/dashboard.html:75
+#: tellybox/web/admin/templates/dashboard.html:90
 msgid "Unblock"
 msgstr "Deblokkeren"
 
-#: tellybox/web/admin/templates/dashboard.html:79
+#: tellybox/web/admin/templates/dashboard.html:83
 #: tellybox/web/admin/templates/history.html:12
 msgid "Everyone"
 msgstr "Iedereen"
 
-#: tellybox/web/admin/templates/dashboard.html:93
+#: tellybox/web/admin/templates/dashboard.html:97
 msgid "Downloads & jobs"
 msgstr "Downloads en taken"
 
-#: tellybox/web/admin/templates/dashboard.html:104
+#: tellybox/web/admin/templates/dashboard.html:108
 msgid "See all jobs"
 msgstr "Alle taken"
 
-#: tellybox/web/admin/templates/dashboard.html:108
+#: tellybox/web/admin/templates/dashboard.html:112
 msgid "System"
 msgstr "Systeem"
 
@@ -1143,7 +1167,7 @@ msgid "No picture"
 msgstr "Geen plaatje"
 
 #: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:66
+#: tellybox/web/admin/templates/settings.html:73
 msgid "Save"
 msgstr "Opslaan"
 
@@ -1217,27 +1241,35 @@ msgstr "Maximale uitloop (minuten, 0–60)"
 msgid "Session break (minutes, 1–240)"
 msgstr "Sessie-einde na pauze (minuten, 1–240)"
 
-#: tellybox/web/admin/templates/settings.html:74
+#: tellybox/web/admin/templates/settings.html:63
+msgid "Tellybox receiver app ID"
+msgstr "App-ID van de Tellybox-ontvanger"
+
+#: tellybox/web/admin/templates/settings.html:68
+msgid "Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own."
+msgstr "Optioneel. Leeg betekent dat de tv de standaard mediaontvanger gebruikt. Zie het onderdeel Tellybox receiver in docs/installation.md om je eigen ontvanger te registreren."
+
+#: tellybox/web/admin/templates/settings.html:81
 msgid "Device"
 msgstr "Apparaat"
 
-#: tellybox/web/admin/templates/settings.html:74
+#: tellybox/web/admin/templates/settings.html:81
 msgid "Address"
 msgstr "Adres"
 
-#: tellybox/web/admin/templates/settings.html:78
+#: tellybox/web/admin/templates/settings.html:85
 msgid "selected"
 msgstr "gekozen"
 
-#: tellybox/web/admin/templates/settings.html:84
+#: tellybox/web/admin/templates/settings.html:91
 msgid "Use this one"
 msgstr "Deze gebruiken"
 
-#: tellybox/web/admin/templates/settings.html:93
+#: tellybox/web/admin/templates/settings.html:100
 msgid "No Chromecasts known yet."
 msgstr "Nog geen Chromecasts bekend."
 
-#: tellybox/web/admin/templates/settings.html:96
+#: tellybox/web/admin/templates/settings.html:103
 msgid "Search"
 msgstr "Zoeken"
 

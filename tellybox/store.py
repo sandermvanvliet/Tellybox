@@ -29,6 +29,12 @@ def timer_settings(conn: sqlite3.Connection, tz: ZoneInfo) -> TimerSettings:
     )
 
 
+def receiver_app_id(conn: sqlite3.Connection) -> str | None:
+    """The Tellybox receiver's Cast app id (v7, CR-1); None or empty means the Default Media Receiver only."""
+    row = conn.execute("SELECT receiver_app_id FROM settings WHERE id = 1").fetchone()
+    return (row["receiver_app_id"] or "").strip().upper() or None if row else None
+
+
 def profile_ids(conn: sqlite3.Connection) -> list[int]:
     return [r[0] for r in conn.execute("SELECT id FROM profile ORDER BY id")]
 

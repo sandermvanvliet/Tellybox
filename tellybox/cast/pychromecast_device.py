@@ -14,13 +14,15 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
+import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 from uuid import UUID
 
 import pychromecast
 import pychromecast.discovery
-from pychromecast.error import PyChromecastError, RequestFailed
+from pychromecast.controllers import BaseController
+from pychromecast.error import NotConnected, PyChromecastError, RequestFailed
 
 from tellybox.cast.device import (
     ConnectionState,
@@ -30,7 +32,10 @@ from tellybox.cast.device import (
     LoadFailed,
     MediaStatus,
     PlayerState,
+    ReceiverMessage,
     ReceiverStatus,
+    RECEIVER_LAUNCH_TIMEOUT_S,
+    RECEIVER_NAMESPACE,
 )
 
 log = logging.getLogger(__name__)
@@ -63,12 +68,28 @@ def _player_state(value: str | None) -> PlayerState:
         return PlayerState.UNKNOWN
 
 
+class TellyboxController(BaseController):
+    """The custom namespace to the Tellybox receiver (docs/receiver-protocol.md). It has no supporting app id:
+    it never launches anything, so a message can't replace whatever app runs."""
+
+    def __init__(self, post: Callable[[DeviceEvent], None]) -> None:
+        super().__init__(RECEIVER_NAMESPACE)
+        self._post = post
+
+    def receive_message(self, _message: Any, data: dict) -> bool:  # socket thread
+        if isinstance(data, dict):
+            self._post(ReceiverMessage(data))
+        return True
+
+
 class _Listener:
     """Receives pychromecast callbacks (socket thread) and forwards translated events."""
 
     def __init__(self, post: Callable[[DeviceEvent], None]) -> None:
         self.post = post
         self.active = True
+        self.launching = False  # a Tellybox receiver launch is in flight: its errors are ours, not a failed load
+        self.launch_error: str | None = None
 
     def _send(self, event: DeviceEvent) -> None:
         if self.active:
@@ -94,6 +115,9 @@ class _Listener:
 
     def new_launch_error(self, status: Any) -> None:
         log.warning("cast launch failed: %s", status)
+        if self.launching:
+            self.launch_error = getattr(status, "reason", None) or "launch error"
+            return
         self._send(LoadFailed(None))
 
     def new_connection_status(self, status: Any) -> None:
@@ -115,6 +139,7 @@ class PyChromecastDevice:
         self._queue: asyncio.Queue[DeviceEvent] | None = None
         self._receiver: ReceiverStatus | None = None
         self._media: MediaStatus | None = None
+        self._tellybox: TellyboxController | None = None
 
     @property
     def receiver(self) -> ReceiverStatus | None:
@@ -165,6 +190,8 @@ class PyChromecastDevice:
         cast.register_connection_listener(listener)
         cast.register_launch_error_listener(listener)
         cast.media_controller.register_status_listener(listener)
+        self._tellybox = TellyboxController(listener._send)
+        cast.register_handler(self._tellybox)
         self._cast = cast
 
     def _detach(self) -> None:
@@ -243,18 +270,56 @@ class PyChromecastDevice:
             raise CastCommandError(f"{name}: {exc!r}") from exc
 
     async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
-        if app_id is not None:
-            raise NotImplementedError  # step 13, part A
-        # BUFFERED: pychromecast defaults to LIVE, which disables seeking (spike).
-        await self._run(
-            "play",
-            lambda c: c.media_controller.play_media(
+        def run(c: Any) -> None:
+            if app_id is not None:
+                self._launch_receiver(c, app_id)
+            # BUFFERED: pychromecast defaults to LIVE, which disables seeking (spike).
+            c.media_controller.play_media(
                 url, "video/mp4", title=title, stream_type="BUFFERED", current_time=start_s or None
-            ),
-        )
+            )
+
+        await self._run("play", run)
+
+    def _launch_receiver(self, cast: Any, app_id: str) -> None:  # worker thread
+        """Start the Tellybox receiver unless it runs, and wait until it takes media (CR-1, CR-6).
+        The media controller would launch the Default Media Receiver over a receiver that hasn't registered
+        the media namespace yet, so 'running' means the app id matches *and* the namespace is there.
+        Kept small on purpose: the real-device spike (S1, S8) may change the launch details."""
+
+        def ready() -> bool:
+            return cast.app_id == app_id and cast.media_controller.is_active
+
+        if ready():
+            return
+        listener = self._listener
+        assert listener is not None
+        listener.launching, listener.launch_error = True, None
+        deadline = time.monotonic() + RECEIVER_LAUNCH_TIMEOUT_S
+        try:
+            cast.start_app(app_id, timeout=RECEIVER_LAUNCH_TIMEOUT_S)
+            while not ready():
+                if listener.launch_error:
+                    raise ReceiverUnavailable(f"launch failed: {listener.launch_error}")
+                if time.monotonic() >= deadline:
+                    raise ReceiverUnavailable("launch timed out")
+                time.sleep(0.05)
+        except NotConnected:
+            raise
+        except PyChromecastError as exc:
+            reason = listener.launch_error
+            raise ReceiverUnavailable(f"launch failed: {reason}" if reason else f"launch failed: {exc!r}") from exc
+        finally:
+            listener.launching = False
 
     async def send_receiver_message(self, payload: dict) -> None:
-        raise NotImplementedError  # step 13, part A
+        tb = self._tellybox
+        if tb is None or not tb.is_active:
+            log.debug("receiver message not sent: the Tellybox receiver isn't running")
+            return
+        await self._run("send_receiver_message", lambda c: tb.send_message_nocheck(payload, no_add_request_id=True))
+
+    async def stop_media(self) -> None:
+        await self._run("stop_media", lambda c: c.media_controller.stop())
 
     async def pause(self) -> None:
         await self._run("pause", lambda c: c.media_controller.pause())

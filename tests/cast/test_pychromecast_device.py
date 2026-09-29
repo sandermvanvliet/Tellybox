@@ -16,9 +16,17 @@ from tellybox.cast.device import (
     LoadFailed,
     MediaStatus,
     PlayerState,
+    RECEIVER_NAMESPACE,
+    ReceiverMessage,
     ReceiverStatus,
 )
-from tellybox.cast.pychromecast_device import CastCommandError, PyChromecastDevice, discover
+from tellybox.cast.pychromecast_device import (
+    CastCommandError,
+    PyChromecastDevice,
+    ReceiverUnavailable,
+    TellyboxController,
+    discover,
+)
 
 UUID1 = "11111111-2222-3333-4444-555555555555"
 INFO = DeviceInfo(uuid=UUID1, name="Living Room TV", host="192.168.1.137")
@@ -38,6 +46,8 @@ class StubMC:
         if name in self.fail:
             raise self.fail[name]
 
+    is_active = True  # the running app implements the media namespace
+
     def play_media(self, *a, **kw): self._call("play_media", *a, **kw)
     def pause(self): self._call("pause")
     def play(self): self._call("play")
@@ -53,6 +63,11 @@ class StubCast:
         self.wait_error = wait_error
         self.quit_error = None
         self.calls = []
+        self.app_id = None
+        self.app_namespaces: list[str] = []  # what the running app supports; the "socket client" is the stub itself
+        self.handlers = []
+        self.launch = "ok"  # ok | error | timeout | never_ready
+        self.messages = []
 
     def wait(self, timeout=None):
         self.calls.append(("wait", timeout))
@@ -62,6 +77,25 @@ class StubCast:
     def register_status_listener(self, l): self.status_listeners.append(l)
     def register_connection_listener(self, l): self.connection_listeners.append(l)
     def register_launch_error_listener(self, l): self.launch_listeners.append(l)
+
+    def register_handler(self, handler):
+        self.handlers.append(handler)
+        handler.registered(self)
+
+    def send_app_message(self, namespace, message, **kw):
+        self.messages.append((namespace, message, kw))
+
+    def start_app(self, app_id, force_launch=False, timeout=None):
+        self.calls.append(("start_app", app_id, timeout))
+        if self.launch == "error":
+            for listener in self.launch_listeners:
+                listener.new_launch_error(SimpleNamespace(reason="NOT_ALLOWED", app_id=app_id, request_id=1))
+            raise RequestFailed("start app")
+        if self.launch == "timeout":
+            raise RequestTimeout("start app", timeout)
+        if self.launch == "ok":
+            self.app_id = app_id
+            self.app_namespaces = ["urn:x-cast:com.google.cast.media", RECEIVER_NAMESPACE]
 
     def quit_app(self):
         self.calls.append(("quit_app",))
@@ -277,6 +311,101 @@ async def test_discover(monkeypatch):
         DeviceInfo(UUID1, "Living Room TV", "192.168.1.137", 8009, "Chromecast")
     ]
     assert got == {"timeout": 1.0, "known_hosts": ["192.168.1.137"]} and browser.stopped
+
+
+# --------------------------------------------------------------------------- Tellybox receiver (v7)
+
+TB = "ABCD1234"
+
+
+async def test_play_with_app_id_launches_our_app_then_loads(cast):  # CR-1
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    await dev.play("http://x/a.mp4", title="Ep", start_s=5.0, app_id=TB)
+    assert cast.calls[-1] == ("start_app", TB, mod.RECEIVER_LAUNCH_TIMEOUT_S)
+    assert [c[0] for c in cast.media_controller.calls] == ["play_media"]
+
+
+async def test_running_app_is_not_relaunched(cast):
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.app_id = TB
+    await dev.play("http://x/a.mp4", app_id=TB)
+    assert not [c for c in cast.calls if c[0] == "start_app"]
+    assert [c[0] for c in cast.media_controller.calls] == ["play_media"]
+
+
+async def test_launch_error_raises_receiver_unavailable_and_is_not_a_load_failure(cast):  # CR-6
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "error"
+    with pytest.raises(ReceiverUnavailable, match="NOT_ALLOWED"):
+        await dev.play("http://x/a.mp4", app_id=TB)
+    assert not cast.media_controller.calls
+    await asyncio.sleep(0.01)
+    assert dev._queue.empty()  # a failed receiver launch must not end the episode as LoadFailed
+
+
+async def test_launch_request_timeout_raises_receiver_unavailable(cast):  # CR-6
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "timeout"
+    with pytest.raises(ReceiverUnavailable):
+        await dev.play("http://x/a.mp4", app_id=TB)
+    assert not cast.media_controller.calls
+
+
+async def test_app_that_never_shows_up_times_out(cast, monkeypatch):  # CR-6, S8
+    monkeypatch.setattr(mod, "RECEIVER_LAUNCH_TIMEOUT_S", 0.2)
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "never_ready"
+    with pytest.raises(ReceiverUnavailable, match="timed out"):
+        await dev.play("http://x/a.mp4", app_id=TB)
+    assert not cast.media_controller.calls
+
+
+async def test_waits_for_the_media_namespace_before_loading(cast):
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.media_controller.is_active = False  # our app is up but has not registered the media namespace yet
+    threading.Timer(0.15, lambda: setattr(cast.media_controller, "is_active", True)).start()
+    await dev.play("http://x/a.mp4", app_id=TB)
+    assert [c[0] for c in cast.media_controller.calls] == ["play_media"]
+
+
+async def test_launch_when_not_connected_is_a_plain_command_error():
+    with pytest.raises(CastCommandError) as err:
+        await PyChromecastDevice(INFO).play("http://x/a.mp4", app_id=TB)
+    assert not isinstance(err.value, ReceiverUnavailable)
+
+
+async def test_custom_namespace_messages_become_events(cast):  # CR-7
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    (handler,) = cast.handlers
+    assert isinstance(handler, TellyboxController) and handler.namespace == RECEIVER_NAMESPACE
+    in_thread(handler.receive_message, None, {"type": "hello", "v": 1, "ua": "X"})
+    assert await next_events(dev, 1) == [ReceiverMessage({"type": "hello", "v": 1, "ua": "X"})]
+
+
+async def test_send_receiver_message_needs_our_app_running(cast):
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    await dev.send_receiver_message({"type": "state"})
+    assert cast.messages == []  # a foreign app runs: nothing is sent
+    cast.app_namespaces = [RECEIVER_NAMESPACE]
+    await dev.send_receiver_message({"type": "state", "v": 1})
+    ((ns, message, kw),) = cast.messages
+    assert (ns, message) == (RECEIVER_NAMESPACE, {"type": "state", "v": 1}) and kw["no_add_request_id"] is True
+
+
+async def test_stop_media_keeps_the_app(cast):
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    await dev.stop_media()
+    assert [c[0] for c in cast.media_controller.calls] == ["stop"]
+    assert ("quit_app",) not in cast.calls
 
 
 def test_module_exports():

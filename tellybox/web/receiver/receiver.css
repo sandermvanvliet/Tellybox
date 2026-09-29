@@ -1,0 +1,79 @@
+/* Tellybox receiver (CR-8: a 1st-gen Chromecast). Static gradients only; no filter, blur or
+   box-shadow; the sun moves by transform; nothing animates while video plays. Colours are the
+   kid app's (tellybox/web/static/app.css). Plain, old-Chrome-safe CSS: no custom properties. */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+[hidden] { display: none !important; }
+cast-media-player { display: none; }
+
+#video { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; }
+
+.layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+
+/* ------------------------------------------------------------------ scene (sky + hills) */
+.scene { position: absolute; overflow: hidden; }
+.scene .sky-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.sky-day   { background: linear-gradient(180deg, #6CC3FA 0%, #8FD3FF 55%, #C4EAFF 100%); }
+.sky-dusk  { background: linear-gradient(180deg, #7D82D2 0%, #D98BA6 42%, #FF8A5B 82%, #FFB27A 100%); display: none; }
+.sky-night { background: linear-gradient(180deg, #161C48 0%, #232B63 55%, #2F3A80 100%); display: none; }
+.is-dusk .sky-dusk, .is-night .sky-night { display: block; }
+
+.sun {
+  position: absolute; left: 0; top: 0; border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%, #FFE58E 0, #FFE58E 18%, #FFC93C 62%);
+  z-index: 1;
+}
+.sun i { position: absolute; border-radius: 50%; }
+/* Glow ring: a static circle, so no box-shadow. */
+.sun .halo { left: -28%; top: -28%; width: 156%; height: 156%; background: rgba(255, 225, 140, .18); }
+.sun .warm { left: 0; top: 0; width: 100%; height: 100%; display: none;
+  background: radial-gradient(circle at 36% 34%, #FFC27A 0, #FFC27A 16%, #FF7A45 70%); }
+.is-dusk .sun .warm, .is-night .sun .warm { display: block; }
+.is-dusk .sun .halo { background: rgba(255, 138, 91, .22); }
+
+.moon { position: absolute; fill: #FFF3B0; display: none; }
+.is-night .moon { display: block; }
+.stars svg { position: absolute; fill: #FFF3B0; display: none; }
+.is-night .stars svg { display: block; }
+
+.far-hills { position: absolute; left: 0; bottom: -1px; width: 100%; z-index: 2; }
+.far-hill-back  { fill: #A8E0B1; }
+.far-hill-front { fill: #86D594; }
+.is-dusk .far-hill-back  { fill: #B9C99A; }
+.is-dusk .far-hill-front { fill: #93C47F; }
+.is-night .far-hill-back  { fill: #2E3C74; }
+.is-night .far-hill-front { fill: #2B5A63; }
+
+/* Corner sky (CR-2): 12% of the width, 5:3, top right. */
+.corner { right: 3vw; top: 3vw; width: 12vw; height: 7.2vw; border-radius: 1.2vw; border: .35vw solid #1E2A5A; background: #8FD3FF; }
+.corner .sun { width: 3.6vw; height: 3.6vw; }
+.corner .moon { right: 12%; top: 14%; width: 2.2vw; height: 2.2vw; }
+.corner .stars { display: none; }
+.corner .far-hills { height: 40%; }
+
+/* Full-screen sky: idle (day) and night. */
+.big .sun { width: 14vw; height: 14vw; }
+.big .moon { right: 14%; top: 14%; width: 11vw; height: 11vw; }
+.big .far-hills { height: 36%; }
+.big .stars svg { animation: twinkle 3.2s ease-in-out infinite; }
+.big .stars svg:nth-child(2n) { animation-delay: 1.3s; }
+.big .stars svg:nth-child(3n) { animation-delay: .6s; }
+@keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* ------------------------------------------------------------------ loading (CR-4) */
+.layer-loading { background: linear-gradient(180deg, #6CC3FA 0%, #8FD3FF 55%, #C4EAFF 100%); }
+.pulse { position: absolute; left: 0; top: 0; width: 100%; height: 100%; animation: pulse 2.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
+.artwork, .thumb { position: absolute; object-fit: cover; background: #C4EAFF; border: .5vw solid #1E2A5A; border-radius: 2vw; }
+.artwork { left: 8%; top: 12%; width: 56%; height: 76%; }
+.thumb { right: 7%; bottom: 12%; width: 30%; height: 30%; }
+/* No artwork: the episode thumbnail alone, centred and large. */
+.no-art .artwork { display: none; }
+.no-art .thumb { left: 25%; top: 17%; right: auto; bottom: auto; width: 50%; height: 66%; }
+.no-thumb .thumb { display: none; }
+.no-thumb.no-art .artwork, .no-thumb.no-art .thumb { display: none; }
+
+/* ------------------------------------------------------------------ up-next (CR-5) */
+.upnext { position: absolute; right: 3vw; bottom: 4vw; width: 20vw; height: 11.25vw; z-index: 5;
+  border: .4vw solid #1E2A5A; border-radius: 1.4vw; background: #1E2A5A; overflow: hidden; }
+.upnext img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.upnext .play { position: absolute; right: .8vw; bottom: .8vw; width: 3vw; height: 3vw; }

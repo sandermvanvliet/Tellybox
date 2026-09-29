@@ -17,6 +17,7 @@
         ("dashboard", "/admin", _("Now")), ("add", "/admin/add", _("Add")), ("jobs", "/admin/jobs", _("Jobs")),
         ("library", "/admin/library", _("Library")), ("profiles", "/admin/profiles", _("Profiles")),
         ("settings", "/admin/settings", _("Settings")),
+        ("integrations", "/admin/integrations", _("Integrations")),
         ("history", "/admin/history", _("History"))] %}
         <a href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}

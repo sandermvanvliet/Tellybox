@@ -83,3 +83,16 @@ def test_history_overrides_name_their_profile(admin, admin_env):
     _watched_by_two(admin_env)
     store.log_override(admin_env.conn, 2, NOW.date(), "block", 1, NOW)
     assert "Noor" in admin.get("/admin/history").text.split("Overrides")[1]
+
+
+def test_history_override_via_label(admin, admin_env):
+    """HA-7: an override applied through an API token shows "via <name>"."""
+    store.log_override(admin_env.conn, PROFILE, NOW.date(), "extra_minutes", 15, NOW)
+    admin_env.conn.execute("UPDATE override_log SET source = ?", ("Home <b>Assistant</b>",))
+    r = admin.get("/admin/history")
+    assert "via Home &lt;b&gt;Assistant&lt;/b&gt;" in r.text
+
+
+def test_history_override_without_source_has_no_via(admin, admin_env):
+    store.log_override(admin_env.conn, PROFILE, NOW.date(), "extra_minutes", 15, NOW)
+    assert "via " not in admin.get("/admin/history").text

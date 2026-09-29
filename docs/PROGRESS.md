@@ -144,13 +144,19 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - Merged as PR #1 (PR numbers restarted in the public repository) and deployed (version 2026.09.29.2). The owner checked the admin pages and the kid app's screens on the devices: fine.
 - **Open:** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`. v2 is done when they pass.
 
+### 9. Admin API for Home Assistant (v2.1), in progress
+Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × Home Assistant: upstream features & integration plan". It covers API tokens, the admin state and its event stream, override endpoints, the instance id and `/api/info`. The Home Assistant integration itself lives in separate repositories later.
+- Plan `docs/plans/step9-ha-api.md`, approved 2026-09-29. Subagent briefs: `docs/plans/step9-handoff.md`. Branch `step9/ha-api`.
+- Renumbered: SponsorBlock is now step 10, subscriptions 11, manual splitting 12, and smart splitting 14. The receiver keeps 13, because it's already in progress.
+- **Next:** the part 0 contract, then three subagents (cast service, JSON API, admin UI).
+
 ### 13. Tellybox receiver (v7), in progress
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
 - Waiting on the owner: registering the receiver in the Google Cast SDK Developer Console and the Chromecast as a test device, then the spike on the TV.
 
 ### Then
-9. SponsorBlock (v3) · 10. Channel subscriptions (v4) · 11. Manual splitting (v5) · 12. Smart splitting (v6).
+10. SponsorBlock (v3) · 11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
 
 ## Open decisions / follow-ups
 

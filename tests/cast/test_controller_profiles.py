@@ -99,7 +99,7 @@ async def test_autoplay_keeps_the_group(conn, clock, fake, episodes, kids):  # P
 
 async def test_a_refusal_carries_the_groups_reason(conn, clock, fake, episodes, kids):  # PR-4
     ctrl = await make_controller(conn, clock, fake)
-    await ctrl.override("block", profile_id=3)
+    await ctrl.override("block", profile_ids=[3])
     with pytest.raises(PlayRefused) as refused:
         await ctrl.play(episodes[0], [1, 3])
     assert refused.value.decision.reason == "blocked"
@@ -142,12 +142,12 @@ async def test_blocking_a_non_watcher_leaves_playback_alone(conn, clock, fake, e
     ctrl = await make_controller(conn, clock, fake)
     await play_for(ctrl, fake, episodes[0], [1])
     await run_for(ctrl, fake, clock, 10)
-    await ctrl.override("block", profile_id=2)
+    await ctrl.override("block", profile_ids=[2])
     await pump(ctrl, fake)
     assert ctrl.current is not None and ctrl.state()["timer"]["action"] == "continue"
     by_id = {p["profile_id"]: p for p in ctrl.state()["timer"]["profiles"]}
     assert by_id[2]["blocked"] and by_id[2]["reason"] == "blocked" and not by_id[2]["watching"]
-    await ctrl.override("block", profile_id=1)  # a watcher: stops now
+    await ctrl.override("block", profile_ids=[1])  # a watcher: stops now
     await pump(ctrl, fake)
     assert ctrl.current is None
 

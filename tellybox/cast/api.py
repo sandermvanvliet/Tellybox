@@ -14,7 +14,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from tellybox import store
 from tellybox.cast.controller import CastController, NoDevice, PlayRefused
@@ -33,9 +33,17 @@ class PlayRequest(BaseModel):
 
 
 class OverrideRequest(BaseModel):
-    kind: Literal["extra_minutes", "unlimited", "block", "stop_now"]
+    kind: Literal["extra_minutes", "unlimited", "block", "stop_now", "clear"]
     value: int | None = None
-    profile_id: int | None = None
+    profile_ids: list[int] | None = Field(default=None, min_length=1, max_length=20)  # HA-3; None: every profile
+    profile_id: int | None = None  # v2 spelling, still accepted
+    source: str | None = Field(default=None, max_length=64)  # HA-7: the API token's name
+
+    @model_validator(mode="after")
+    def _one_target_spelling(self) -> "OverrideRequest":
+        if self.profile_id is not None and self.profile_ids is not None:
+            raise ValueError("send profile_id or profile_ids, not both")
+        return self
 
 
 class SelectDeviceRequest(BaseModel):
@@ -89,7 +97,8 @@ def create_api(
     @app.post("/overrides")
     async def override(req: OverrideRequest) -> dict:
         try:
-            return await run(controller.override(req.kind, req.value, req.profile_id))
+            ids = [req.profile_id] if req.profile_id is not None else req.profile_ids
+            return await run(controller.override(req.kind, req.value, ids, req.source))
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from None
 

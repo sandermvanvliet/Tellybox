@@ -1,4 +1,9 @@
-# Tellybox
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/brand/logo-dark.svg">
+    <img src="docs/images/brand/logo.svg" alt="Tellybox" width="420">
+  </picture>
+</h1>
 
 **A TV remote for kids who can't read yet, with only the videos you approved and a daily time limit that switches itself off.**
 
@@ -161,6 +166,8 @@ python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 ```
 
 The timer and cast controller are tested with a fake clock and a fake Chromecast. [docs/kid-api.md](docs/kid-api.md) describes the kid app's API.
+
+The logo, favicon and home-screen icon are SVGs in [docs/images/brand/](docs/images/brand/) and `tellybox/web/static/`. After changing one, run `scripts/brand.sh` to regenerate the outlined logos, the social preview and the PNG and ICO files. It needs Inkscape, ImageMagick and the [Fredoka](https://fonts.google.com/specimen/Fredoka) font.
 
 ## License
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Tellybox mark for dark backgrounds: a yolk TV whose screen shows the sun going down behind the hill, the kid
+       app's "the sky is the timer" (KA-6). Colours are the kid app's tokens (app.css). -->
+  <defs><clipPath id="screen"><rect x="54" y="100" width="148" height="100" rx="22"/></clipPath></defs>
+  <g stroke="#FFFFFF" stroke-width="13" stroke-linecap="round" fill="none"><path d="M108 72 82 36M148 72l26-36"/></g>
+  <g fill="#FF8A5B" stroke="#FFFFFF" stroke-width="9"><circle cx="80" cy="32" r="12"/><circle cx="176" cy="32" r="12"/></g>
+  <rect x="26" y="72" width="204" height="156" rx="44" fill="#FFC93C" stroke="#FFFFFF" stroke-width="13"/>
+  <rect x="54" y="100" width="148" height="100" rx="22" fill="#8FD3FF"/>
+  <g clip-path="url(#screen)">
+    <circle cx="146" cy="176" r="27" fill="#FFF3B0"/>
+    <circle cx="146" cy="176" r="22" fill="#FFC93C"/>
+    <path d="M48 178c34-14 70-12 100 2s46 10 60 2V210H48Z" fill="#6CCB7A"/>
+  </g>
+  <rect x="54" y="100" width="148" height="100" rx="22" fill="none" stroke="#FFFFFF" stroke-width="13"/>
+</svg>

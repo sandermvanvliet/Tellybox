@@ -1,4 +1,4 @@
-# Cast service API contract (internal; profiles since step 8, receiver since step 13, admin API since step 9)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Cast service API contract (internal; profiles since step 8, receiver since step 13, admin API since step 9)
 
 The `cast` service listens on `127.0.0.1` only; the `web` service is its only client (`tellybox/web/cast_client.py`). Only the cast service writes timer, history and position tables. Fields marked **v2** are new in step 8 (kid profiles), **v7** in step 13 (Tellybox receiver, see `docs/receiver-protocol.md`), **v2.1** in step 9 (admin API, see `docs/admin-api.md`).
 

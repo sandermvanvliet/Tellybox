@@ -23,6 +23,7 @@ def static_dir(tmp_path):
     (d / "js").mkdir(parents=True)
     (d / "index.html").write_text("<!doctype html><title>Tellybox</title>")
     (d / "manifest.webmanifest").write_text('{"name": "Tellybox"}')
+    (d / "favicon.ico").write_bytes(b"ico")
     (d / "js" / "app.js").write_text("console.log('hi')")
     return d
 
@@ -417,6 +418,23 @@ def test_manifest_and_static(env):
     assert r.json() == {"name": "Tellybox"}
     assert client.get("/static/js/app.js").text == "console.log('hi')"
     assert client.get("/static/nope.js").status_code == 404
+
+
+def test_favicon_ico_at_the_root(env):
+    client, *_ = env
+    r = client.get("/favicon.ico")
+    assert r.status_code == 200
+    assert r.content == b"ico"
+    assert r.headers["content-type"] == "image/vnd.microsoft.icon"
+
+
+def test_shipped_shell_links_the_icons():
+    index = (web_app.STATIC_DIR / "index.html").read_text()
+    assert 'href="/static/favicon.svg"' in index
+    assert 'href="/favicon.ico"' in index
+    manifest = json.loads((web_app.STATIC_DIR / "manifest.webmanifest").read_text())
+    for name in ["favicon.svg", "favicon.ico", *(Path(i["src"]).name for i in manifest["icons"])]:
+        assert (web_app.STATIC_DIR / name).is_file(), name
 
 
 def test_default_static_dir_is_the_package():

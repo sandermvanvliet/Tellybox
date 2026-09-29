@@ -127,6 +127,12 @@ Plan: `docs/plans/i18n.md`. The foundation was built first, then subagents did t
 - **Open:** numbers keep a decimal point in every language ("127.7 KB").
 - 743 tests.
 
+### Logo and favicon (2026-09-29, branch `brand/logo`)
+- **Mark:** a yolk TV whose screen shows the sun going down behind the hill, the kid app's "the sky is the timer" idea. It uses the kid app's colours, with a white-outlined variant for dark backgrounds. The wordmark is Fredoka SemiBold (OFL), outlined to paths.
+- **Files:** `docs/images/brand/` (mark, logo, dark variants, `social-preview.png`, sources in `src/`). In the app: `favicon.svg` (the mark simplified for 16 px), `favicon.ico` (16/32/48) and a `/favicon.ico` route, plus the home-screen icon redrawn with the new TV. `scripts/brand.sh` regenerates everything derived.
+- **Where:** favicon links in the kid app and admin, the mark in the admin header, the logo at the top of the README (light and dark), and the mark on the headings of the installation guide and the API and protocol docs.
+- 1003 tests.
+
 ## Next
 
 The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, then the Tellybox Cast receiver. The decisions from that session are PRD A-7..A-11, SB-1..SB-6 and CR-1..CR-8. On 2026-09-29 the owner moved the receiver ahead (it keeps step 13) and inserted the admin API for Home Assistant as step 9. The current order is:
@@ -282,6 +288,7 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
 
 ## Open decisions / follow-ups
 
+- Branding: when step 13 merges, link the favicon in `tellybox/web/receiver/index.html` and `dev.html`. The receiver is also served from GitHub Pages, so it needs its own copy of `favicon.svg` next to the page (relative paths). Upload `docs/images/brand/social-preview.png` as the repository's social preview (GitHub settings, by hand).
 - Kid app images are cached for an hour (`max-age=3600`), so replaced artwork or thumbnails can take up to an hour to show on kids' devices. The admin images revalidate; consider `no-cache` for the kid app too.
 - Show order: the PRD asks only for episode order, so shows keep their creation order; there is no admin control for it.
 - The admin test suite is slower (full run ~60 s, was ~25 s), mostly from argon2 hashing in each sign-in; lower the hash cost in tests if it bothers.

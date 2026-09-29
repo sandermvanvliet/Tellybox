@@ -134,6 +134,11 @@ def create_app(
     async def index() -> FileResponse:
         return static_file("index.html", headers={"Cache-Control": "no-cache"})
 
+    # Browsers ask for /favicon.ico on their own; pages also link /static/favicon.svg.
+    @app.get("/favicon.ico")
+    async def favicon() -> FileResponse:
+        return static_file("favicon.ico")
+
     @app.get("/manifest.webmanifest")
     async def manifest() -> FileResponse:
         return static_file("manifest.webmanifest", media_type="application/manifest+json")

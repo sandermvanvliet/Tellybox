@@ -1,16 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs><clipPath id="screen"><rect x="146" y="232" width="220" height="140" rx="26"/></clipPath></defs>
+  <!-- Home-screen icon (maskable): the Tellybox mark (docs/images/brand/mark.svg) in the kid app's
+       landscape. Everything that matters sits inside the central 80% safe zone. -->
   <rect width="512" height="512" fill="#8FD3FF"/>
-  <circle cx="186" cy="132" r="50" fill="#FFC93C"/>
-  <path d="M0 214C110 168 210 178 300 202s150 16 212-16V512H0Z" fill="#6CCB7A"/>
-  <g stroke="#1E2A5A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
-    <path d="m206 150 50 44 50-44" fill="none"/>
-    <rect x="106" y="194" width="300" height="216" rx="44" fill="#FFFFFF"/>
-    <rect x="146" y="232" width="220" height="140" rx="26" fill="#8FD3FF"/>
-  </g>
-  <g clip-path="url(#screen)">
-    <circle cx="222" cy="288" r="24" fill="#FFC93C"/>
-    <path d="M140 352c44-30 96-34 132-18s60 12 100-4V380H140Z" fill="#6CCB7A"/>
-  </g>
-  <rect x="146" y="232" width="220" height="140" rx="26" fill="none" stroke="#1E2A5A" stroke-width="22"/>
+  <path d="M0 250C110 204 210 214 300 238s150 16 212-16V512H0Z" fill="#6CCB7A"/>
+  <svg x="77" y="90" width="358" height="358" viewBox="0 0 256 256">
+    <defs><clipPath id="screen"><rect x="54" y="100" width="148" height="100" rx="22"/></clipPath></defs>
+    <g stroke="#1E2A5A" stroke-width="13" stroke-linecap="round" fill="none"><path d="M108 72 82 36M148 72l26-36"/></g>
+    <g fill="#FF8A5B" stroke="#1E2A5A" stroke-width="9"><circle cx="80" cy="32" r="12"/><circle cx="176" cy="32" r="12"/></g>
+    <rect x="26" y="72" width="204" height="156" rx="44" fill="#FFC93C" stroke="#1E2A5A" stroke-width="13"/>
+    <rect x="54" y="100" width="148" height="100" rx="22" fill="#8FD3FF"/>
+    <g clip-path="url(#screen)">
+    <circle cx="146" cy="176" r="27" fill="#FFF3B0"/>
+    <circle cx="146" cy="176" r="22" fill="#FFC93C"/>
+    <path d="M48 178c34-14 70-12 100 2s46 10 60 2V210H48Z" fill="#6CCB7A"/>
+    </g>
+    <rect x="54" y="100" width="148" height="100" rx="22" fill="none" stroke="#1E2A5A" stroke-width="13"/>
+  </svg>
 </svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640">
+  <!-- Source of social-preview.png, the GitHub repository social preview (1280x640); see scripts/brand.sh. -->
+  <rect width="1280" height="640" fill="#8FD3FF"/>
+  <circle cx="1090" cy="120" r="56" fill="#FFC93C"/>
+  <path d="M0 470c190-60 380-60 600-20s420 50 680-20V640H0Z" fill="#6CCB7A"/>
+  <svg x="190" y="150" width="256" height="256" viewBox="0 0 256 256">@MARK@</svg>
+  <text x="470" y="340" font-family="Fredoka" font-weight="600" font-size="164" letter-spacing="-2" fill="#1E2A5A">Tellybox</text>
+  <text x="640" y="560" text-anchor="middle" font-family="Fredoka" font-weight="500" font-size="44" fill="#FFFFFF">A TV remote for kids who can't read yet</text>
+</svg>

@@ -1,4 +1,4 @@
-# Installing and deploying Tellybox
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Installing and deploying Tellybox
 
 This guide takes you from an empty server to kids picking videos on the TV. Setup takes 15 to 30 minutes. Then it covers HTTPS, remote access, backups, updates and troubleshooting.
 

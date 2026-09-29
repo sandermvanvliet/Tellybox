@@ -278,3 +278,17 @@ def test_session_cookie_is_secure_through_nginx_https(admin_env):
                        headers={"X-Forwarded-Proto": "https"}, follow_redirects=False)
     assert r.status_code == 303
     assert "secure" in r.headers["set-cookie"].lower()
+
+
+# --------------------------------------------------------------------------- branding
+
+
+def test_login_page_links_the_favicon(anon):
+    html = anon.get("/admin/login").text
+    assert '<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">' in html
+    assert '<link rel="icon" href="/favicon.ico" sizes="32x32">' in html
+
+
+def test_signed_in_header_shows_the_mark(admin):
+    html = admin.get("/admin").text
+    assert re.search(r'<a class="brand" href="/admin"><img src="/static/mark-dark.svg" alt="" [^>]*>Tellybox</a>', html)

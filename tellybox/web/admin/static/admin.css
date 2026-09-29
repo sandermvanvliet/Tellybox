@@ -46,7 +46,10 @@ header.top {
   display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem;
   position: sticky; top: 0; z-index: 10;
 }
-header.top .brand { color: var(--yolk); font-weight: 700; text-decoration: none; font-size: 1.1rem; }
+header.top .brand {
+  color: var(--yolk); font-weight: 700; text-decoration: none; font-size: 1.1rem;
+  display: inline-flex; align-items: center; gap: .4rem;
+}
 header.top nav { display: flex; flex-wrap: wrap; gap: .1rem .25rem; align-items: center; }
 header.top nav a, header.top nav button.link {
   color: #fff; text-decoration: none; padding: .35rem .55rem; border-radius: 6px; font-size: .95rem;

@@ -1,4 +1,4 @@
-# Kid API contract (step 4; tile titles shown since step 7; profiles since step 8)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Kid API contract (step 4; tile titles shown since step 7; profiles since step 8)
 
 The kid app (static files in `tellybox/web/static/`) talks only to these endpoints of the
 `web` service. No login (NF-1). Only visible content ever appears: hidden shows/episodes and

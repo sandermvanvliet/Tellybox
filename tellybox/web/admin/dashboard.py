@@ -9,6 +9,7 @@ import contextlib
 import json
 import shutil
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
@@ -89,6 +90,20 @@ def _disk_context(conn: sqlite3.Connection, media_dir: Path) -> dict:
     return {"media_bytes": media_bytes, "free_bytes": free_bytes}
 
 
+def _receiver_context(ctx: AdminContext, state: dict | None) -> dict | None:
+    """The TV receiver line (CR-6): what the next pick uses; None if the cast service doesn't say."""
+    receiver = (state or {}).get("receiver")
+    if not receiver:
+        return None
+    result = {"kind": receiver.get("kind"), "until": None, "reason": receiver.get("last_error") or ""}
+    until = receiver.get("fallback_until")
+    if until:
+        deadline = datetime.fromisoformat(until)
+        if deadline > ctx.clock.now():  # an expired fallback is only stale state
+            result["until"] = deadline.astimezone(ctx.config.tz).strftime("%H:%M")
+    return result
+
+
 def _page_context(ctx: AdminContext, state: dict | None, unreachable: bool) -> dict:
     timer = (state or {}).get("timer")
     return {
@@ -98,6 +113,7 @@ def _page_context(ctx: AdminContext, state: dict | None, unreachable: bool) -> d
         "now_playing": _now_playing_context(ctx.conn, (state or {}).get("now_playing")),
         "timer": timer,
         "time_up": bool((state or {}).get("time_up")),
+        "receiver": _receiver_context(ctx, state),
         "profiles": _profiles_context(ctx.conn, state),
         "jobs": _jobs_context(ctx.conn),
         "ytdlp_version": _ytdlp_version(ctx.conn),

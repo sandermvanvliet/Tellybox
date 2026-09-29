@@ -14,6 +14,10 @@
     <span id="connection">{{ _("unreachable") if unreachable else (labels.connection(connection) if connection else _("unknown")) }}</span>
     {% if device %}<span id="device-name"> &mdash; {{ device.name }}</span>{% endif %}
   </p>
+  <p class="muted" id="receiver-row"{% if not receiver %} hidden{% endif %}>
+    {{ _("TV receiver") }}:
+    <span id="receiver">{% if receiver %}{% if receiver.until %}{{ _("Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)", time=receiver.until, reason=receiver.reason) }}{% elif receiver.kind == "tellybox" %}{{ _("Tellybox receiver") }}{% else %}{{ _("Default Media Receiver") }}{% endif %}{% endif %}</span>
+  </p>
   {% if unreachable %}<p class="badge bad">{{ _("Cast service unreachable") }}</p>{% endif %}
   {% if timer and timer.action == "finish_then_stop" %}
     <p class="badge warn">{{ _("Time's up — finishing this episode") }}</p>

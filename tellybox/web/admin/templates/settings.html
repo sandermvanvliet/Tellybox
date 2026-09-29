@@ -59,6 +59,13 @@
         <input type="number" name="session_break_min" min="1" max="240" value="{{ values.session_break_min }}">
       </label>
       {% if errors.get('session_break_min') %}<p class="flash error">{{ errors.session_break_min }}</p>{% endif %}
+
+      <label>{{ _("Tellybox receiver app ID") }}
+        <input type="text" name="receiver_app_id" maxlength="8" autocomplete="off" spellcheck="false"
+               pattern="[0-9A-Fa-f]{8}" value="{{ values.receiver_app_id }}">
+      </label>
+      {% if errors.get('receiver_app_id') %}<p class="flash error">{{ errors.receiver_app_id }}</p>{% endif %}
+      <p class="muted">{{ _("Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own.") }}</p>
     </div>
   </section>
 

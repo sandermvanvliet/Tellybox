@@ -42,6 +42,7 @@ def cast_state(
     time_up: bool = False,
     now_playing: dict | None = None,
     profiles: list[dict] | None = None,
+    receiver: dict | None = None,
 ) -> dict:
     """A cast service state snapshot, shaped like CastController.state()."""
     if profiles is None:
@@ -57,6 +58,9 @@ def cast_state(
                   "grace_deadline": None, "session_started_at": None, "session_elapsed_s": None,
                   "profiles": profiles},
         "time_up": time_up,
+        # docs/cast-api.md (v7, CR-6)
+        "receiver": receiver if receiver is not None else
+        {"kind": "default", "configured": False, "fallback_until": None, "last_error": None},
     }
 
 

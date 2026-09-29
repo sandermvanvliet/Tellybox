@@ -48,14 +48,14 @@ def cast_state(
         profiles = [{"profile_id": PROFILE, "day": "2026-09-28", "used_s": used_s, "extra_s": extra_s,
                      "unlimited": unlimited, "blocked": False, "remaining_s": remaining_s,
                      "can_start": not time_up, "reason": "allowance" if time_up else None,
-                     "watching": now_playing is not None}]
+                     "session_elapsed_s": None, "watching": now_playing is not None}]
     return {
         "connection": connection,
         "device": {"uuid": "5f0c2a17", "name": "Living Room TV"},
         "now_playing": now_playing,
         "timer": {"remaining_s": remaining_s, "can_start": not time_up, "action": "continue", "reason": None,
                   "grace_deadline": None, "session_started_at": None, "session_elapsed_s": None,
-                  "profiles": profiles},
+                  "next_reset": "2026-09-29T02:00:00+00:00", "profiles": profiles},
         "time_up": time_up,
     }
 

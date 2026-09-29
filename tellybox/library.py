@@ -537,6 +537,13 @@ def list_held_downloads(conn: sqlite3.Connection) -> list[HeldDownload]:
     ]
 
 
+def count_held_ready(conn: sqlite3.Connection) -> int:
+    """Held downloads that finished and wait for the admin to publish them (admin API, HA-2)."""
+    return conn.execute(
+        "SELECT COUNT(*) FROM source_video WHERE publish = 'hold' AND status = 'ready'"
+    ).fetchone()[0]
+
+
 def publish_held_playlist(conn: sqlite3.Connection, playlist_id: str, *, now: datetime) -> int:
     """Publish every held video of this playlist that is ready (CI-7). Returns how many; KeyError if none are held.
 

@@ -38,7 +38,7 @@ from tellybox.cast.pychromecast_device import CastCommandError
 from tellybox.clock import Clock
 from tellybox.db import to_db
 from tellybox.library import Episode
-from tellybox.timer import Action, Activity, Decision, TimeUpReason, WatchTimer, day_for, next_reset_after
+from tellybox.timer import Action, Activity, Decision, TimeUpReason, WatchTimer, day_for
 
 log = logging.getLogger(__name__)
 
@@ -575,7 +575,6 @@ class CastController:
         self._refresh_profiles(now)
         d = self._decision
         c = self.current
-        settings = store.timer_settings(self.conn, self.tz)
         now_playing = None
         if c is not None:
             state = c.player_state
@@ -601,7 +600,7 @@ class CastController:
                 "grace_deadline": to_db(d.grace_deadline),
                 "session_started_at": to_db(d.session_started_at),
                 "session_elapsed_s": None if d.session_elapsed_s is None else round(d.session_elapsed_s),
-                "next_reset": to_db(next_reset_after(now, settings.reset_time, self.tz)),  # HA-2
+                "next_reset": to_db(self.timer.next_reset),  # HA-2
                 "profiles": [self._profile_state(now, p) for p in self._known_profiles],
             },
             "time_up": not d.can_start,  # KA-9

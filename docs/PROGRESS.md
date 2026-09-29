@@ -149,7 +149,8 @@ Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × 
 - Plan `docs/plans/step9-ha-api.md`, approved 2026-09-29. Subagent briefs: `docs/plans/step9-handoff.md`. Branch `step9/ha-api`.
 - Renumbered: SponsorBlock is now step 10, subscriptions 11, manual splitting 12, and smart splitting 14. The receiver keeps 13, because it's already in progress.
 - Contract (2026-09-29): migration 007 (`api_token`, `settings.instance_id`, `override_log.source`), `tellybox/api_tokens.py` with tests, `CastClient.override(kind, value, profile_ids, source)`, `docs/admin-api.md`, `docs/cast-api.md` (`profile_ids`, `source`, `clear`, `timer.next_reset`, `profiles[].session_elapsed_s`), PRD HA-1..HA-8 and A-16..A-18.
-- **Next:** three subagents in parallel: cast service (A), JSON API and hub (B), admin Integrations page and history (C).
+- **Cast service (A), merged:** `/overrides` takes `profile_ids` (1–20, `profile_id` still accepted), `source` and the new `clear` kind; unknown ids are a 422 and nothing is applied; `override_log.source`; the state gains `timer.next_reset` (from the timer, no extra DB read) and `profiles[].session_elapsed_s`. 905 tests.
+- **Running:** JSON API and hub (B), admin Integrations page and history (C).
 
 ### 13. Tellybox receiver (v7), in progress
 Moved ahead of steps 9–12 by the owner on 2026-09-29. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.

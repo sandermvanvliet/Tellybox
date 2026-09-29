@@ -202,3 +202,12 @@ def test_override_carries_its_profile(conn, second_profile):
     store.log_override(conn, None, date(2026, 9, 28), "stop_now", None, NOW)
     overrides = next(d for d in history_days(conn, NOW, AMS, FOUR) if d.overrides).overrides
     assert [(o.kind, o.profile.name if o.profile else None) for o in overrides] == [("block", "Noor"), ("stop_now", None)]
+
+
+def test_override_carries_its_source(conn, profile_id):
+    """HA-7: NULL source = the admin pages; otherwise the API token name."""
+    store.log_override(conn, profile_id, date(2026, 9, 28), "block", 1, NOW)
+    store.log_override(conn, profile_id, date(2026, 9, 28), "extra_minutes", 5, NOW)
+    conn.execute("UPDATE override_log SET source = ? WHERE kind = ?", ("Home Assistant", "extra_minutes"))
+    by_day = {d.day: d for d in history_days(conn, NOW, AMS, FOUR)}
+    assert {o.kind: o.source for o in by_day[date(2026, 9, 28)].overrides} == {"block": None, "extra_minutes": "Home Assistant"}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The Tellybox mark (docs/images/brand/mark.svg) simplified for 16-32 px: thicker lines, no antenna tips. -->
+  <defs><clipPath id="s"><rect x="7.5" y="13.5" width="17" height="11" rx="2.5"/></clipPath></defs>
+  <path d="M13.5 10 10 4.5M18.5 10 22 4.5" stroke="#1E2A5A" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="2.5" y="9.5" width="27" height="20" rx="6" fill="#FFC93C" stroke="#1E2A5A" stroke-width="2.6"/>
+  <rect x="7.5" y="13.5" width="17" height="11" rx="2.5" fill="#8FD3FF"/>
+  <g clip-path="url(#s)">
+    <circle cx="18.5" cy="22" r="3.4" fill="#FFC93C"/>
+    <path d="M7 22.5c4-2 8-1.6 11.5 0s5.5 1 6.5.3V25H7Z" fill="#6CCB7A"/>
+  </g>
+  <rect x="7.5" y="13.5" width="17" height="11" rx="2.5" fill="none" stroke="#1E2A5A" stroke-width="2.2"/>
+</svg>

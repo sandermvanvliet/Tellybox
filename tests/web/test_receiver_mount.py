@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from tellybox import db
@@ -26,3 +28,9 @@ def test_real_receiver_directory_is_mounted(config, fake_cast):
     r = client.get("/receiver/index.html")
     assert r.status_code == 200
     assert r.headers["cache-control"] == "no-cache"
+
+
+def test_receiver_favicon_matches_the_app_favicon():
+    """The receiver keeps its own copy (it's also served from GitHub Pages); scripts/brand.sh refreshes it."""
+    web = Path(app_module.__file__).parent
+    assert (web / "receiver" / "favicon.svg").read_bytes() == (web / "static" / "favicon.svg").read_bytes()

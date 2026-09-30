@@ -4,7 +4,7 @@
 #   docs/images/brand/src/*.svg                    lockup and social preview sources, text as <text>
 #   tellybox/web/static/favicon.svg, icon.svg      hand-written (favicon and home-screen icon)
 # Outputs: logo.svg, logo-dark.svg (text outlined, so they render without the font), social-preview.png,
-# favicon.ico and the home-screen icon PNGs. Needs Inkscape, ImageMagick and the Fredoka font (OFL,
+# favicon.ico, the receiver's copy of favicon.svg and the home-screen icon PNGs. Needs Inkscape, ImageMagick and the Fredoka font (OFL,
 # https://fonts.google.com/specimen/Fredoka).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -32,6 +32,7 @@ outline "$tmp/logo-dark.svg" $B/logo-dark.svg
 inkscape "$tmp/social.svg" -w 1280 -h 640 -o $B/social-preview.png 2>/dev/null
 
 cp $B/mark-dark.svg $S/mark-dark.svg   # the admin header's mark
+cp $S/favicon.svg tellybox/web/receiver/favicon.svg   # the receiver is also on GitHub Pages: relative paths only
 
 for s in 16 32 48; do inkscape $S/favicon.svg -w $s -h $s -o "$tmp/fav-$s.png" 2>/dev/null; done
 magick "$tmp"/fav-16.png "$tmp"/fav-32.png "$tmp"/fav-48.png $S/favicon.ico

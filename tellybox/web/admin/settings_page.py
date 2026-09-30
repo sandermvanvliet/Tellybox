@@ -12,6 +12,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from starlette.datastructures import FormData
 
+from tellybox import sponsorblock
 from tellybox.library import _transaction
 from tellybox.i18n import _
 from tellybox.timer.models import CountingMode
@@ -80,8 +81,13 @@ def create_router(ctx: AdminContext) -> APIRouter:
             "selected_uuid": selected["uuid"] if selected else None,
         }
 
+    def sb_selected() -> list[str]:
+        row = conn.execute("SELECT sponsorblock_categories FROM settings WHERE id = 1").fetchone()
+        return sponsorblock.parse_csv(row["sponsorblock_categories"])
+
     def page_context(**overrides) -> dict:
-        data = {"profiles": profiles(), "values": default_values(), "errors": {}, **devices_context()}
+        data = {"profiles": profiles(), "values": default_values(), "errors": {}, "sb_selected": sb_selected(),
+                **devices_context()}
         data.update(overrides)
         return data
 
@@ -123,10 +129,11 @@ def create_router(ctx: AdminContext) -> APIRouter:
         receiver_app_id = (form.get("receiver_app_id") or "").strip().upper()
         if receiver_app_id and not _APP_ID.fullmatch(receiver_app_id):
             errors["receiver_app_id"] = _("Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty.")
+        sb_chosen = sponsorblock.parse_csv(",".join(str(v) for v in form.getlist("sponsorblock")))  # SB-2
 
         if errors or len(parsed_profiles) != len(profiles()):
             return render(request, "settings.html", 422, nav="settings",
-                          **page_context(values=values, errors=errors))
+                          **page_context(values=values, errors=errors, sb_selected=sb_chosen))
 
         with _transaction(conn):
             for pid, allowance, mode, max_session in parsed_profiles:
@@ -139,6 +146,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
                 " receiver_app_id = ? WHERE id = 1",
                 (reset_time.strftime("%H:%M"), grace_cap, session_break, receiver_app_id or None),
             )
+            conn.execute("UPDATE settings SET sponsorblock_categories = ? WHERE id = 1", (sponsorblock.to_csv(sb_chosen),))
         return see_other("/admin/settings", flash=_("Saved. The TV picks this up within 15 s."))
 
     @router.post("/admin/settings/devices/search")

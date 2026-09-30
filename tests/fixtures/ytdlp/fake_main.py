@@ -1,5 +1,6 @@
 """Fake yt-dlp CLI for tests: mimics only the arguments tellybox.ytdlp uses. No network."""
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -15,8 +16,33 @@ def fail(msg, code=1):
     sys.exit(code)
 
 
+# SB-1: segments the fake SponsorBlock "knows" for URLs containing "sponsored".
+SEGMENTS = [
+    {"start_time": 30.0, "end_time": 60.0, "category": "sponsor", "title": "Sponsor", "type": "skip"},
+    {"start_time": 55.0, "end_time": 70.0, "category": "selfpromo", "title": "Unpaid/Self Promotion", "type": "skip"},
+    {"start_time": 100.0, "end_time": 101.0, "category": "poi_highlight", "title": "Highlight", "type": "poi"},
+    {"start_time": 700.0, "end_time": 710.0, "category": "intro", "title": "Intro", "type": "skip"},
+]
+
+
+def sponsorblock(argv, url, info):
+    """Mimic SponsorBlockPP (after_filter, before download) and ModifyChaptersPP."""
+    flag = next((f for f in ("--sponsorblock-remove", "--sponsorblock-mark") if f in argv), None)
+    if flag is None:
+        return None
+    if "sbdown" in url:
+        fail("ERROR: Preprocessing: Unable to communicate with SponsorBlock API: "
+             "HTTP Error 503: Service Unavailable. Aborting.")
+    cats = argv[argv.index(flag) + 1].split(",")
+    found = [dict(s) for s in SEGMENTS if "sponsored" in url and (s["category"] in cats or s["type"] == "poi")]
+    info["sponsorblock_chapters"] = found
+    return flag
+
+
 def render(template, fields, info):
-    return template.replace("%()j", json.dumps(info)) % fields
+    template = template.replace("%()j", json.dumps(info).replace("%", "%%"))
+    template = re.sub(r"%\((\w+)\)j", lambda m: json.dumps(info.get(m.group(1))).replace("%", "%%"), template)
+    return template % fields
 
 
 def main(argv):
@@ -48,6 +74,14 @@ def main(argv):
     if "-J" in argv:
         print(json.dumps(info))
         return
+    if "nochapters" in url:
+        info["chapters"] = None
+    original_chapters = info.get("chapters")
+    sb = sponsorblock(argv, url, info)
+    if "--simulate" in argv:  # SB-3 re-check: --print without a stage prints at the video stage
+        for p in (argv[i + 1] for i, a in enumerate(argv) if a == "--print"):
+            print(render(p, {}, info), flush=True)
+        return
 
     opts = {}
     prints = []
@@ -63,7 +97,7 @@ def main(argv):
             opts[a] = next(it)
     stage_prints = lambda stage: [p.split(":", 1)[1] for p in prints if p.startswith(stage + ":")]
     for p in stage_prints("before_dl"):
-        print(render(p, {"format_id": info["format_id"]}, info), flush=True)
+        print(render(p, {"format_id": info["format_id"]}, {**info, "chapters": original_chapters}), flush=True)
     tmpl = opts["--progress-template"].split(":", 1)[1]
     for fmt, total, est in (("136", 1000, "NA"), ("140", "NA", 200)):
         size = total if total != "NA" else est
@@ -79,6 +113,11 @@ def main(argv):
         Path(opts["thumbnail"].replace("%(ext)s", opts["--convert-thumbnails"])).write_bytes(b"jpg")
     print("[Merger] Merging formats into " + str(video), flush=True)
     info["filepath"] = str(video)
+    if sb == "--sponsorblock-remove" and any(c["type"] == "skip" for c in info["sponsorblock_chapters"]):
+        removed = [c for c in info["sponsorblock_chapters"] if c["type"] == "skip"]
+        if not info.get("chapters"):  # like ModifyChapters: one chapter for the whole video
+            info["chapters"] = [{"start_time": 0.0, "end_time": info["duration"], "title": info["title"]}]
+        info["duration"] -= max(c["end_time"] for c in removed) - min(c["start_time"] for c in removed)
     for p in stage_prints("after_move"):
         print(render(p, {"filepath": str(video)}, info), flush=True)
 

@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>{% block title %}{{ _("Admin") }}{% endblock %} · Tellybox</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="stylesheet" href="/admin/static/admin.css">
   {% block head %}{% endblock %}
 </head>
 <body>
   {% if signed_in is not defined or signed_in %}
   <header class="top">
-    <a class="brand" href="/admin">Tellybox</a>
+    <a class="brand" href="/admin"><img src="/static/mark-dark.svg" alt="" width="28" height="28">Tellybox</a>
     <nav>
       {% for key, href, label in [
         ("dashboard", "/admin", _("Now")), ("add", "/admin/add", _("Add")), ("jobs", "/admin/jobs", _("Jobs")),

@@ -1,4 +1,4 @@
-# Tellybox receiver protocol (v7, CR-1..CR-8)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Tellybox receiver protocol (v7, CR-1..CR-8)
 
 The Tellybox receiver is a Cast Web Receiver (static files in `tellybox/web/receiver/`). It plays the same signed MP4 files as the Default Media Receiver, through the standard media namespace (`urn:x-cast:com.google.cast.media`), so loading, pause, resume, stop and media status work exactly as before (PB-*, WT-9). On top of that, the cast service and the receiver talk JSON on one custom namespace:
 

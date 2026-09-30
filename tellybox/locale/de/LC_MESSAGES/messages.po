@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:31+0200\n"
+"POT-Creation-Date: 2026-09-30 12:11+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -91,10 +91,46 @@ msgstr "Bild ist zu groß (max. 5 MB)"
 msgid "file is not a JPEG, PNG or WebP image"
 msgstr "Datei ist kein JPEG-, PNG- oder WebP-Bild"
 
-#: tellybox/jobs.py:185
+#: tellybox/jobs.py:202
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr "Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich wiederholen"
+
+#: tellybox/sponsorblock.py:20
+msgid "Sponsor"
+msgstr "Sponsor"
+
+#: tellybox/sponsorblock.py:21
+msgid "Unpaid or self promotion"
+msgstr "Unbezahlte oder Eigenwerbung"
+
+#: tellybox/sponsorblock.py:22
+msgid "Interaction reminder (subscribe)"
+msgstr "Interaktionserinnerung (Abonnieren)"
+
+#: tellybox/sponsorblock.py:23
+msgid "Intermission or intro animation"
+msgstr "Pause oder Intro-Animation"
+
+#: tellybox/sponsorblock.py:24
+msgid "End cards or credits"
+msgstr "Endcards oder Abspann"
+
+#: tellybox/sponsorblock.py:25
+msgid "Preview or recap"
+msgstr "Vorschau oder Rückblick"
+
+#: tellybox/sponsorblock.py:26
+msgid "Hook or greetings"
+msgstr "Hook oder Begrüßung"
+
+#: tellybox/sponsorblock.py:27
+msgid "Filler tangent"
+msgstr "Füllmaterial oder Abschweifung"
+
+#: tellybox/sponsorblock.py:28
+msgid "Non-music section"
+msgstr "Abschnitt ohne Musik"
 
 #: tellybox/web/admin/__init__.py:76
 msgid "This sign-in form must be sent from this page."
@@ -207,30 +243,30 @@ msgstr "Die Auswahl passt nicht zur Vorschau; lade sie neu."
 msgid "Tick at least one video to add."
 msgstr "Wähle mindestens ein Video aus."
 
-#: tellybox/web/admin/common.py:43 tellybox/web/admin/js_strings.py:46
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:48
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr "%(hours)s Std. %(minutes)s min"
 
-#: tellybox/web/admin/common.py:44 tellybox/web/admin/js_strings.py:47
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:49
 #: tellybox/web/admin/templates/history.html:40
 #, python-format
 msgid "%(minutes)s min"
 msgstr "%(minutes)s min"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:49
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:51
 msgid "KB"
 msgstr "KB"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:50
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:52
 msgid "MB"
 msgstr "MB"
 
-#: tellybox/web/admin/common.py:55 tellybox/web/admin/js_strings.py:51
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:53
 msgid "GB"
 msgstr "GB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:48
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:50
 #, python-format
 msgid "%(size)s B"
 msgstr "%(size)s B"
@@ -306,42 +342,52 @@ msgstr "Token widerrufen."
 msgid "Update yt-dlp"
 msgstr "yt-dlp aktualisieren"
 
-#: tellybox/web/admin/jobs_page.py:91
+#: tellybox/web/admin/jobs_page.py:44 tellybox/web/admin/js_strings.py:40
+#: tellybox/web/admin/templates/_labels.html:17
+msgid "Check SponsorBlock"
+msgstr "SponsorBlock prüfen"
+
+#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:41
+#: tellybox/web/admin/templates/_labels.html:17
+msgid "Download again"
+msgstr "Erneut herunterladen"
+
+#: tellybox/web/admin/jobs_page.py:93
 #, python-format
 msgid "Job %(id)d queued for retry"
 msgstr "Aufgabe %(id)d wird erneut versucht"
 
-#: tellybox/web/admin/jobs_page.py:96
+#: tellybox/web/admin/jobs_page.py:98
 msgid "yt-dlp update queued"
 msgstr "yt-dlp-Update eingeplant"
 
-#: tellybox/web/admin/jobs_page.py:96
+#: tellybox/web/admin/jobs_page.py:98
 msgid "An update is already pending"
 msgstr "Ein Update ist schon eingeplant"
 
 #: tellybox/web/admin/js_strings.py:16
-#: tellybox/web/admin/templates/_labels.html:20
+#: tellybox/web/admin/templates/_labels.html:21
 msgid "connecting"
 msgstr "verbindet…"
 
 #: tellybox/web/admin/js_strings.py:17
-#: tellybox/web/admin/templates/_labels.html:20
+#: tellybox/web/admin/templates/_labels.html:21
 msgid "connected"
 msgstr "verbunden"
 
 #: tellybox/web/admin/js_strings.py:18
-#: tellybox/web/admin/templates/_labels.html:20
+#: tellybox/web/admin/templates/_labels.html:21
 msgid "lost"
 msgstr "unterbrochen"
 
 #: tellybox/web/admin/js_strings.py:19
 #: tellybox/web/admin/templates/_labels.html:12
-#: tellybox/web/admin/templates/_labels.html:21
+#: tellybox/web/admin/templates/_labels.html:22
 msgid "failed"
 msgstr "fehlgeschlagen"
 
 #: tellybox/web/admin/js_strings.py:20
-#: tellybox/web/admin/templates/_labels.html:21
+#: tellybox/web/admin/templates/_labels.html:22
 msgid "disconnected"
 msgstr "getrennt"
 
@@ -351,22 +397,22 @@ msgid "unreachable"
 msgstr "nicht erreichbar"
 
 #: tellybox/web/admin/js_strings.py:22
-#: tellybox/web/admin/templates/_labels.html:26
+#: tellybox/web/admin/templates/_labels.html:27
 msgid "loading"
 msgstr "startet…"
 
 #: tellybox/web/admin/js_strings.py:23
-#: tellybox/web/admin/templates/_labels.html:26
+#: tellybox/web/admin/templates/_labels.html:27
 msgid "playing"
 msgstr "läuft"
 
 #: tellybox/web/admin/js_strings.py:24
-#: tellybox/web/admin/templates/_labels.html:26
+#: tellybox/web/admin/templates/_labels.html:27
 msgid "buffering"
 msgstr "lädt…"
 
 #: tellybox/web/admin/js_strings.py:25
-#: tellybox/web/admin/templates/_labels.html:27
+#: tellybox/web/admin/templates/_labels.html:28
 msgid "paused"
 msgstr "pausiert"
 
@@ -443,31 +489,31 @@ msgstr "Standard-Medienempfänger"
 msgid "Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"
 msgstr "Standard-Medienempfänger (Tellybox-Empfänger nicht verfügbar bis %(time)s: %(reason)s)"
 
-#: tellybox/web/admin/js_strings.py:41
+#: tellybox/web/admin/js_strings.py:43
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "queued"
 msgstr "wartet"
 
-#: tellybox/web/admin/js_strings.py:42
+#: tellybox/web/admin/js_strings.py:44
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "downloading"
 msgstr "lädt herunter"
 
-#: tellybox/web/admin/js_strings.py:43
+#: tellybox/web/admin/js_strings.py:45
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "processing"
 msgstr "wird verarbeitet"
 
-#: tellybox/web/admin/js_strings.py:44
+#: tellybox/web/admin/js_strings.py:46
 #: tellybox/web/admin/templates/_labels.html:12
 msgid "ready"
 msgstr "bereit"
 
-#: tellybox/web/admin/js_strings.py:52
+#: tellybox/web/admin/js_strings.py:54
 msgid "TB"
 msgstr "TB"
 
-#: tellybox/web/admin/js_strings.py:57
+#: tellybox/web/admin/js_strings.py:59
 #: tellybox/web/admin/templates/add.html:116
 #, python-format
 msgid "Add %(num)d video"
@@ -475,7 +521,7 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] "%(num)d Video hinzufügen"
 msgstr[1] "%(num)d Videos hinzufügen"
 
-#: tellybox/web/admin/js_strings.py:58
+#: tellybox/web/admin/js_strings.py:60
 #: tellybox/web/admin/templates/dashboard.html:99
 #, python-format
 msgid "%(num)d failed job"
@@ -483,115 +529,132 @@ msgid_plural "%(num)d failed jobs"
 msgstr[0] "%(num)d fehlgeschlagene Aufgabe"
 msgstr[1] "%(num)d fehlgeschlagene Aufgaben"
 
-#: tellybox/web/admin/library_pages.py:94
+#: tellybox/web/admin/library_pages.py:95
 #: tellybox/web/admin/templates/add.html:73
 #: tellybox/web/admin/templates/library.html:101
 msgid "Playlist"
 msgstr "Playlist"
 
-#: tellybox/web/admin/library_pages.py:155
-#: tellybox/web/admin/library_pages.py:205
+#: tellybox/web/admin/library_pages.py:160
+#: tellybox/web/admin/library_pages.py:210
 msgid "Show name must not be empty."
 msgstr "Der Name der Serie darf nicht leer sein."
 
-#: tellybox/web/admin/library_pages.py:157
+#: tellybox/web/admin/library_pages.py:162
 msgid "Show created."
 msgstr "Serie angelegt."
 
-#: tellybox/web/admin/library_pages.py:164
+#: tellybox/web/admin/library_pages.py:169
 msgid "Confirm the merge first."
 msgstr "Bestätige zuerst das Zusammenführen."
 
-#: tellybox/web/admin/library_pages.py:168
+#: tellybox/web/admin/library_pages.py:173
 msgid "Cannot merge a show into itself."
 msgstr "Eine Serie lässt sich nicht mit sich selbst zusammenführen."
 
-#: tellybox/web/admin/library_pages.py:171
+#: tellybox/web/admin/library_pages.py:176
 msgid "Shows merged."
 msgstr "Serien zusammengeführt."
 
-#: tellybox/web/admin/library_pages.py:179
+#: tellybox/web/admin/library_pages.py:184
 msgid "Published to the kid app."
 msgstr "In der Kinder-App freigegeben."
 
-#: tellybox/web/admin/library_pages.py:190
+#: tellybox/web/admin/library_pages.py:195
 msgid "Nothing in that playlist is ready yet."
 msgstr "In dieser Playlist ist noch nichts bereit."
 
-#: tellybox/web/admin/library_pages.py:191
+#: tellybox/web/admin/library_pages.py:196
 #, python-format
 msgid "Published %(num)d video to the kid app."
 msgid_plural "Published %(num)d videos to the kid app."
 msgstr[0] "%(num)d Video in der Kinder-App freigegeben."
 msgstr[1] "%(num)d Videos in der Kinder-App freigegeben."
 
-#: tellybox/web/admin/library_pages.py:209
-#: tellybox/web/admin/library_pages.py:284
+#: tellybox/web/admin/library_pages.py:214
+#: tellybox/web/admin/library_pages.py:307
 msgid "Renamed."
 msgstr "Umbenannt."
 
-#: tellybox/web/admin/library_pages.py:217
+#: tellybox/web/admin/library_pages.py:222
+#: tellybox/web/admin/library_pages.py:240
 #: tellybox/web/admin/profiles_page.py:97
 msgid "Saved."
 msgstr "Gespeichert."
 
-#: tellybox/web/admin/library_pages.py:225
-#: tellybox/web/admin/library_pages.py:290
+#: tellybox/web/admin/library_pages.py:248
+#: tellybox/web/admin/library_pages.py:313
 msgid "Hidden."
 msgstr "Ausgeblendet."
 
-#: tellybox/web/admin/library_pages.py:225
-#: tellybox/web/admin/library_pages.py:290
+#: tellybox/web/admin/library_pages.py:248
+#: tellybox/web/admin/library_pages.py:313
 msgid "Unhidden."
 msgstr "Wieder eingeblendet."
 
-#: tellybox/web/admin/library_pages.py:233
+#: tellybox/web/admin/library_pages.py:256
 msgid "Type the show's name exactly to delete it."
 msgstr "Gib den Namen der Serie genau ein, um sie zu löschen."
 
-#: tellybox/web/admin/library_pages.py:236
+#: tellybox/web/admin/library_pages.py:259
 msgid "Show deleted."
 msgstr "Serie gelöscht."
 
-#: tellybox/web/admin/library_pages.py:250
-#: tellybox/web/admin/library_pages.py:272
+#: tellybox/web/admin/library_pages.py:273
+#: tellybox/web/admin/library_pages.py:295
 msgid "Artwork updated."
 msgstr "Titelbild aktualisiert."
 
-#: tellybox/web/admin/library_pages.py:260
+#: tellybox/web/admin/library_pages.py:283
 msgid "Pick an episode of this show."
 msgstr "Wähle eine Folge dieser Serie."
 
-#: tellybox/web/admin/library_pages.py:264
+#: tellybox/web/admin/library_pages.py:287
 msgid "That episode's video file is missing."
 msgstr "Die Videodatei dieser Folge fehlt."
 
-#: tellybox/web/admin/library_pages.py:282
+#: tellybox/web/admin/library_pages.py:305
 msgid "Episode title must not be empty."
 msgstr "Der Titel der Folge darf nicht leer sein."
 
-#: tellybox/web/admin/library_pages.py:298
+#: tellybox/web/admin/library_pages.py:321
 msgid "Unknown target show."
 msgstr "Unbekannte Zielserie."
 
-#: tellybox/web/admin/library_pages.py:300
+#: tellybox/web/admin/library_pages.py:323
 msgid "Episode moved."
 msgstr "Folge verschoben."
 
-#: tellybox/web/admin/library_pages.py:314
+#: tellybox/web/admin/library_pages.py:337
 msgid "Type \"delete\" to confirm."
 msgstr "Gib „delete“ ein, um zu bestätigen."
 
-#: tellybox/web/admin/library_pages.py:317
+#: tellybox/web/admin/library_pages.py:340
 msgid "Episode deleted."
 msgstr "Folge gelöscht."
 
-#: tellybox/web/admin/library_pages.py:344
-#: tellybox/web/admin/library_pages.py:359
+#: tellybox/web/admin/library_pages.py:369
+msgid "This episode has no downloaded video to download again."
+msgstr "Diese Folge hat kein heruntergeladenes Video, das erneut heruntergeladen werden könnte."
+
+#: tellybox/web/admin/library_pages.py:374
+msgid "This video is already being checked or downloaded again."
+msgstr "Dieses Video wird bereits geprüft oder erneut heruntergeladen."
+
+#: tellybox/web/admin/library_pages.py:376
+msgid "This video can't be downloaded again right now."
+msgstr "Dieses Video kann gerade nicht erneut heruntergeladen werden."
+
+#: tellybox/web/admin/library_pages.py:377
+msgid "Queued: the video will be downloaded again."
+msgstr "In der Warteschlange: Das Video wird erneut heruntergeladen."
+
+#: tellybox/web/admin/library_pages.py:404
+#: tellybox/web/admin/library_pages.py:419
 msgid "Thumbnail updated."
 msgstr "Vorschaubild aktualisiert."
 
-#: tellybox/web/admin/library_pages.py:351
+#: tellybox/web/admin/library_pages.py:411
 msgid "This episode's video file is missing."
 msgstr "Die Videodatei dieser Folge fehlt."
 
@@ -663,59 +726,59 @@ msgstr "Dieses Profil schaut gerade. Stoppe zuerst den Fernseher."
 msgid "Profile deleted."
 msgstr "Profil gelöscht."
 
-#: tellybox/web/admin/settings_page.py:27
+#: tellybox/web/admin/settings_page.py:28
 msgid "Enter a whole number of minutes."
 msgstr "Gib eine ganze Zahl an Minuten ein."
 
-#: tellybox/web/admin/settings_page.py:29
+#: tellybox/web/admin/settings_page.py:30
 #, python-format
 msgid "Enter a number between %(lo)d and %(hi)d."
 msgstr "Gib eine Zahl zwischen %(lo)d und %(hi)d ein."
 
-#: tellybox/web/admin/settings_page.py:106
+#: tellybox/web/admin/settings_page.py:112
 msgid "Choose a counting mode."
 msgstr "Wähle eine Zählweise."
 
-#: tellybox/web/admin/settings_page.py:115
+#: tellybox/web/admin/settings_page.py:121
 msgid "Enter a time as HH:MM."
 msgstr "Gib eine Uhrzeit als HH:MM ein."
 
-#: tellybox/web/admin/settings_page.py:125
+#: tellybox/web/admin/settings_page.py:131
 msgid "Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty."
 msgstr "Gib die 8 Zeichen (0-9, A-F) der App-ID ein oder lass das Feld leer."
 
-#: tellybox/web/admin/settings_page.py:142
+#: tellybox/web/admin/settings_page.py:150
 msgid "Saved. The TV picks this up within 15 s."
 msgstr "Gespeichert. Der Fernseher übernimmt das innerhalb von 15 s."
 
-#: tellybox/web/admin/settings_page.py:149
+#: tellybox/web/admin/settings_page.py:157
 msgid "Cast service unreachable; couldn't search for devices."
 msgstr "Cast-Dienst nicht erreichbar; Gerätesuche nicht möglich."
 
-#: tellybox/web/admin/settings_page.py:152
+#: tellybox/web/admin/settings_page.py:160
 msgid "No Chromecasts found."
 msgstr "Keine Chromecasts gefunden."
 
-#: tellybox/web/admin/settings_page.py:154
+#: tellybox/web/admin/settings_page.py:162
 #, python-format
 msgid "Found: %(names)s."
 msgstr "Gefunden: %(names)s."
 
-#: tellybox/web/admin/settings_page.py:161
+#: tellybox/web/admin/settings_page.py:169
 msgid "Unknown device; search again."
 msgstr "Unbekanntes Gerät; such noch einmal."
 
-#: tellybox/web/admin/settings_page.py:163
+#: tellybox/web/admin/settings_page.py:171
 msgid "Cast service unreachable; nothing was changed."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde geändert."
 
-#: tellybox/web/admin/settings_page.py:164
+#: tellybox/web/admin/settings_page.py:172
 msgid "Chromecast selected."
 msgstr "Chromecast ausgewählt."
 
 #: tellybox/web/admin/templates/add.html:3
 #: tellybox/web/admin/templates/add.html:63
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/profiles.html:65
 msgid "Add"
 msgstr "Hinzufügen"
@@ -748,14 +811,14 @@ msgid "See %(jobs)s or %(library)s."
 msgstr "Siehe %(jobs)s oder %(library)s."
 
 #: tellybox/web/admin/templates/add.html:19
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/jobs.html:3
 #: tellybox/web/admin/templates/jobs.html:7
 msgid "Jobs"
 msgstr "Aufgaben"
 
 #: tellybox/web/admin/templates/add.html:20
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/library.html:3
 #: tellybox/web/admin/templates/library.html:6
 #: tellybox/web/admin/templates/show.html:5
@@ -841,36 +904,36 @@ msgstr "Bis zur Freigabe zurückhalten"
 msgid "Admin"
 msgstr "Verwaltung"
 
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/dashboard.html:4
 msgid "Now"
 msgstr "Jetzt"
 
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/profiles.html:3
 #: tellybox/web/admin/templates/profiles.html:5
 msgid "Profiles"
 msgstr "Profile"
 
-#: tellybox/web/admin/templates/base.html:19
+#: tellybox/web/admin/templates/base.html:21
 #: tellybox/web/admin/templates/settings.html:3
 #: tellybox/web/admin/templates/settings.html:5
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: tellybox/web/admin/templates/base.html:20
+#: tellybox/web/admin/templates/base.html:22
 #: tellybox/web/admin/templates/integrations.html:2
 #: tellybox/web/admin/templates/integrations.html:4
 msgid "Integrations"
 msgstr "Integrationen"
 
-#: tellybox/web/admin/templates/base.html:21
+#: tellybox/web/admin/templates/base.html:23
 #: tellybox/web/admin/templates/history.html:3
 #: tellybox/web/admin/templates/history.html:5
 msgid "History"
 msgstr "Verlauf"
 
-#: tellybox/web/admin/templates/base.html:24
+#: tellybox/web/admin/templates/base.html:26
 msgid "Sign out"
 msgstr "Abmelden"
 
@@ -944,6 +1007,82 @@ msgstr "Alle Aufgaben"
 msgid "System"
 msgstr "System"
 
+#: tellybox/web/admin/templates/episode.html:12
+#: tellybox/web/admin/templates/library.html:23
+#: tellybox/web/admin/templates/show.html:115
+msgid "Hidden"
+msgstr "Ausgeblendet"
+
+#: tellybox/web/admin/templates/episode.html:20
+#: tellybox/web/admin/templates/settings.html:73
+#: tellybox/web/admin/templates/show.html:34
+msgid "SponsorBlock"
+msgstr "SponsorBlock"
+
+#: tellybox/web/admin/templates/episode.html:25
+msgid "Category"
+msgstr "Kategorie"
+
+#: tellybox/web/admin/templates/episode.html:25
+#: tellybox/web/admin/templates/history.html:31
+msgid "Start"
+msgstr "Beginn"
+
+#: tellybox/web/admin/templates/episode.html:25
+#: tellybox/web/admin/templates/history.html:31
+msgid "End"
+msgstr "Ende"
+
+#: tellybox/web/admin/templates/episode.html:33
+#, python-format
+msgid "Removed in total: %(time)s"
+msgstr "Insgesamt entfernt: %(time)s"
+
+#: tellybox/web/admin/templates/episode.html:34
+msgid "Times are on the original video."
+msgstr "Die Zeiten beziehen sich auf das Originalvideo."
+
+#: tellybox/web/admin/templates/episode.html:36
+msgid "No segments found."
+msgstr "Keine Segmente gefunden."
+
+#: tellybox/web/admin/templates/episode.html:38
+msgid "SponsorBlock couldn't be reached; it will be checked again."
+msgstr "SponsorBlock war nicht erreichbar; es wird später erneut geprüft."
+
+#: tellybox/web/admin/templates/episode.html:40
+msgid "SponsorBlock is off for this show."
+msgstr "SponsorBlock ist für diese Serie ausgeschaltet."
+
+#: tellybox/web/admin/templates/episode.html:42
+msgid "Downloaded again without SponsorBlock."
+msgstr "Erneut ohne SponsorBlock heruntergeladen."
+
+#: tellybox/web/admin/templates/episode.html:46
+#, python-format
+msgid "Checked daily until %(date)s."
+msgstr "Wird täglich geprüft bis %(date)s."
+
+#: tellybox/web/admin/templates/episode.html:50
+msgid "Being downloaded again"
+msgstr "Wird erneut heruntergeladen"
+
+#: tellybox/web/admin/templates/episode.html:52
+msgid "This video is split into episodes, so it can't be downloaded again."
+msgstr "Dieses Video ist in Folgen aufgeteilt und kann deshalb nicht erneut heruntergeladen werden."
+
+#: tellybox/web/admin/templates/episode.html:56
+msgid "Download this video again without SponsorBlock? The file is replaced; the resume position is kept."
+msgstr "Dieses Video erneut ohne SponsorBlock herunterladen? Die Datei wird ersetzt; die Wiedergabeposition bleibt erhalten."
+
+#: tellybox/web/admin/templates/episode.html:58
+msgid "Download again without SponsorBlock"
+msgstr "Erneut ohne SponsorBlock herunterladen"
+
+#: tellybox/web/admin/templates/episode.html:64
+msgid "Download again with SponsorBlock"
+msgstr "Erneut mit SponsorBlock herunterladen"
+
 #: tellybox/web/admin/templates/history.html:6
 msgid "The last 21 days."
 msgstr "Die letzten 21 Tage."
@@ -969,14 +1108,6 @@ msgstr "Folge"
 #: tellybox/web/admin/templates/history.html:31
 msgid "Who"
 msgstr "Wer"
-
-#: tellybox/web/admin/templates/history.html:31
-msgid "Start"
-msgstr "Beginn"
-
-#: tellybox/web/admin/templates/history.html:31
-msgid "End"
-msgstr "Ende"
 
 #: tellybox/web/admin/templates/history.html:31
 msgid "Minutes"
@@ -1162,11 +1293,6 @@ msgstr[1] "%(num)d Folgen"
 msgid "%(count)s hidden"
 msgstr "%(count)s ausgeblendet"
 
-#: tellybox/web/admin/templates/library.html:23
-#: tellybox/web/admin/templates/show.html:83
-msgid "Hidden"
-msgstr "Ausgeblendet"
-
 #: tellybox/web/admin/templates/library.html:24
 msgid "Autoplay"
 msgstr "Automatisch weiter"
@@ -1285,7 +1411,8 @@ msgid "No picture"
 msgstr "Kein Bild"
 
 #: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:73
+#: tellybox/web/admin/templates/settings.html:87
+#: tellybox/web/admin/templates/show.html:60
 msgid "Save"
 msgstr "Speichern"
 
@@ -1302,12 +1429,12 @@ msgid "Remove photo"
 msgstr "Foto entfernen"
 
 #: tellybox/web/admin/templates/profiles.html:44
-#: tellybox/web/admin/templates/show.html:90
+#: tellybox/web/admin/templates/show.html:122
 msgid "Move up"
 msgstr "Nach oben"
 
 #: tellybox/web/admin/templates/profiles.html:48
-#: tellybox/web/admin/templates/show.html:94
+#: tellybox/web/admin/templates/show.html:126
 msgid "Move down"
 msgstr "Nach unten"
 
@@ -1367,32 +1494,40 @@ msgstr "App-ID des Tellybox-Empfängers"
 msgid "Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own."
 msgstr "Optional. Leer heißt, der Fernseher nutzt den Standard-Medienempfänger. Wie du deinen eigenen registrierst, steht im Abschnitt Tellybox receiver in docs/installation.md."
 
-#: tellybox/web/admin/templates/settings.html:81
+#: tellybox/web/admin/templates/settings.html:75
+msgid "Cut these kinds of segments out of videos. Tick nothing to turn SponsorBlock off."
+msgstr "Diese Arten von Segmenten aus Videos herausschneiden. Nichts ankreuzen, um SponsorBlock auszuschalten."
+
+#: tellybox/web/admin/templates/settings.html:83
+msgid "Segments are cut from new downloads and from videos still inside their 7-day re-check. Each show can override this."
+msgstr "Segmente werden aus neuen Downloads und aus Videos herausgeschnitten, die noch in ihrer 7-tägigen Nachprüfung liegen. Jede Serie kann das überschreiben."
+
+#: tellybox/web/admin/templates/settings.html:95
 msgid "Device"
 msgstr "Gerät"
 
-#: tellybox/web/admin/templates/settings.html:81
+#: tellybox/web/admin/templates/settings.html:95
 msgid "Address"
 msgstr "Adresse"
 
-#: tellybox/web/admin/templates/settings.html:85
+#: tellybox/web/admin/templates/settings.html:99
 msgid "selected"
 msgstr "ausgewählt"
 
-#: tellybox/web/admin/templates/settings.html:91
+#: tellybox/web/admin/templates/settings.html:105
 msgid "Use this one"
 msgstr "Dieses verwenden"
 
-#: tellybox/web/admin/templates/settings.html:100
+#: tellybox/web/admin/templates/settings.html:114
 msgid "No Chromecasts known yet."
 msgstr "Noch keine Chromecasts bekannt."
 
-#: tellybox/web/admin/templates/settings.html:103
+#: tellybox/web/admin/templates/settings.html:117
 msgid "Search"
 msgstr "Suchen"
 
 #: tellybox/web/admin/templates/show.html:12
-#: tellybox/web/admin/templates/show.html:104
+#: tellybox/web/admin/templates/show.html:136
 msgid "Rename"
 msgstr "Umbenennen"
 
@@ -1424,80 +1559,101 @@ msgstr "Zum Löschen den Namen der Serie eingeben"
 msgid "Delete show and its files"
 msgstr "Serie samt Dateien löschen"
 
-#: tellybox/web/admin/templates/show.html:34
+#: tellybox/web/admin/templates/show.html:39
+#, python-format
+msgid "Use the default (%(categories)s)"
+msgstr "Standard verwenden (%(categories)s)"
+
+#: tellybox/web/admin/templates/show.html:41
+msgid "Use the default (off)"
+msgstr "Standard verwenden (aus)"
+
+#: tellybox/web/admin/templates/show.html:46
+msgid "Off for this show"
+msgstr "Für diese Serie aus"
+
+#: tellybox/web/admin/templates/show.html:50
+msgid "Choose"
+msgstr "Auswählen"
+
+#: tellybox/web/admin/templates/show.html:62
+msgid "Applies to new downloads and to videos still inside their 7-day re-check."
+msgstr "Gilt für neue Downloads und für Videos, die noch in ihrer 7-tägigen Nachprüfung liegen."
+
+#: tellybox/web/admin/templates/show.html:66
 msgid "Artwork"
 msgstr "Titelbild"
 
-#: tellybox/web/admin/templates/show.html:39
+#: tellybox/web/admin/templates/show.html:71
 msgid "Upload"
 msgstr "Hochladen"
 
-#: tellybox/web/admin/templates/show.html:44
+#: tellybox/web/admin/templates/show.html:76
 msgid "Frame from"
 msgstr "Bild aus"
 
-#: tellybox/web/admin/templates/show.html:51
+#: tellybox/web/admin/templates/show.html:83
 msgid "At"
 msgstr "Bei"
 
-#: tellybox/web/admin/templates/show.html:52
-#: tellybox/web/admin/templates/show.html:130
+#: tellybox/web/admin/templates/show.html:84
+#: tellybox/web/admin/templates/show.html:162
 msgid "mm:ss or seconds"
 msgstr "mm:ss oder Sekunden"
 
-#: tellybox/web/admin/templates/show.html:55
-#: tellybox/web/admin/templates/show.html:133
+#: tellybox/web/admin/templates/show.html:87
+#: tellybox/web/admin/templates/show.html:165
 msgid "Preview frame"
 msgstr "Bild ansehen"
 
-#: tellybox/web/admin/templates/show.html:60
-#: tellybox/web/admin/templates/show.html:138
+#: tellybox/web/admin/templates/show.html:92
+#: tellybox/web/admin/templates/show.html:170
 msgid "Frame preview"
 msgstr "Bildvorschau"
 
-#: tellybox/web/admin/templates/show.html:65
-#: tellybox/web/admin/templates/show.html:142
+#: tellybox/web/admin/templates/show.html:97
+#: tellybox/web/admin/templates/show.html:174
 msgid "Use this frame"
 msgstr "Dieses Bild verwenden"
 
-#: tellybox/web/admin/templates/show.html:73
+#: tellybox/web/admin/templates/show.html:105
 msgid "Episodes"
 msgstr "Folgen"
 
-#: tellybox/web/admin/templates/show.html:75
+#: tellybox/web/admin/templates/show.html:107
 msgid "No episodes in this show."
 msgstr "Keine Folgen in dieser Serie."
 
-#: tellybox/web/admin/templates/show.html:100
+#: tellybox/web/admin/templates/show.html:132
 msgid "Edit episode"
 msgstr "Folge bearbeiten"
 
-#: tellybox/web/admin/templates/show.html:110
+#: tellybox/web/admin/templates/show.html:142
 msgid "Unhide"
 msgstr "Einblenden"
 
-#: tellybox/web/admin/templates/show.html:110
+#: tellybox/web/admin/templates/show.html:142
 msgid "Hide"
 msgstr "Ausblenden"
 
-#: tellybox/web/admin/templates/show.html:117
+#: tellybox/web/admin/templates/show.html:149
 msgid "Move to show"
 msgstr "In Serie verschieben"
 
-#: tellybox/web/admin/templates/show.html:124
+#: tellybox/web/admin/templates/show.html:156
 msgid "Upload thumbnail"
 msgstr "Vorschaubild hochladen"
 
-#: tellybox/web/admin/templates/show.html:129
+#: tellybox/web/admin/templates/show.html:161
 msgid "Frame at"
 msgstr "Bild bei"
 
-#: tellybox/web/admin/templates/show.html:148
+#: tellybox/web/admin/templates/show.html:180
 #, python-format
 msgid "Type \"%(word)s\" to confirm"
 msgstr "Zum Bestätigen „%(word)s“ eingeben"
 
-#: tellybox/web/admin/templates/show.html:149
+#: tellybox/web/admin/templates/show.html:181
 msgid "Delete episode and its files"
 msgstr "Folge samt Dateien löschen"
 

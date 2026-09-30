@@ -258,7 +258,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 | Entity | Key fields | Notes |
 | --- | --- | --- |
 | Profile | name, picture, daily allowance, counting mode | v1 has one household profile |
-| Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories empty = the global setting (SB-2) |
+| Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories not set = the global setting, none = SponsorBlock off for the show (SB-2) |
 | SourceVideo | YouTube ID, channel, title, duration, file path, status, removed segments, SponsorBlock re-check until | The downloaded original; may be deleted after splitting |
 | Episode | show, source video, start/end offset, title, thumbnail, file path, order, hidden | What kids see and play |
 | SplitProfile | reference frames, compare region, match threshold, length hint, snap window | One per show |
@@ -351,6 +351,8 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-16 | API tokens are independent of the admin password: changing the password doesn't revoke them. Revoked tokens stay listed (owner, 2026-09-29). |
 | A-17 | Extra minutes through the API are capped at 240 per call, with no daily cap: a control token carries the parent's authority (owner, 2026-09-29). |
 | A-18 | The kid app doesn't show where an override came from (owner, 2026-09-29). |
+| A-19 | SponsorBlock cuts are made at keyframes by yt-dlp (stream copy), without re-encoding. A cut may be off by up to about two seconds (owner, 2026-09-30). |
+| A-20 | Videos downloaded before v3 are not cut by the daily re-check; the admin can download one again with SponsorBlock from its episode page (step 10, 2026-09-30). |
 
 ### Open questions
 

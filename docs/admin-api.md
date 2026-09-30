@@ -1,4 +1,4 @@
-# Admin API contract (step 9, v2.1, HA-1..HA-8)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Admin API contract (step 9, v2.1, HA-1..HA-8)
 
 A small JSON API on the `web` service for Home Assistant and similar home-automation tools. It mirrors the admin dashboard's live state and exposes the parent overrides. It never becomes a way around the timer (HA-8):
 - every action goes through the cast service, exactly like the admin dashboard's buttons;

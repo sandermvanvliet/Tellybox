@@ -11,7 +11,8 @@ from pathlib import Path
 import pytest
 
 from tellybox import ytdlp
-from tellybox.ytdlp import Chapter, YtDlp, YtDlpError, classify_error, update
+from tellybox.sponsorblock import Segment
+from tellybox.ytdlp import Chapter, SponsorBlockUnavailable, YtDlp, YtDlpError, classify_error, update
 
 FIXTURES = Path(__file__).parent / "fixtures" / "ytdlp"
 
@@ -299,6 +300,47 @@ def test_download_errors(yt, tmp_path, url, message, retryable):
     with pytest.raises(YtDlpError) as e:
         yt.download(url, tmp_path)
     assert (e.value.message, e.value.retryable) == (message, retryable)
+
+
+# --- SponsorBlock (SB-1, SB-3, SB-5) --------------------------------------------
+
+SB = ["sponsor", "selfpromo", "interaction"]
+
+
+def test_download_with_sponsorblock_reports_removed_segments(yt, tmp_path):
+    res = yt.download("https://youtu.be/sponsored", tmp_path, sb_categories=SB)
+    assert res.sponsor_segments == [Segment("sponsor", 30.0, 70.0)]  # overlap merged; poi and intro left out
+    assert len(res.info.chapters) == 2  # the video's own chapters stay
+
+
+def test_download_with_sponsorblock_drops_made_up_chapter(yt, tmp_path):
+    res = yt.download("https://youtu.be/sponsored-nochapters", tmp_path, sb_categories=SB)
+    assert res.sponsor_segments and res.info.chapters == []
+
+
+def test_download_without_sponsorblock_or_segments(yt, tmp_path):
+    assert yt.download("https://youtu.be/sponsored", tmp_path / "a").sponsor_segments == []
+    res = yt.download("https://youtu.be/plain", tmp_path / "b", sb_categories=SB)
+    assert res.sponsor_segments == [] and len(res.info.chapters) == 2
+
+
+def test_download_sponsorblock_unreachable(yt, tmp_path):
+    with pytest.raises(SponsorBlockUnavailable) as e:
+        yt.download("https://youtu.be/sbdown", tmp_path, sb_categories=SB)
+    assert e.value.retryable and "SponsorBlock" in e.value.message
+    assert yt.download("https://youtu.be/sbdown", tmp_path / "b").sponsor_segments == []  # SB-5 fallback
+
+
+def test_sponsor_segments_recheck(yt):
+    assert yt.sponsor_segments("https://youtu.be/sponsored", SB) == [Segment("sponsor", 30.0, 70.0)]
+    assert yt.sponsor_segments("https://youtu.be/sponsored", ["intro"]) == [Segment("intro", 700.0, 710.0)]
+    assert yt.sponsor_segments("https://youtu.be/plain", SB) == []
+    assert yt.sponsor_segments("https://youtu.be/sponsored", []) == []
+    with pytest.raises(SponsorBlockUnavailable):
+        yt.sponsor_segments("https://youtu.be/sbdown", SB)
+    with pytest.raises(YtDlpError) as e:
+        yt.sponsor_segments("https://youtu.be/unavailable", SB)
+    assert not isinstance(e.value, SponsorBlockUnavailable) and not e.value.retryable
 
 
 @pytest.mark.parametrize("url", ["https://youtu.be/slow", "https://youtu.be/stall"])

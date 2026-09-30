@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from tellybox.db import to_db
+from tellybox import sponsorblock
+from tellybox.db import from_db, to_db
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class Show:
     sort_order: int
     youtube_channel_id: str | None = None  # CI-4: default show per channel
     artwork_path: str | None = None  # relative to the media dir
+    sponsorblock_categories: str | None = None  # SB-2: None = the global setting, '' = off, else CSV
 
 
 @dataclass(frozen=True)
@@ -46,7 +48,7 @@ class Episode:
 _EPISODE_COLS = (
     "id, show_id, title, file_path, duration_s, sort_order, hidden, source_video_id, start_s, end_s, thumbnail_path"
 )
-_SHOW_COLS = "id, name, autoplay, hidden, sort_order, youtube_channel_id, artwork_path"
+_SHOW_COLS = "id, name, autoplay, hidden, sort_order, youtube_channel_id, artwork_path, sponsorblock_categories"
 
 
 def _show(row: sqlite3.Row) -> Show:
@@ -58,6 +60,7 @@ def _show(row: sqlite3.Row) -> Show:
         sort_order=row["sort_order"],
         youtube_channel_id=row["youtube_channel_id"],
         artwork_path=row["artwork_path"],
+        sponsorblock_categories=row["sponsorblock_categories"],
     )
 
 
@@ -232,6 +235,47 @@ def set_show_hidden(conn: sqlite3.Connection, show_id: int, hidden: bool) -> Non
 
 def set_show_autoplay(conn: sqlite3.Connection, show_id: int, autoplay: bool) -> None:  # LM-4
     _update_one(conn, "UPDATE show SET autoplay = ? WHERE id = ?", (int(autoplay), show_id), show_id)
+
+
+def set_show_sponsorblock(conn: sqlite3.Connection, show_id: int, categories: list[str] | None) -> None:  # SB-2
+    """None = follow the global setting, [] = SponsorBlock off for this show, else its own categories."""
+    value = None if categories is None else sponsorblock.to_csv(categories)
+    _update_one(conn, "UPDATE show SET sponsorblock_categories = ? WHERE id = ?", (value, show_id), show_id)
+
+
+@dataclass(frozen=True)
+class SponsorBlockInfo:
+    """What was done to a source video's current file (SB-4); see sponsorblock.SB_STATUSES."""
+
+    source_id: int
+    status: str | None  # None: downloaded before v3, or just re-enabled
+    segments: list[sponsorblock.Segment]  # removed, original timeline
+    removed_s: float | None
+    checked_at: datetime | None
+    recheck_until: datetime | None
+    ready: bool  # the video is published, so it can be downloaded again
+    split: bool  # an episode is a segment of it (SB-6): the file must not change
+
+
+def get_sponsorblock_info(conn: sqlite3.Connection, source_id: int) -> SponsorBlockInfo | None:
+    row = conn.execute(
+        """SELECT id, status, sb_status, sb_segments_json, sb_removed_s, sb_checked_at, sb_recheck_until,
+                  EXISTS (SELECT 1 FROM episode WHERE source_video_id = source_video.id AND start_s IS NOT NULL) AS split
+           FROM source_video WHERE id = ?""",
+        (source_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return SponsorBlockInfo(
+        source_id=row["id"],
+        status=row["sb_status"],
+        segments=sponsorblock.loads(row["sb_segments_json"]) if row["sb_segments_json"] else [],
+        removed_s=row["sb_removed_s"],
+        checked_at=from_db(row["sb_checked_at"]),
+        recheck_until=from_db(row["sb_recheck_until"]),
+        ready=row["status"] == "ready",
+        split=bool(row["split"]),
+    )
 
 
 def rename_episode(conn: sqlite3.Connection, episode_id: int, title: str) -> None:  # LM-1

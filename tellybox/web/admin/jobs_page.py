@@ -27,12 +27,12 @@ class JobRow:
     """A job plus the presentation bits the template and the JSON API both need."""
 
     job: Job
-    title: str | None  # download jobs only
+    title: str | None  # jobs of a video: download, sb_recheck and redownload
     badge: str  # admin.css .badge modifier, or "" for the plain badge
 
 
 def _title(conn: sqlite3.Connection, job: Job) -> str | None:
-    if job.type != JobType.DOWNLOAD or job.target_id is None:
+    if job.type not in (JobType.DOWNLOAD, JobType.SB_RECHECK, JobType.REDOWNLOAD) or job.target_id is None:
         return None
     row = conn.execute("SELECT title FROM source_video WHERE id = ?", (job.target_id,)).fetchone()
     return row["title"] if row else None
@@ -41,7 +41,9 @@ def _title(conn: sqlite3.Connection, job: Job) -> str | None:
 def _label(row: JobRow) -> str:
     if row.title:
         return row.title
-    return _("Update yt-dlp") if row.job.type == JobType.UPDATE_YTDLP else row.job.type.value
+    labels = {JobType.UPDATE_YTDLP: _("Update yt-dlp"), JobType.SB_RECHECK: _("Check SponsorBlock"),
+              JobType.REDOWNLOAD: _("Download again")}
+    return labels.get(row.job.type, row.job.type.value)
 
 
 def _rows(conn: sqlite3.Connection) -> list[JobRow]:

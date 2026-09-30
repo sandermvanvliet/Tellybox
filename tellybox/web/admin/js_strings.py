@@ -37,6 +37,8 @@ STRINGS: list[str] = [
     N_("Tellybox receiver"),
     N_("Default Media Receiver"),
     N_("Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"),
+    N_("Check SponsorBlock"),
+    N_("Download again"),
     # dashboard.js and jobs.js: job statuses
     N_("queued"),
     N_("downloading"),

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ episode.title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/admin/static/library.css">{% endblock %}
+{% block content %}
+<p><a href="/admin/shows/{{ show.id }}">&larr; {{ show.name }}</a></p>
+<h1>{{ episode.title }}</h1>
+
+<div class="card">
+  <div class="row">
+    <img class="thumb small" src="/admin/img/episode/{{ episode.id }}.jpg" alt="">
+    <div>
+      <p><a href="/admin/shows/{{ show.id }}">{{ show.name }}</a>{% if episode.hidden %} <span class="badge warn">{{ _("Hidden") }}</span>{% endif %}</p>
+      <p class="muted">{{ episode.duration_s | duration }}</p>
+    </div>
+  </div>
+</div>
+
+{% if sb %}
+<div class="card">
+  <h2>{{ _("SponsorBlock") }}</h2>
+
+  {% if sb.status == "cut" %}
+    {% if sb.segments %}
+    <table class="list">
+      <thead><tr><th>{{ _("Category") }}</th><th>{{ _("Start") }}</th><th>{{ _("End") }}</th></tr></thead>
+      <tbody>
+        {% for seg in sb.segments %}
+        <tr><td>{{ sb_label(seg.category) }}</td><td>{{ seg.start_s | duration }}</td><td>{{ seg.end_s | duration }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <p>{{ _("Removed in total: %(time)s", time=sb.removed_s | duration) }}</p>
+    <p class="muted">{{ _("Times are on the original video.") }}</p>
+  {% elif sb.status == "none" %}
+    <p>{{ _("No segments found.") }}</p>
+  {% elif sb.status == "unreachable" %}
+    <p><span class="badge warn">{{ _("SponsorBlock couldn't be reached; it will be checked again.") }}</span></p>
+  {% elif sb.status == "off" %}
+    <p>{{ _("SponsorBlock is off for this show.") }}</p>
+  {% elif sb.status == "admin_off" %}
+    <p>{{ _("Downloaded again without SponsorBlock.") }}</p>
+  {% endif %}
+
+  {% if sb.status in ("cut", "none") and sb_window_open %}
+    <p class="muted">{{ _("Checked daily until %(date)s.", date=format_date(sb.recheck_until.astimezone(tz), "long")) }}</p>
+  {% endif %}
+
+  {% if sb_pending %}
+    <p><span class="badge warn">{{ _("Being downloaded again") }}</span></p>
+  {% elif sb.split %}
+    <p class="muted">{{ _("This video is split into episodes, so it can't be downloaded again.") }}</p>
+  {% else %}
+    {% if sb_offer_without %}
+    <form method="post" action="/admin/episodes/{{ episode.id }}/redownload" class="inline"
+          onsubmit="return confirm({{ _("Download this video again without SponsorBlock? The file is replaced; the resume position is kept.") | tojson | forceescape }})">
+      <input type="hidden" name="sponsorblock" value="0">
+      <button class="btn small" type="submit">{{ _("Download again without SponsorBlock") }}</button>
+    </form>
+    {% endif %}
+    {% if sb_offer_with %}
+    <form method="post" action="/admin/episodes/{{ episode.id }}/redownload" class="inline">
+      <input type="hidden" name="sponsorblock" value="1">
+      <button class="btn small" type="submit">{{ _("Download again with SponsorBlock") }}</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

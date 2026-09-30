@@ -127,13 +127,19 @@ Plan: `docs/plans/i18n.md`. The foundation was built first, then subagents did t
 - **Open:** numbers keep a decimal point in every language ("127.7 KB").
 - 743 tests.
 
+### Logo and favicon (2026-09-29, branch `brand/logo`)
+- **Mark:** a yolk TV whose screen shows the sun going down behind the hill, the kid app's "the sky is the timer" idea. It uses the kid app's colours, with a white-outlined variant for dark backgrounds. The wordmark is Fredoka SemiBold (OFL), outlined to paths.
+- **Files:** `docs/images/brand/` (mark, logo, dark variants, `social-preview.png`, sources in `src/`). In the app: `favicon.svg` (the mark simplified for 16 px), `favicon.ico` (16/32/48) and a `/favicon.ico` route, plus the home-screen icon redrawn with the new TV. `scripts/brand.sh` regenerates everything derived.
+- **Where:** favicon links in the kid app and admin, the mark in the admin header, the logo at the top of the README (light and dark), and the mark on the headings of the installation guide and the API and protocol docs.
+- 1003 tests.
+
 ## Next
 
 The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid profiles, SponsorBlock, channel subscriptions, manual splitting, smart splitting, then the Tellybox Cast receiver. The decisions from that session are PRD A-7..A-11, SB-1..SB-6 and CR-1..CR-8. On 2026-09-29 the owner moved the receiver ahead (it keeps step 13) and inserted the admin API for Home Assistant as step 9. The current order is:
 - 8: profiles;
 - 9: admin API;
 - 13: receiver, in progress;
-- 10: SponsorBlock;
+- 10: SponsorBlock, deployed; device checks open;
 - 11: subscriptions;
 - 12: manual splitting;
 - 14: smart splitting.
@@ -159,7 +165,7 @@ Three steps are open:
 - Merged as PR #1 (PR numbers restarted in the public repository) and deployed (version 2026.09.29.2). The owner checked the admin pages and the kid app's screens on the devices: fine.
 - **Open:** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`. v2 is done when they pass.
 
-### 9. Admin API for Home Assistant (v2.1), merged as PR #3; device checks open
+### 9. Admin API for Home Assistant (v2.1), done
 Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × Home Assistant: upstream features & integration plan". It covers API tokens, the admin state and its event stream, override endpoints, the instance id and `/api/info`. The Home Assistant integration itself lives in separate repositories later.
 - Plan `docs/plans/step9-ha-api.md`, approved 2026-09-29. Subagent briefs: `docs/plans/step9-handoff.md`. Branch `step9/ha-api`.
 - Renumbered: SponsorBlock is now step 10, subscriptions 11, manual splitting 12, and smart splitting 14. The receiver keeps 13, because it's already in progress.
@@ -194,20 +200,85 @@ Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × 
   - 401 after revoke;
   - no token in the access log.
 - 999 tests.
-- **Open:**
-  - PR #3 is merged; CI deploys it;
-  - the owner's device checks after deploy (`docs/plans/step9-ha-api.md`, "Real-device checks").
-  - v2.1 is done when they pass. The PRD's gate is that it runs at home for a week before the integration builds on it.
-- **After step 9, outside this repository:** Phase 1 of the owner's Home Assistant plan. That is a `pytellybox` async client and an `ha-tellybox` custom integration (HACS), built against `docs/admin-api.md`. It gives:
-  - a media player;
-  - time-left and time-used sensors;
-  - time-up and last-five binary sensors;
-  - override buttons and services;
-  - reauth when a token is revoked.
+- Merged as PR #3 and deployed (version 2026.09.29.5). On the server:
+  - `/api/info` answers with the instance id, so migration 007 ran;
+  - `/api/admin/state` without a token gets a 401.
+- **Device checks passed (2026-09-29)** through the Home Assistant integration: tokens, state, +15 moving the sun, "via Home Assistant" in the history, and 401/reauth after a revoke.
+- **Home Assistant integration (Phase 1), built and released as v0.1.0 on 2026-09-29, outside this repository.** It lives in two public Apache-2.0 repositories:
+  - [`pytellybox`](https://github.com/sandermvanvliet/pytellybox): the async client and a mock Tellybox, 69 tests;
+  - [`ha-tellybox`](https://github.com/sandermvanvliet/ha-tellybox): a HACS integration for HA 2026.4 or later, 101 tests, with hassfest and HACS validation green.
+
+  What it has:
+  - a Tellybox device: media player, now playing, time left, downloads, time up and last five minutes, and buttons for everyone;
+  - one device per kid: time left and used, session, watching, blocked and unlimited, and per-kid buttons;
+  - six actions;
+  - live updates over `/api/admin/events`;
+  - reauth when a token is revoked;
+  - nl and de translations.
+
+  It was built by three Sonnet subagents from a contract. The plan and log are in `ha-tellybox/docs/`.
+  - pytellybox 0.1.0 is on PyPI. The integration is installed through HACS on the owner's Home Assistant.
+  - **The owner's checks all passed (2026-09-29):**
+    - the Tellybox device and both kid devices appear;
+    - +15 moves the sun, with "via Home Assistant" in the history;
+    - play works, and is refused when time is up;
+    - revoking the token starts reauth.
+  - Phase 1 is done.
 - **Deferred from the Home Assistant plan** (owner, 2026-09-29: Phase 0 only):
   - F4 typed events (`time_up`, `last_five`, `override_applied`, `download_ready`…) on the admin stream; today an integration has to diff the state;
   - opt-in zeroconf advertisement (`_tellybox._tcp`);
   - F6: settings `GET`/`PATCH`, daily history, and publishing held downloads from Home Assistant (opt-in).
+
+### 10. SponsorBlock (v3), deployed; device checks open
+Sponsor segments are cut out of the file at download through yt-dlp's `--sponsorblock-remove`, with the categories set in Settings and per show, a 7-day daily re-check, and an episode page that lists the removed segments (SB-1..SB-5).
+- Plan `docs/plans/step10-sponsorblock.md`, approved 2026-09-30. Subagent briefs: `docs/plans/step10-handoff.md`.
+- **Decisions (owner, 2026-09-30):**
+  - keyframe cuts by yt-dlp's stream copy, with no re-encode (A-19);
+  - a new episode page `/admin/episodes/{id}` for SB-4.
+  - Also recorded: videos from before v3 are only cut when the admin downloads them again with SponsorBlock (A-20).
+- **What the yt-dlp source (2026.08.19) showed:**
+  - the lookup sends only a 4-character hash prefix (SB-1 privacy);
+  - an unreachable API fails the whole run before anything is downloaded, so the worker retries without SponsorBlock (SB-5);
+  - when a video has no chapters, the cut invents a single one for the whole video, which the wrapper drops.
+- **Contract:**
+  - migration 008 (the categories on settings and show, the `source_video.sb_*` columns, the `job` table rebuilt for `sb_recheck` and `redownload`, the `position_shift` queue);
+  - `tellybox/sponsorblock.py` (categories, segment merging, `remap_position`);
+  - in `ytdlp.py`: `sb_categories`, `sponsor_segments()` and `SponsorBlockUnavailable`;
+  - `jobs.defer`, `jobs.has_pending_for` and `ingest.request_redownload`.
+- Built by three Sonnet subagents and merged by the controller (2026-09-30). 1103 tests.
+  - **Worker (A):**
+    - the download cuts the effective categories and falls back to uncut on `unreachable`;
+    - the daily `sb_recheck` in the 03:00 slot;
+    - `redownload` shares the pipeline with the download. It waits 20 minutes while the episode is on the TV or the cast service can't be reached (checked both before and after the download). It replaces the file at the same path in one transaction, with a hardlink backup, then updates the duration and queues `position_shift` rows. The episode keeps its id, title, thumbnail, hidden state and show.
+  - **Cast (B):** `store.apply_position_shifts` on each tick and before `play`. Controller review fix: `updated_at` is kept, so continue watching keeps its order.
+  - **Admin (C):**
+    - the SponsorBlock categories in Settings;
+    - "default / off / choose" per show;
+    - the episode page (the segments, time removed and status, and "Download again without / with SponsorBlock");
+    - job labels;
+    - nl and de.
+- **Smoke test with the real yt-dlp** (a 185 s video with three sponsor segments):
+  - the lookup matches the download's segments;
+  - 20.2 s removed; the file probes at 164.9 s, against 164.8 s expected;
+  - no invented chapter;
+  - with the API unreachable, yt-dlp exits 1 with "Preprocessing: Unable to communicate with SponsorBlock API", which the wrapper detects.
+- Merged as PR #6 and deployed (version 2026.09.30.13) on 2026-09-30. The worker log shows migration 008 applied.
+- **GHCR, 2026-09-30:** the first deploy failed silently. The server's pull was denied, but the workflow stayed green, so the old version kept running.
+  - Cause: the server's registry token had been renewed as a fine-grained token, and GHCR accepts only classic tokens with `read:packages`.
+  - Fix: the `tellybox` package is now public. The repository is public too, so the server needs no token.
+  - The package is still linked to the archived `Tellybox-private`, which is why its settings page is read-only. To change a setting, unarchive `Tellybox-private` for a moment.
+  - Follow-ups:
+    - the deploy script now stops on a failed pull (`set -e`);
+    - the GHCR login task and `github_pat` in the `tellybox` role in middle-earth-iac can go.
+- **Real-device checks (owner, after deploy):**
+  1. Add a video with sponsor segments. Its episode page lists them and the time removed. Play it on the TV: the joins are clean, with no sponsor left beyond about two seconds.
+  2. Watch a cut episode partway, then press "Download again without SponsorBlock". While it's playing, the job waits. After stopping and redownloading, resume: it continues at the same moment in the video (the earlier cuts are now back in the file).
+  3. Turn SponsorBlock off for one show and add a video: its page says it's off, and the file is uncut.
+  4. The next morning, the jobs page shows the "Check SponsorBlock" jobs that ran in the 03:00 slot.
+- **Open:**
+  - the owner's real-device checks above. v3 is done when they pass.
+  - A redownload of a split video completes without doing anything (SB-6, step 12 should add a message).
+  - The admin API's job counts (HA-2) include the daily re-check jobs for a moment.
 
 ### 13. Tellybox receiver (v7), in progress on `step13/receiver`
 Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29; it keeps number 13. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
@@ -267,10 +338,11 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
   - No lint was run (ruff isn't in the venv).
 
 ### Then
-10. SponsorBlock (v3) · 11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
+11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
 
 ## Open decisions / follow-ups
 
+- Branding: when step 13 merges, link the favicon in `tellybox/web/receiver/index.html` and `dev.html`. The receiver is also served from GitHub Pages, so it needs its own copy of `favicon.svg` next to the page (relative paths). Upload `docs/images/brand/social-preview.png` as the repository's social preview (GitHub settings, by hand).
 - Kid app images are cached for an hour (`max-age=3600`), so replaced artwork or thumbnails can take up to an hour to show on kids' devices. The admin images revalidate; consider `no-cache` for the kid app too.
 - Show order: the PRD asks only for episode order, so shows keep their creation order; there is no admin control for it.
 - The admin test suite is slower (full run ~60 s, was ~25 s), mostly from argon2 hashing in each sign-in; lower the hash cost in tests if it bothers.

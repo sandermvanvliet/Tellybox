@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 256">
+  <!-- Tellybox logo. Source: docs/images/brand/src/logo.svg; scripts/brand.sh outlines the text (Fredoka). -->
+  <svg x="0" y="0" width="256" height="256" viewBox="0 0 256 256">@MARK@</svg>
+  <text x="276" y="196" font-family="Fredoka" font-weight="600" font-size="164" letter-spacing="-2" fill="@INK@">Tellybox</text>
+</svg>

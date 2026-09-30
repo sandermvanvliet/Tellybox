@@ -3,24 +3,25 @@
 import json
 import shutil
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
-from tellybox import ingest, jobs, library, ytdlp
+from tellybox import ingest, jobs, library, sponsorblock, ytdlp
 from tellybox.clock import FakeClock
-from tellybox.db import open_db
+from tellybox.db import open_db, to_db
 from tellybox.ingest import JobRunner
 from tellybox.jobs import JobStatus, JobType
-from tellybox.ytdlp import Chapter, DownloadResult, UpdateResult, VideoInfo, YtDlpError
+from tellybox.sponsorblock import Segment
+from tellybox.ytdlp import Chapter, DownloadResult, SponsorBlockUnavailable, UpdateResult, VideoInfo, YtDlpError
 
 
-def _ffmpeg(out: Path, *args: str) -> Path:
+def _ffmpeg(out: Path, *args: str, seconds: int = 2) -> Path:
     subprocess.run(
         ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-         "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=25:duration=2",
-         "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=2",
+         "-f", "lavfi", "-i", f"testsrc2=size=640x360:rate=25:duration={seconds}",
+         "-f", "lavfi", "-i", f"sine=frequency=440:sample_rate=48000:duration={seconds}",
          *args, str(out)],
         check=True,
     )
@@ -31,6 +32,13 @@ def _ffmpeg(out: Path, *args: str) -> Path:
 def h264_clip(tmp_path_factory) -> Path:
     return _ffmpeg(tmp_path_factory.mktemp("clips") / "h264.mp4",
                    "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac")
+
+
+@pytest.fixture(scope="session")
+def short_clip(tmp_path_factory) -> Path:
+    """One second shorter than h264_clip: what a cut file looks like."""
+    return _ffmpeg(tmp_path_factory.mktemp("clips") / "short.mp4",
+                   "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", seconds=1)
 
 
 @pytest.fixture(scope="session")
@@ -57,12 +65,31 @@ class FakeYtDlp:
         self.download_infos: dict[str, VideoInfo] = {}  # full info the download reports, by URL
         self.error: YtDlpError | None = None
         self.downloads: list[str] = []
+        self.segments: dict[str, list[Segment]] = {}  # SponsorBlock segments by URL
+        self.sb_unavailable = False  # the SponsorBlock API is down
+        self.sb_calls: list[list[str] | None] = []  # sb_categories of each download
+        self.lookups: list[list[str]] = []  # categories of each sponsor_segments call
+        self.lookup_error: YtDlpError | None = None
+
+    def _segments(self, url: str, categories) -> list[Segment]:
+        return [s for s in self.segments.get(url, []) if s.category in (categories or [])]
+
+    def sponsor_segments(self, url, categories, *, timeout=0):
+        self.lookups.append(list(categories))
+        if self.sb_unavailable:
+            raise SponsorBlockUnavailable("Unable to communicate with SponsorBlock API")
+        if self.lookup_error:
+            raise self.lookup_error
+        return self._segments(url, categories)
 
     def preview(self, url: str) -> VideoInfo:
         return self.infos[url]
 
-    def download(self, url, dest_dir, *, on_progress=None, timeout=0):
+    def download(self, url, dest_dir, *, on_progress=None, timeout=0, sb_categories=None):
         self.downloads.append(url)
+        self.sb_calls.append(sb_categories)
+        if sb_categories and self.sb_unavailable:
+            raise SponsorBlockUnavailable("Unable to communicate with SponsorBlock API")
         if self.error:
             raise self.error
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -75,7 +102,8 @@ class FakeYtDlp:
                 on_progress(p)
         youtube_id = url.rsplit("=", 1)[-1]
         return DownloadResult(video_path=video, thumbnail_path=thumb,
-                              info=self.download_infos.get(url) or info(youtube_id))
+                              info=self.download_infos.get(url) or info(youtube_id),
+                              sponsor_segments=self._segments(url, sb_categories))
 
     def version(self):
         return "2026.08.19"
@@ -416,3 +444,392 @@ def test_failed_update_is_retried_once(conn, clock, runner, monkeypatch):
     clock.advance(jobs.BACKOFF_S[0])
     assert run_next(runner, clock).status == JobStatus.FAILED
     assert jobs.get(conn, job_id).attempts == 2
+
+
+# --------------------------------------------------------------------------- SponsorBlock admin actions (SB-4)
+
+
+def test_request_redownload(conn, clock, runner):
+    sid, _ = ingest.add(conn, info(), publish=True, now=clock.now())
+    with pytest.raises(KeyError):  # not published yet
+        ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    run_next(runner, clock)
+    job_id = ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    job = jobs.get(conn, job_id)
+    assert (job.type, job.target_id, job.status) == (JobType.REDOWNLOAD, sid, JobStatus.QUEUED)
+    assert source(conn, sid)["sb_status"] == "admin_off"
+    with pytest.raises(ingest.RedownloadPending):
+        ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+    jobs.claim_next(conn, now=clock.now())
+    jobs.complete(conn, job_id, now=clock.now())
+    ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+    row = source(conn, sid)
+    assert row["sb_status"] is None
+    assert row["sb_recheck_until"] == to_db(clock.now() + timedelta(days=7))
+    with pytest.raises(KeyError):
+        ingest.request_redownload(conn, 999, with_sponsorblock=True, now=clock.now())
+
+
+
+# --------------------------------------------------------------------------- SponsorBlock download (SB-1, SB-2, SB-5)
+
+URL = "https://www.youtube.com/watch?v=abc123"
+DEFAULT_CATS = ["sponsor", "selfpromo", "interaction"]
+SPONSOR = Segment("sponsor", 10.0, 20.0)
+
+
+def published(conn, clock, runner, *, publish=True):
+    """Add and download one video; returns its source id."""
+    source_id, _ = ingest.add(conn, info(), publish=publish, now=clock.now())
+    assert run_next(runner, clock).status == JobStatus.READY
+    return source_id
+
+
+def episode_of(conn, source_id):
+    return conn.execute("SELECT * FROM episode WHERE source_video_id = ?", (source_id,)).fetchone()
+
+
+def test_download_cuts_the_enabled_categories(conn, clock, runner, fake):  # SB-1, SB-2
+    fake.segments[URL] = [SPONSOR, Segment("intro", 30.0, 40.0)]  # intro isn't enabled by default
+    sid = published(conn, clock, runner)
+    assert fake.sb_calls == [DEFAULT_CATS]
+    row = source(conn, sid)
+    assert (row["sb_status"], row["sb_categories"], row["sb_removed_s"]) == ("cut", "sponsor,selfpromo,interaction", 10.0)
+    assert sponsorblock.loads(row["sb_segments_json"]) == [SPONSOR]
+    assert row["sb_checked_at"] == to_db(clock.now())
+    assert row["sb_recheck_until"] == to_db(clock.now() + timedelta(days=7))  # SB-3
+
+
+def test_download_without_segments(conn, clock, runner):
+    row = source(conn, published(conn, clock, runner))
+    assert (row["sb_status"], row["sb_categories"], row["sb_removed_s"]) == ("none", "sponsor,selfpromo,interaction", 0)
+    assert row["sb_recheck_until"] == to_db(clock.now() + timedelta(days=7))  # a video may get segments later
+
+
+def test_download_with_sponsorblock_off_globally(conn, clock, runner, fake):  # SB-2
+    conn.execute("UPDATE settings SET sponsorblock_categories = ''")
+    fake.segments[URL] = [SPONSOR]
+    row = source(conn, published(conn, clock, runner))
+    assert fake.sb_calls == [None]
+    assert (row["sb_status"], row["sb_categories"], row["sb_segments_json"]) == ("off", None, "[]")
+    assert row["sb_checked_at"] is not None and row["sb_recheck_until"] is not None  # turning it on later is caught up
+
+
+def test_show_setting_overrides_the_global_one(conn, clock, runner, fake):  # SB-2
+    show_id = library.create_show(conn, "Kids Channel", now=clock.now(), youtube_channel_id="UCkids")
+    conn.execute("UPDATE show SET sponsorblock_categories = 'intro' WHERE id = ?", (show_id,))
+    fake.segments[URL] = [SPONSOR, Segment("intro", 30.0, 40.0)]
+    row = source(conn, published(conn, clock, runner))
+    assert fake.sb_calls == [["intro"]]
+    assert (row["sb_status"], row["sb_categories"], row["sb_removed_s"]) == ("cut", "intro", 10.0)
+
+
+def test_download_continues_uncut_when_sponsorblock_is_unreachable(conn, clock, runner, fake, media):  # SB-5
+    fake.sb_unavailable = True
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)  # the job still completes
+    assert fake.sb_calls == [DEFAULT_CATS, None]
+    row = source(conn, sid)
+    assert (row["status"], row["sb_status"], row["sb_categories"], row["sb_removed_s"]) == ("ready", "unreachable", None, 0)
+    assert row["sb_checked_at"] is None and row["sb_recheck_until"] == to_db(clock.now() + timedelta(days=7))
+    assert (media / row["file_path"]).exists()
+
+
+# --------------------------------------------------------------------------- SponsorBlock re-check (SB-3)
+
+
+def recheck(conn, clock, runner, sid):
+    jobs.enqueue(conn, JobType.SB_RECHECK, sid, now=clock.now(), max_attempts=2)
+    return run_next(runner, clock)
+
+
+def redownloads(conn):
+    return conn.execute("SELECT * FROM job WHERE type = 'redownload'").fetchall()
+
+
+def test_recheck_unchanged_only_notes_the_check(conn, clock, runner, fake):
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)
+    clock.advance(days=1)
+    assert recheck(conn, clock, runner, sid).status == JobStatus.READY
+    assert not redownloads(conn)
+    assert fake.lookups == [DEFAULT_CATS]
+    assert source(conn, sid)["sb_checked_at"] == to_db(clock.now())
+
+
+def test_recheck_within_tolerance_is_unchanged(conn, clock, runner, fake):
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)
+    fake.segments[URL] = [Segment("sponsor", 10.2, 19.9)]
+    recheck(conn, clock, runner, sid)
+    assert not redownloads(conn)
+
+
+def test_recheck_queues_a_redownload_when_segments_appear(conn, clock, runner, fake):
+    sid = published(conn, clock, runner)
+    fake.segments[URL] = [SPONSOR]
+    assert recheck(conn, clock, runner, sid).status == JobStatus.READY
+    (job,) = redownloads(conn)
+    assert (job["target_id"], job["status"]) == (sid, "queued")
+    assert len(fake.downloads) == 1  # the re-check itself downloads nothing
+
+
+def test_recheck_queues_a_redownload_when_segments_change(conn, clock, runner, fake):
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)
+    fake.segments[URL] = [Segment("sponsor", 10.0, 25.0)]
+    recheck(conn, clock, runner, sid)
+    assert len(redownloads(conn)) == 1
+
+
+def test_recheck_after_turning_the_categories_off_removes_the_cuts(conn, clock, runner, fake):  # SB-2
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)
+    conn.execute("UPDATE settings SET sponsorblock_categories = ''")
+    recheck(conn, clock, runner, sid)
+    assert fake.lookups == []  # nothing to look up
+    assert len(redownloads(conn)) == 1
+
+
+def test_recheck_of_an_uncut_file_after_turning_off_only_updates_the_status(conn, clock, runner):  # SB-2
+    sid = published(conn, clock, runner)
+    conn.execute("UPDATE settings SET sponsorblock_categories = ''")
+    recheck(conn, clock, runner, sid)
+    assert not redownloads(conn)
+    row = source(conn, sid)
+    assert (row["sb_status"], row["sb_categories"]) == ("off", None)
+
+
+def test_recheck_catches_up_an_unreachable_download(conn, clock, runner, fake):  # SB-5
+    fake.sb_unavailable = True
+    sid = published(conn, clock, runner)
+    fake.sb_unavailable = False
+    clock.advance(days=1)
+    recheck(conn, clock, runner, sid)  # the API is back and knows nothing: the file was right all along
+    assert not redownloads(conn)
+    row = source(conn, sid)
+    assert (row["sb_status"], row["sb_categories"], row["sb_checked_at"]) == ("none", "sponsor,selfpromo,interaction", to_db(clock.now()))
+
+    fake.sb_unavailable = True
+    sid2, _ = ingest.add(conn, info("def456"), publish=True, now=clock.now())
+    run_next(runner, clock)
+    fake.sb_unavailable = False
+    fake.segments["https://www.youtube.com/watch?v=def456"] = [SPONSOR]
+    recheck(conn, clock, runner, sid2)  # ... or it wasn't: cut it now
+    assert [j["target_id"] for j in redownloads(conn)] == [sid2]
+
+
+def test_recheck_with_sponsorblock_unreachable_changes_nothing(conn, clock, runner, fake):  # SB-5
+    sid = published(conn, clock, runner)
+    before = dict(source(conn, sid))
+    clock.advance(days=1)
+    fake.sb_unavailable = True
+    job = recheck(conn, clock, runner, sid)
+    assert job.status == JobStatus.READY  # tomorrow's check catches up
+    assert dict(source(conn, sid)) == before and not redownloads(conn)
+
+
+def test_recheck_failure_is_retried(conn, clock, runner, fake):
+    sid = published(conn, clock, runner)
+    fake.lookup_error = YtDlpError("network", retryable=True)
+    job = recheck(conn, clock, runner, sid)
+    assert job.status == JobStatus.QUEUED and job.error == "network"
+    assert source(conn, sid)["status"] == "ready"
+
+
+@pytest.mark.parametrize("why", ["admin_off", "window", "split", "redownload pending", "not ready"])
+def test_recheck_does_nothing_when(conn, clock, runner, fake, why):  # SB-3, SB-4, SB-6
+    sid = published(conn, clock, runner)
+    fake.segments[URL] = [SPONSOR]  # would be worth a redownload
+    if why == "admin_off":
+        conn.execute("UPDATE source_video SET sb_status = 'admin_off' WHERE id = ?", (sid,))
+    elif why == "window":
+        clock.advance(days=8)
+    elif why == "split":
+        conn.execute("UPDATE episode SET start_s = 5 WHERE source_video_id = ?", (sid,))
+    else:
+        conn.execute("UPDATE source_video SET status = 'failed' WHERE id = ?", (sid,))
+    job_id = jobs.enqueue(conn, JobType.SB_RECHECK, sid, now=clock.now(), max_attempts=2)
+    if why == "redownload pending":
+        jobs.enqueue(conn, JobType.REDOWNLOAD, sid, now=clock.now())
+    pending = len(redownloads(conn))
+    assert run_next(runner, clock).id == job_id
+    assert jobs.get(conn, job_id).status == JobStatus.READY
+    assert fake.lookups == [] and len(redownloads(conn)) == pending
+
+
+# --------------------------------------------------------------------------- redownload (SB-3, SB-4)
+
+
+def cut_and_redownload(conn, clock, runner, fake, sid):
+    """SponsorBlock now knows a segment: the re-check queues the redownload and it runs."""
+    fake.segments[URL] = [SPONSOR]
+    recheck(conn, clock, runner, sid)
+    return run_next(runner, clock)
+
+
+def test_redownload_replaces_the_file_and_keeps_the_episode(conn, clock, runner, fake, media, short_clip):  # SB-3
+    sid = published(conn, clock, runner, publish=False)  # held: stays hidden
+    before = episode_of(conn, sid)
+    row = source(conn, sid)
+    thumb = (media / row["thumbnail_path"]).read_bytes()
+    old_size = (media / row["file_path"]).stat().st_size
+    fake.clip = short_clip
+    clock.advance(days=1)
+    job = cut_and_redownload(conn, clock, runner, fake, sid)
+    assert job.status == JobStatus.READY
+
+    after = episode_of(conn, sid)
+    assert after["id"] == before["id"] and after["hidden"] == 1
+    assert (after["title"], after["file_path"], after["thumbnail_path"], after["show_id"], after["sort_order"]) == (
+        before["title"], before["file_path"], before["thumbnail_path"], before["show_id"], before["sort_order"])
+    assert (media / after["file_path"]).stat().st_size != old_size  # the new file is in place
+    assert 0.5 < after["duration_s"] < 1.5 < before["duration_s"]
+    assert (media / row["thumbnail_path"]).read_bytes() == thumb
+    assert not list(media.glob("shows/*/*.old")) and not (media / ".tmp" / f"job-{job.id}").exists()
+
+    new = source(conn, sid)
+    assert (new["status"], new["sb_status"], new["sb_removed_s"]) == ("ready", "cut", 10.0)
+    assert new["sb_recheck_until"] == row["sb_recheck_until"]  # the window doesn't restart
+    assert new["sb_checked_at"] == to_db(clock.now())
+    (shift,) = conn.execute("SELECT * FROM position_shift").fetchall()
+    assert shift["episode_id"] == before["id"]
+    assert sponsorblock.loads(shift["old_cuts_json"]) == [] and sponsorblock.loads(shift["new_cuts_json"]) == [SPONSOR]
+
+
+def test_redownload_without_sponsorblock_undoes_the_cuts(conn, clock, runner, fake):  # SB-4
+    fake.segments[URL] = [SPONSOR]
+    sid = published(conn, clock, runner)
+    ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    assert run_next(runner, clock).status == JobStatus.READY
+    assert fake.sb_calls[-1] is None  # downloaded whole
+    row = source(conn, sid)
+    assert (row["sb_status"], row["sb_categories"], row["sb_removed_s"]) == ("admin_off", None, 0)
+    (shift,) = conn.execute("SELECT * FROM position_shift").fetchall()
+    assert sponsorblock.loads(shift["old_cuts_json"]) == [SPONSOR] and sponsorblock.loads(shift["new_cuts_json"]) == []
+
+
+def test_redownload_with_sponsorblock_again(conn, clock, runner, fake):  # SB-4
+    sid = published(conn, clock, runner)
+    ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    run_next(runner, clock)
+    fake.segments[URL] = [SPONSOR]
+    ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+    run_next(runner, clock)
+    assert (source(conn, sid)["sb_status"], source(conn, sid)["sb_removed_s"]) == ("cut", 10.0)
+
+
+def test_redownload_with_the_same_cuts_queues_no_position_shift(conn, clock, runner):
+    sid = published(conn, clock, runner)
+    ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    run_next(runner, clock)
+    assert source(conn, sid)["sb_status"] == "admin_off"
+    assert conn.execute("SELECT count(*) FROM position_shift").fetchone()[0] == 0
+
+
+def test_redownload_of_a_split_video_does_nothing(conn, clock, runner, fake):  # SB-6
+    sid = published(conn, clock, runner)
+    conn.execute("UPDATE episode SET start_s = 5 WHERE source_video_id = ?", (sid,))
+    ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    assert run_next(runner, clock).status == JobStatus.READY
+    assert len(fake.downloads) == 1
+
+
+def queued_redownload(conn, clock, runner, fake):
+    sid = published(conn, clock, runner)
+    fake.segments[URL] = [SPONSOR]
+    recheck(conn, clock, runner, sid)
+    return sid, episode_of(conn, sid)["id"]
+
+
+@pytest.mark.parametrize("state", ["playing", "unreachable"])
+def test_redownload_waits_while_the_episode_is_on_the_tv(conn, clock, runner, fake, state):  # SB-3
+    sid, episode_id = queued_redownload(conn, clock, runner, fake)
+    if state == "playing":
+        runner.now_playing = lambda: episode_id
+    else:
+        def down():
+            raise ConnectionError("cast service down")
+        runner.now_playing = down
+    job = run_next(runner, clock)
+    assert job.status == JobStatus.QUEUED and job.attempts == 0  # no attempt used
+    assert job.error.startswith("waiting")
+    assert job.run_after == clock.now() + timedelta(minutes=20)
+    assert len(fake.downloads) == 1  # nothing downloaded while waiting
+    assert not (runner.media_dir / ".tmp" / f"job-{job.id}").exists()
+
+    runner.now_playing = lambda: None  # stopped: the next run goes through
+    assert jobs.claim_next(conn, now=clock.now()) is None  # not due yet
+    clock.advance(minutes=20)
+    assert run_next(runner, clock).status == JobStatus.READY
+    assert source(conn, sid)["sb_status"] == "cut"
+
+
+def test_redownload_ignores_another_episode_on_the_tv(conn, clock, runner, fake):
+    sid, episode_id = queued_redownload(conn, clock, runner, fake)
+    runner.now_playing = lambda: episode_id + 1
+    assert run_next(runner, clock).status == JobStatus.READY
+
+
+def test_redownload_waits_when_the_episode_starts_during_the_download(conn, clock, runner, fake, media):  # SB-3
+    sid, episode_id = queued_redownload(conn, clock, runner, fake)
+    calls = iter([None, episode_id])  # nothing at the start, playing right before the swap
+    runner.now_playing = lambda: next(calls)
+    path = media / source(conn, sid)["file_path"]
+    old = path.read_bytes()
+    job = run_next(runner, clock)
+    assert job.status == JobStatus.QUEUED and job.error.startswith("waiting")
+    assert path.read_bytes() == old and len(fake.downloads) == 2
+    assert not list(media.glob(".tmp/*"))
+    assert conn.execute("SELECT count(*) FROM position_shift").fetchone()[0] == 0
+
+
+def test_failed_redownload_keeps_the_published_file(conn, clock, runner, fake, media):
+    sid, episode_id = queued_redownload(conn, clock, runner, fake)
+    path = media / source(conn, sid)["file_path"]
+    old = path.read_bytes()
+    fake.error = YtDlpError("gone", retryable=False)
+    job = run_next(runner, clock)
+    assert (job.status, job.error) == (JobStatus.FAILED, "gone")
+    assert path.read_bytes() == old
+    assert source(conn, sid)["status"] == "ready" and source(conn, sid)["sb_status"] == "none"
+    assert episode_of(conn, sid)["id"] == episode_id
+
+
+def test_redownload_with_sponsorblock_unreachable_keeps_the_old_file_and_retries(conn, clock, runner, fake, media):  # SB-5
+    sid, _ = queued_redownload(conn, clock, runner, fake)
+    path = media / source(conn, sid)["file_path"]
+    old = path.read_bytes()
+    fake.sb_unavailable = True
+    job = run_next(runner, clock)
+    assert job.status == JobStatus.QUEUED  # retryable, with backoff
+    assert path.read_bytes() == old and source(conn, sid)["status"] == "ready"
+    assert fake.sb_calls[-1] == DEFAULT_CATS  # not silently downloaded without cuts
+
+
+def test_database_failure_during_the_swap_restores_the_old_file(conn, clock, runner, fake, media, monkeypatch, short_clip):  # NF-8
+    sid, _ = queued_redownload(conn, clock, runner, fake)
+    path = media / source(conn, sid)["file_path"]
+    old = path.read_bytes()
+    duration = episode_of(conn, sid)["duration_s"]
+    fake.clip = short_clip
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("disk full")
+
+    with monkeypatch.context() as m:
+        m.setattr(jobs, "complete", boom)
+        job = run_next(runner, clock)
+    assert job.status == JobStatus.QUEUED and "disk full" in job.error
+    assert path.read_bytes() == old
+    assert not list(media.glob("shows/*/*.old"))
+    assert episode_of(conn, sid)["duration_s"] == duration
+    assert conn.execute("SELECT count(*) FROM position_shift").fetchone()[0] == 0
+    assert (source(conn, sid)["sb_status"], source(conn, sid)["status"]) == ("none", "ready")
+
+
+def test_recover_removes_a_leftover_backup(conn, clock, runner, media):  # NF-7
+    (media / "shows" / "1").mkdir(parents=True)
+    (media / "shows" / "1" / "x.mp4.old").write_bytes(b"old")
+    runner.recover()
+    assert not list(media.glob("shows/*/*.old"))

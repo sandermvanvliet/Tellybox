@@ -31,6 +31,38 @@
 </div>
 
 <div class="card">
+  <h2>{{ _("SponsorBlock") }}</h2>
+  <form method="post" action="/admin/shows/{{ show.id }}/sponsorblock" class="stack">
+    <label class="check">
+      <input type="radio" name="mode" value="default" {% if sb_mode == "default" %}checked{% endif %}>
+      {% if sb_global %}
+      {{ _("Use the default (%(categories)s)", categories=sb_global | map("sb_label") | join(", ")) }}
+      {% else %}
+      {{ _("Use the default (off)") }}
+      {% endif %}
+    </label>
+    <label class="check">
+      <input type="radio" name="mode" value="off" {% if sb_mode == "off" %}checked{% endif %}>
+      {{ _("Off for this show") }}
+    </label>
+    <label class="check">
+      <input type="radio" name="mode" value="choose" {% if sb_mode == "choose" %}checked{% endif %}>
+      {{ _("Choose") }}
+    </label>
+    <fieldset class="stack" style="margin-left:1.8rem">
+      {% for key in sb_categories %}
+      <label class="check">
+        <input type="checkbox" name="category" value="{{ key }}" {% if key in sb_checked %}checked{% endif %}>
+        {{ sb_label(key) }}
+      </label>
+      {% endfor %}
+    </fieldset>
+    <div><button class="btn small" type="submit">{{ _("Save") }}</button></div>
+  </form>
+  <p class="muted">{{ _("Applies to new downloads and to videos still inside their 7-day re-check.") }}</p>
+</div>
+
+<div class="card">
   <h2>{{ _("Artwork") }}</h2>
   <div class="row">
     <img class="thumb small" src="/admin/img/show/{{ show.id }}.jpg" alt="">
@@ -80,7 +112,7 @@
       <div class="row">
         <img class="thumb small" src="/admin/img/episode/{{ ep.id }}.jpg" alt="">
         <div>
-          <strong>{{ ep.title }}</strong> {% if ep.hidden %}<span class="badge warn">{{ _("Hidden") }}</span>{% endif %}
+          <a href="/admin/episodes/{{ ep.id }}"><strong>{{ ep.title }}</strong></a> {% if ep.hidden %}<span class="badge warn">{{ _("Hidden") }}</span>{% endif %}
           <p class="muted">{{ ep.duration_s | duration }}</p>
         </div>
       </div>

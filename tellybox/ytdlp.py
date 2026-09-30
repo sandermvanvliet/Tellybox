@@ -8,6 +8,7 @@ the image is used as a fallback.
 
 Download output (stdout, one line each, prefixed so they can't be confused with anything else):
   TBFMT <format_id>                          before download; "137+140" means two files
+  TBCHAPS <json>                             chapters before download (null when none)
   TBPROG <format_id> <downloaded> <total> <total_estimate>   progress ("NA" when unknown)
   TBFILE <path>                              final file after merge/move
   TBINFO <json>                              full info dict after move
@@ -25,11 +26,14 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import parse_qs, quote, urlsplit
+
+from tellybox import sponsorblock
+from tellybox.sponsorblock import Segment
 
 FORMAT = "bv*[height<=720][vcodec^=avc1]+ba[acodec^=mp4a]/bv*[height<=720]+ba/b[height<=720]"  # CI-2
 PIP_SPEC = "yt-dlp[default,deno]"
@@ -226,7 +230,8 @@ def _best_thumbnail(thumbnails: list[dict] | None) -> str | None:
 class DownloadResult:
     video_path: Path
     thumbnail_path: Path | None  # jpg
-    info: VideoInfo
+    info: VideoInfo  # chapters already shifted to the cut file (SB-1)
+    sponsor_segments: list[Segment] = field(default_factory=list)  # removed from the file (SB-1); original timeline
 
 
 @dataclass(frozen=True)
@@ -242,6 +247,22 @@ class YtDlpError(Exception):
         super().__init__(message)
         self.message = message
         self.retryable = retryable
+
+
+class SponsorBlockUnavailable(YtDlpError):
+    """The SponsorBlock API couldn't be reached (SB-5). Nothing was downloaded yet."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, retryable=True)
+
+
+_SB_UNREACHABLE = "Unable to communicate with SponsorBlock API"
+
+
+def _raise_for(stderr: str, returncode: int | None) -> None:
+    if _SB_UNREACHABLE in stderr:
+        raise SponsorBlockUnavailable(error_message(stderr, returncode))
+    raise YtDlpError(error_message(stderr, returncode), retryable=classify_error(stderr))
 
 
 def classify_error(stderr: str) -> bool:
@@ -335,7 +356,7 @@ class YtDlp:
         except subprocess.TimeoutExpired:
             raise YtDlpError(f"yt-dlp timed out after {timeout:g}s", retryable=True) from None
         if p.returncode != 0:
-            raise YtDlpError(error_message(p.stderr, p.returncode), retryable=classify_error(p.stderr))
+            _raise_for(p.stderr, p.returncode)
         return p.stdout
 
     def version(self) -> str:
@@ -372,19 +393,51 @@ class YtDlp:
             raise YtDlpError("yt-dlp returned invalid JSON", retryable=True) from None
         return parse_playlist(data)
 
+    def sponsor_segments(self, url: str, categories: list[str], *, timeout: float = 120) -> list[Segment]:
+        """SB-3: the video's current SponsorBlock segments in `categories`, without downloading.
+
+        Raises SponsorBlockUnavailable when the API can't be reached, YtDlpError otherwise.
+        """
+        if not categories:
+            return []
+        out = self._run(
+            ["--simulate", "--no-playlist", "--sponsorblock-mark", ",".join(categories),
+             "--print", "TBSB %(sponsorblock_chapters)j", "--", url],
+            timeout,
+        )
+        for line in out.splitlines():
+            tag, _, rest = line.partition(" ")
+            if tag == "TBSB":
+                if rest.strip() == "NA":  # not a YouTube video: SponsorBlock doesn't apply
+                    return []
+                try:
+                    chapters = json.loads(rest)
+                except json.JSONDecodeError:
+                    raise YtDlpError("yt-dlp returned invalid JSON", retryable=True) from None
+                return sponsorblock.segments_from_info(chapters, categories)
+        raise YtDlpError("yt-dlp reported no SponsorBlock result", retryable=True)
+
     def download(
         self, url: str, dest_dir: Path, *,
         on_progress: Callable[[float], None] | None = None, timeout: float = 4 * 3600,
+        sb_categories: list[str] | None = None,
     ) -> DownloadResult:
-        """CI-2: download at most 720p, preferring H.264 + AAC so processing can remux."""
+        """CI-2: download at most 720p, preferring H.264 + AAC so processing can remux.
+
+        SB-1: with `sb_categories`, their segments are cut out (at keyframes).
+        Raises SponsorBlockUnavailable, before anything is downloaded, when the API can't be
+        reached; the caller downloads again without (SB-5).
+        """
         dest = Path(dest_dir).resolve()
         dest.mkdir(parents=True, exist_ok=True)
+        sb_args = ["--sponsorblock-remove", ",".join(sb_categories)] if sb_categories else []
         args = [
             "-f", FORMAT, "--no-playlist", "--newline", "--no-mtime", "--progress",
-            "--write-thumbnail", "--convert-thumbnails", "jpg",
+            "--write-thumbnail", "--convert-thumbnails", "jpg", *sb_args,
             "-o", f"{dest}/video.%(ext)s", "-o", f"thumbnail:{dest}/thumb.%(ext)s",
             "--progress-template", _PROGRESS_TEMPLATE,
             "--print", "before_dl:TBFMT %(format_id)s",
+            "--print", "before_dl:TBCHAPS %(chapters)j",
             "--print", "after_move:TBFILE %(filepath)s",
             "--print", "after_move:TBINFO %()j",
             "--", url,
@@ -410,6 +463,7 @@ class YtDlp:
         progress = _Progress(on_progress)
         filepath: str | None = None
         info: dict | None = None
+        had_chapters = True
         deadline = time.monotonic() + timeout
         while True:
             remaining = deadline - time.monotonic()
@@ -429,6 +483,8 @@ class YtDlp:
                 progress.update(fmt, _num(done), _num(total) or _num(est))
             elif tag == "TBFMT":
                 progress.formats(rest)
+            elif tag == "TBCHAPS":
+                had_chapters = rest not in ("null", "NA", "[]")
             elif tag == "TBFILE":
                 filepath = rest
             elif tag == "TBINFO":
@@ -443,12 +499,15 @@ class YtDlp:
             t.join(timeout=5)
         err = "".join(stderr)
         if proc.returncode != 0:
-            raise YtDlpError(error_message(err, proc.returncode), retryable=classify_error(err))
+            _raise_for(err, proc.returncode)
         if not filepath or info is None or not Path(filepath).is_file():
             raise YtDlpError("yt-dlp finished without reporting the downloaded file", retryable=True)
         progress.report(1.0)
         thumb = dest / "thumb.jpg"
-        return DownloadResult(Path(filepath), thumb if thumb.is_file() else None, parse_info(info))
+        segments = sponsorblock.segments_from_info(info.get("sponsorblock_chapters"), sb_categories or [])
+        if segments and not had_chapters:
+            info["chapters"] = None  # ModifyChapters makes up one chapter for the whole video
+        return DownloadResult(Path(filepath), thumb if thumb.is_file() else None, parse_info(info), segments)
 
 
 def _active_dir(tools_dir: Path) -> Path | None:

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:18+0200\n"
+"POT-Creation-Date: 2026-09-30 09:33+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -91,12 +91,48 @@ msgstr "Bild ist zu groß (max. 5 MB)"
 msgid "file is not a JPEG, PNG or WebP image"
 msgstr "Datei ist kein JPEG-, PNG- oder WebP-Bild"
 
-#: tellybox/jobs.py:185
+#: tellybox/jobs.py:202
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr ""
 "Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich "
 "wiederholen"
+
+#: tellybox/sponsorblock.py:20
+msgid "Sponsor"
+msgstr "Sponsor"
+
+#: tellybox/sponsorblock.py:21
+msgid "Unpaid or self promotion"
+msgstr "Unbezahlte oder Eigenwerbung"
+
+#: tellybox/sponsorblock.py:22
+msgid "Interaction reminder (subscribe)"
+msgstr "Interaktionserinnerung (Abonnieren)"
+
+#: tellybox/sponsorblock.py:23
+msgid "Intermission or intro animation"
+msgstr "Pause oder Intro-Animation"
+
+#: tellybox/sponsorblock.py:24
+msgid "End cards or credits"
+msgstr "Endcards oder Abspann"
+
+#: tellybox/sponsorblock.py:25
+msgid "Preview or recap"
+msgstr "Vorschau oder Rückblick"
+
+#: tellybox/sponsorblock.py:26
+msgid "Hook or greetings"
+msgstr "Hook oder Begrüßung"
+
+#: tellybox/sponsorblock.py:27
+msgid "Filler tangent"
+msgstr "Füllmaterial oder Abschweifung"
+
+#: tellybox/sponsorblock.py:28
+msgid "Non-music section"
+msgstr "Abschnitt ohne Musik"
 
 #: tellybox/web/admin/__init__.py:76
 msgid "This sign-in form must be sent from this page."
@@ -703,7 +739,7 @@ msgstr "Chromecast ausgewählt."
 
 #: tellybox/web/admin/templates/add.html:3
 #: tellybox/web/admin/templates/add.html:63
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/profiles.html:65
 msgid "Add"
 msgstr "Hinzufügen"
@@ -736,14 +772,14 @@ msgid "See %(jobs)s or %(library)s."
 msgstr "Siehe %(jobs)s oder %(library)s."
 
 #: tellybox/web/admin/templates/add.html:19
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/jobs.html:3
 #: tellybox/web/admin/templates/jobs.html:7
 msgid "Jobs"
 msgstr "Aufgaben"
 
 #: tellybox/web/admin/templates/add.html:20
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/library.html:3
 #: tellybox/web/admin/templates/library.html:6
 #: tellybox/web/admin/templates/show.html:5
@@ -833,36 +869,36 @@ msgstr "Bis zur Freigabe zurückhalten"
 msgid "Admin"
 msgstr "Verwaltung"
 
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/dashboard.html:4
 msgid "Now"
 msgstr "Jetzt"
 
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/profiles.html:3
 #: tellybox/web/admin/templates/profiles.html:5
 msgid "Profiles"
 msgstr "Profile"
 
-#: tellybox/web/admin/templates/base.html:19
+#: tellybox/web/admin/templates/base.html:21
 #: tellybox/web/admin/templates/settings.html:3
 #: tellybox/web/admin/templates/settings.html:5
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: tellybox/web/admin/templates/base.html:20
+#: tellybox/web/admin/templates/base.html:22
 #: tellybox/web/admin/templates/integrations.html:2
 #: tellybox/web/admin/templates/integrations.html:4
 msgid "Integrations"
 msgstr "Integrationen"
 
-#: tellybox/web/admin/templates/base.html:21
+#: tellybox/web/admin/templates/base.html:23
 #: tellybox/web/admin/templates/history.html:3
 #: tellybox/web/admin/templates/history.html:5
 msgid "History"
 msgstr "Verlauf"
 
-#: tellybox/web/admin/templates/base.html:24
+#: tellybox/web/admin/templates/base.html:26
 msgid "Sign out"
 msgstr "Abmelden"
 

@@ -13,10 +13,10 @@ import os
 import shutil
 import sqlite3
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from tellybox import jobs, library, media_format
+from tellybox import jobs, library, media_format, sponsorblock
 from tellybox.clock import Clock
 from tellybox.db import to_db
 from tellybox.jobs import Job, JobStatus, JobType
@@ -180,6 +180,44 @@ def retry(conn: sqlite3.Connection, job_id: int, *, now: datetime) -> Job:
     if job.type == JobType.DOWNLOAD and job.target_id is not None:
         _set_source_status(conn, job.target_id, "queued", now)
     return job
+
+
+class RedownloadPending(Exception):
+    """A re-check or redownload of this video is already queued or running."""
+
+
+def request_redownload(conn: sqlite3.Connection, source_id: int, *, with_sponsorblock: bool, now: datetime) -> int:
+    """SB-4: "Download again without SponsorBlock" (or with it again). Returns the job id.
+
+    Without: the video is marked admin_off, so the redownload keeps every second and the
+    daily re-checks stop. With: the mark is cleared and the re-check window starts again.
+    Raises KeyError for an unknown or unpublished video, RedownloadPending when one is queued.
+    """
+    source = get_source_video(conn, source_id)
+    if source is None or source.status != "ready":
+        raise KeyError(source_id)
+    if jobs.has_pending_for(conn, source_id, (JobType.REDOWNLOAD, JobType.SB_RECHECK)):
+        raise RedownloadPending(source_id)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        if with_sponsorblock:
+            conn.execute(
+                """UPDATE source_video SET sb_status = CASE WHEN sb_status = 'admin_off' THEN NULL ELSE sb_status END,
+                     sb_recheck_until = ?, updated_at = ? WHERE id = ?""",
+                (to_db(now + timedelta(days=sponsorblock.RECHECK_DAYS)), to_db(now), source_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE source_video SET sb_status = 'admin_off', updated_at = ? WHERE id = ?", (to_db(now), source_id)
+            )
+        job_id = jobs.enqueue(conn, JobType.REDOWNLOAD, source_id, now=now)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    log.info("redownload of source video %d %s SponsorBlock, job %d", source_id,
+             "with" if with_sponsorblock else "without", job_id)
+    return job_id
 
 
 def request_ytdlp_update(conn: sqlite3.Connection, *, now: datetime) -> int | None:

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-29 14:18+0200\n"
+"POT-Creation-Date: 2026-09-30 09:33+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -91,10 +91,46 @@ msgstr "afbeelding is te groot (max. 5 MB)"
 msgid "file is not a JPEG, PNG or WebP image"
 msgstr "bestand is geen JPEG-, PNG- of WebP-afbeelding"
 
-#: tellybox/jobs.py:185
+#: tellybox/jobs.py:202
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr "taak %(id)d is %(status)s; alleen mislukte taken kun je opnieuw proberen"
+
+#: tellybox/sponsorblock.py:20
+msgid "Sponsor"
+msgstr "Sponsor"
+
+#: tellybox/sponsorblock.py:21
+msgid "Unpaid or self promotion"
+msgstr "Onbetaalde of eigen promotie"
+
+#: tellybox/sponsorblock.py:22
+msgid "Interaction reminder (subscribe)"
+msgstr "Herinnering aan interactie (abonneren)"
+
+#: tellybox/sponsorblock.py:23
+msgid "Intermission or intro animation"
+msgstr "Pauze of intro-animatie"
+
+#: tellybox/sponsorblock.py:24
+msgid "End cards or credits"
+msgstr "Eindschermen of aftiteling"
+
+#: tellybox/sponsorblock.py:25
+msgid "Preview or recap"
+msgstr "Vooruitblik of samenvatting"
+
+#: tellybox/sponsorblock.py:26
+msgid "Hook or greetings"
+msgstr "Hook of begroeting"
+
+#: tellybox/sponsorblock.py:27
+msgid "Filler tangent"
+msgstr "Opvulling of zijspoor"
+
+#: tellybox/sponsorblock.py:28
+msgid "Non-music section"
+msgstr "Deel zonder muziek"
 
 #: tellybox/web/admin/__init__.py:76
 msgid "This sign-in form must be sent from this page."
@@ -699,7 +735,7 @@ msgstr "Chromecast gekozen."
 
 #: tellybox/web/admin/templates/add.html:3
 #: tellybox/web/admin/templates/add.html:63
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/profiles.html:65
 msgid "Add"
 msgstr "Toevoegen"
@@ -732,14 +768,14 @@ msgid "See %(jobs)s or %(library)s."
 msgstr "Zie %(jobs)s of %(library)s."
 
 #: tellybox/web/admin/templates/add.html:19
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/jobs.html:3
 #: tellybox/web/admin/templates/jobs.html:7
 msgid "Jobs"
 msgstr "Taken"
 
 #: tellybox/web/admin/templates/add.html:20
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/library.html:3
 #: tellybox/web/admin/templates/library.html:6
 #: tellybox/web/admin/templates/show.html:5
@@ -829,36 +865,36 @@ msgstr "Achterhouden tot vrijgave"
 msgid "Admin"
 msgstr "Beheer"
 
-#: tellybox/web/admin/templates/base.html:17
+#: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/dashboard.html:4
 msgid "Now"
 msgstr "Nu"
 
-#: tellybox/web/admin/templates/base.html:18
+#: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/profiles.html:3
 #: tellybox/web/admin/templates/profiles.html:5
 msgid "Profiles"
 msgstr "Profielen"
 
-#: tellybox/web/admin/templates/base.html:19
+#: tellybox/web/admin/templates/base.html:21
 #: tellybox/web/admin/templates/settings.html:3
 #: tellybox/web/admin/templates/settings.html:5
 msgid "Settings"
 msgstr "Instellingen"
 
-#: tellybox/web/admin/templates/base.html:20
+#: tellybox/web/admin/templates/base.html:22
 #: tellybox/web/admin/templates/integrations.html:2
 #: tellybox/web/admin/templates/integrations.html:4
 msgid "Integrations"
 msgstr "Integraties"
 
-#: tellybox/web/admin/templates/base.html:21
+#: tellybox/web/admin/templates/base.html:23
 #: tellybox/web/admin/templates/history.html:3
 #: tellybox/web/admin/templates/history.html:5
 msgid "History"
 msgstr "Geschiedenis"
 
-#: tellybox/web/admin/templates/base.html:24
+#: tellybox/web/admin/templates/base.html:26
 msgid "Sign out"
 msgstr "Uitloggen"
 

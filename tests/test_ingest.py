@@ -3,14 +3,14 @@
 import json
 import shutil
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from tellybox import ingest, jobs, library, ytdlp
 from tellybox.clock import FakeClock
-from tellybox.db import open_db
+from tellybox.db import open_db, to_db
 from tellybox.ingest import JobRunner
 from tellybox.jobs import JobStatus, JobType
 from tellybox.ytdlp import Chapter, DownloadResult, UpdateResult, VideoInfo, YtDlpError
@@ -61,7 +61,7 @@ class FakeYtDlp:
     def preview(self, url: str) -> VideoInfo:
         return self.infos[url]
 
-    def download(self, url, dest_dir, *, on_progress=None, timeout=0):
+    def download(self, url, dest_dir, *, on_progress=None, timeout=0, sb_categories=None):
         self.downloads.append(url)
         if self.error:
             raise self.error
@@ -416,3 +416,27 @@ def test_failed_update_is_retried_once(conn, clock, runner, monkeypatch):
     clock.advance(jobs.BACKOFF_S[0])
     assert run_next(runner, clock).status == JobStatus.FAILED
     assert jobs.get(conn, job_id).attempts == 2
+
+
+# --------------------------------------------------------------------------- SponsorBlock admin actions (SB-4)
+
+
+def test_request_redownload(conn, clock, runner):
+    sid, _ = ingest.add(conn, info(), publish=True, now=clock.now())
+    with pytest.raises(KeyError):  # not published yet
+        ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    run_next(runner, clock)
+    job_id = ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    job = jobs.get(conn, job_id)
+    assert (job.type, job.target_id, job.status) == (JobType.REDOWNLOAD, sid, JobStatus.QUEUED)
+    assert source(conn, sid)["sb_status"] == "admin_off"
+    with pytest.raises(ingest.RedownloadPending):
+        ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+    jobs.claim_next(conn, now=clock.now())
+    jobs.complete(conn, job_id, now=clock.now())
+    ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+    row = source(conn, sid)
+    assert row["sb_status"] is None
+    assert row["sb_recheck_until"] == to_db(clock.now() + timedelta(days=7))
+    with pytest.raises(KeyError):
+        ingest.request_redownload(conn, 999, with_sponsorblock=True, now=clock.now())

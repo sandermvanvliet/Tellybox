@@ -29,6 +29,8 @@ class JobStatus(StrEnum):
 class JobType(StrEnum):
     DOWNLOAD = "download"
     UPDATE_YTDLP = "update_ytdlp"
+    SB_RECHECK = "sb_recheck"  # SB-3: look up a published video's segments again
+    REDOWNLOAD = "redownload"  # SB-3, SB-4: download a published video again and replace its file
 
 
 RUNNING = (JobStatus.DOWNLOADING, JobStatus.PROCESSING)
@@ -40,7 +42,7 @@ STALE_AFTER_S = 60  # NF-7: a running job without a heartbeat this long is orpha
 class Job:
     id: int
     type: JobType
-    target_id: int | None  # source_video.id for download jobs
+    target_id: int | None  # source_video.id for download, sb_recheck and redownload jobs
     status: JobStatus
     progress: float | None  # 0..1 within the current status
     error: str | None  # last error; kept visible while retrying, cleared on success
@@ -109,7 +111,8 @@ def claim_next(conn: sqlite3.Connection, *, now: datetime) -> Job | None:
         if row is None:
             conn.execute("COMMIT")
             return None
-        status = JobStatus.DOWNLOADING if row["type"] == JobType.DOWNLOAD else JobStatus.PROCESSING
+        downloads = (JobType.DOWNLOAD, JobType.REDOWNLOAD)
+        status = JobStatus.DOWNLOADING if row["type"] in downloads else JobStatus.PROCESSING
         claimed = conn.execute(
             f"""UPDATE job SET status = ?, attempts = attempts + 1, progress = 0, heartbeat_at = ?, updated_at = ?
                 WHERE id = ? RETURNING {_COLS}""",
@@ -168,6 +171,20 @@ def fail(conn: sqlite3.Connection, job_id: int, error: str, *, now: datetime, re
             (error, ts, ts, job_id),
         ).fetchone()
     return _job(row)
+
+
+def defer(conn: sqlite3.Connection, job_id: int, until: datetime, reason: str, *, now: datetime) -> None:
+    """Put a running job back in the queue until `until` without using up an attempt.
+
+    For a job that can't run yet but hasn't failed, e.g. a redownload while its episode
+    is on the TV (SB-3). `reason` shows as the job's error meanwhile.
+    """
+    conn.execute(
+        """UPDATE job SET status = 'queued', attempts = MAX(attempts - 1, 0), error = ?, progress = NULL,
+               heartbeat_at = NULL, run_after = ?, updated_at = ?, finished_at = NULL
+           WHERE id = ?""",
+        (reason, to_db(until), to_db(now), job_id),
+    )
 
 
 def retry(conn: sqlite3.Connection, job_id: int, *, now: datetime) -> Job:
@@ -243,6 +260,17 @@ def has_pending(conn: sqlite3.Connection, type: JobType) -> bool:
     row = conn.execute(
         f"SELECT 1 FROM job WHERE type = ? AND status IN ('queued', {_RUNNING_SQL}) LIMIT 1",
         (JobType(type).value,),
+    ).fetchone()
+    return row is not None
+
+
+def has_pending_for(conn: sqlite3.Connection, target_id: int, types: Iterable[JobType]) -> bool:
+    """Any queued or running job of these types for this source video."""
+    wanted = [JobType(t).value for t in types]
+    row = conn.execute(
+        f"""SELECT 1 FROM job WHERE target_id = ? AND type IN ({', '.join('?' * len(wanted))})
+            AND status IN ('queued', {_RUNNING_SQL}) LIMIT 1""",
+        (target_id, *wanted),
     ).fetchone()
     return row is not None
 

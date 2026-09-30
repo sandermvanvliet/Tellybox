@@ -264,3 +264,32 @@ def test_has_pending_and_next_run_after(conn, clock):
     jobs.claim_next(conn, now=job.run_after)
     jobs.complete(conn, jid, now=clock.now())
     assert not jobs.has_pending(conn, JobType.UPDATE_YTDLP)
+
+
+def test_new_job_types_claim_status(conn, clock):
+    r = jobs.enqueue(conn, JobType.REDOWNLOAD, 3, now=clock.now())
+    c = jobs.enqueue(conn, JobType.SB_RECHECK, 3, now=clock.now())
+    assert jobs.claim_next(conn, now=clock.now()).status == JobStatus.DOWNLOADING
+    assert jobs.claim_next(conn, now=clock.now()).status == JobStatus.PROCESSING
+    assert jobs.get(conn, r).type == JobType.REDOWNLOAD and jobs.get(conn, c).type == JobType.SB_RECHECK
+
+
+def test_defer_requeues_without_using_an_attempt(conn, clock):
+    jid = jobs.enqueue(conn, JobType.REDOWNLOAD, 3, now=clock.now())
+    jobs.claim_next(conn, now=clock.now())
+    later = clock.now() + timedelta(minutes=20)
+    jobs.defer(conn, jid, later, "episode is playing", now=clock.now())
+    job = jobs.get(conn, jid)
+    assert (job.status, job.attempts, job.run_after, job.error) == (JobStatus.QUEUED, 0, later, "episode is playing")
+    assert jobs.claim_next(conn, now=clock.now()) is None
+
+
+def test_has_pending_for(conn, clock):
+    assert not jobs.has_pending_for(conn, 3, [JobType.SB_RECHECK, JobType.REDOWNLOAD])
+    jid = jobs.enqueue(conn, JobType.REDOWNLOAD, 3, now=clock.now())
+    assert jobs.has_pending_for(conn, 3, [JobType.SB_RECHECK, JobType.REDOWNLOAD])
+    assert not jobs.has_pending_for(conn, 4, [JobType.REDOWNLOAD])
+    assert not jobs.has_pending_for(conn, 3, [JobType.SB_RECHECK])
+    jobs.claim_next(conn, now=clock.now())
+    jobs.complete(conn, jid, now=clock.now())
+    assert not jobs.has_pending_for(conn, 3, [JobType.REDOWNLOAD])

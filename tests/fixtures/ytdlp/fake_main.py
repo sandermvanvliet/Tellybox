@@ -31,7 +31,7 @@ def sponsorblock(argv, url, info):
     if flag is None:
         return None
     if "sbdown" in url:
-        fail("ERROR: Postprocessing: Unable to communicate with SponsorBlock API: "
+        fail("ERROR: Preprocessing: Unable to communicate with SponsorBlock API: "
              "HTTP Error 503: Service Unavailable. Aborting.")
     cats = argv[argv.index(flag) + 1].split(",")
     found = [dict(s) for s in SEGMENTS if "sponsored" in url and (s["category"] in cats or s["type"] == "poi")]

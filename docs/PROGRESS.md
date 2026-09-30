@@ -139,7 +139,7 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - 8: profiles;
 - 9: admin API;
 - 13: receiver, in progress;
-- 10: SponsorBlock;
+- 10: SponsorBlock, built on `step10/sponsorblock`;
 - 11: subscriptions;
 - 12: manual splitting;
 - 14: smart splitting.
@@ -229,6 +229,49 @@ Inserted as step 9 by the owner on 2026-09-29: Phase 0 of the plan "Tellybox × 
   - opt-in zeroconf advertisement (`_tellybox._tcp`);
   - F6: settings `GET`/`PATCH`, daily history, and publishing held downloads from Home Assistant (opt-in).
 
+### 10. SponsorBlock (v3), built on `step10/sponsorblock`; PR, deploy and device checks open
+Sponsor segments are cut out of the file at download through yt-dlp's `--sponsorblock-remove`, with the categories set in Settings and per show, a 7-day daily re-check, and an episode page that lists the removed segments (SB-1..SB-5).
+- Plan `docs/plans/step10-sponsorblock.md`, approved 2026-09-30. Subagent briefs: `docs/plans/step10-handoff.md`.
+- **Decisions (owner, 2026-09-30):**
+  - keyframe cuts by yt-dlp's stream copy, with no re-encode (A-19);
+  - a new episode page `/admin/episodes/{id}` for SB-4.
+  - Also recorded: videos from before v3 are only cut when the admin downloads them again with SponsorBlock (A-20).
+- **What the yt-dlp source (2026.08.19) showed:**
+  - the lookup sends only a 4-character hash prefix (SB-1 privacy);
+  - an unreachable API fails the whole run before anything is downloaded, so the worker retries without SponsorBlock (SB-5);
+  - when a video has no chapters, the cut invents a single one for the whole video, which the wrapper drops.
+- **Contract:**
+  - migration 008 (the categories on settings and show, the `source_video.sb_*` columns, the `job` table rebuilt for `sb_recheck` and `redownload`, the `position_shift` queue);
+  - `tellybox/sponsorblock.py` (categories, segment merging, `remap_position`);
+  - in `ytdlp.py`: `sb_categories`, `sponsor_segments()` and `SponsorBlockUnavailable`;
+  - `jobs.defer`, `jobs.has_pending_for` and `ingest.request_redownload`.
+- Built by three Sonnet subagents and merged by the controller (2026-09-30). 1103 tests.
+  - **Worker (A):**
+    - the download cuts the effective categories and falls back to uncut on `unreachable`;
+    - the daily `sb_recheck` in the 03:00 slot;
+    - `redownload` shares the pipeline with the download. It waits 20 minutes while the episode is on the TV or the cast service can't be reached (checked both before and after the download). It replaces the file at the same path in one transaction, with a hardlink backup, then updates the duration and queues `position_shift` rows. The episode keeps its id, title, thumbnail, hidden state and show.
+  - **Cast (B):** `store.apply_position_shifts` on each tick and before `play`. Controller review fix: `updated_at` is kept, so continue watching keeps its order.
+  - **Admin (C):**
+    - the SponsorBlock categories in Settings;
+    - "default / off / choose" per show;
+    - the episode page (the segments, time removed and status, and "Download again without / with SponsorBlock");
+    - job labels;
+    - nl and de.
+- **Smoke test with the real yt-dlp** (a 185 s video with three sponsor segments):
+  - the lookup matches the download's segments;
+  - 20.2 s removed; the file probes at 164.9 s, against 164.8 s expected;
+  - no invented chapter;
+  - with the API unreachable, yt-dlp exits 1 with "Preprocessing: Unable to communicate with SponsorBlock API", which the wrapper detects.
+- **Real-device checks (owner, after deploy):**
+  1. Add a video with sponsor segments. Its episode page lists them and the time removed. Play it on the TV: the joins are clean, with no sponsor left beyond about two seconds.
+  2. Watch a cut episode partway, then press "Download again without SponsorBlock". While it's playing, the job waits. After stopping and redownloading, resume: it continues at the same moment in the video (the earlier cuts are now back in the file).
+  3. Turn SponsorBlock off for one show and add a video: its page says it's off, and the file is uncut.
+  4. The next morning, the jobs page shows the "Check SponsorBlock" jobs that ran in the 03:00 slot.
+- **Open:**
+  - Open the PR and deploy.
+  - A redownload of a split video completes without doing anything (SB-6, step 12 should add a message).
+  - The admin API's job counts (HA-2) include the daily re-check jobs for a moment.
+
 ### 13. Tellybox receiver (v7), in progress on `step13/receiver`
 Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29; it keeps number 13. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
@@ -286,7 +329,7 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
   - No lint was run (ruff isn't in the venv).
 
 ### Then
-10. SponsorBlock (v3) · 11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
+11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
 
 ## Open decisions / follow-ups
 

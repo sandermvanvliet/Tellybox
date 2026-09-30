@@ -48,6 +48,21 @@ Tellybox is a small self-hosted app that replaces all of that:
 
 Out of the box, episodes play through the Chromecast's standard Default Media Receiver. The optional **Tellybox receiver** is a Cast app of your own that makes the TV part of the story, still without any text:
 
+<table>
+  <tr>
+    <td width="25%"><img src="docs/images/tv-loading.png" alt="Loading: the show's artwork and the episode's thumbnail on a sky background"></td>
+    <td width="25%"><img src="docs/images/tv-day.png" alt="Playing: the episode full screen with a small sky and sun in the top corner"></td>
+    <td width="25%"><img src="docs/images/tv-up-next.png" alt="Up next: a card with the next episode's thumbnail in the bottom corner"></td>
+    <td width="25%"><img src="docs/images/tv-night.png" alt="Goodnight: a moon and stars over dark hills"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Loading</b><br>The show's artwork while it starts</td>
+    <td align="center"><b>Playing</b><br>The sky in the corner</td>
+    <td align="center"><b>Up next</b><br>Before autoplay continues</td>
+    <td align="center"><b>Goodnight</b><br>Time's up</td>
+  </tr>
+</table>
+
 - **Loading:** the show's artwork while the episode starts, instead of a spinner.
 - **The sky in the corner:** the same sun as in the kid app, sinking as the allowance runs down and turning to dusk in the last five minutes. It's hidden on an unlimited day.
 - **Up next:** before autoplay continues, a card with the next episode's thumbnail.

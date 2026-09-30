@@ -34,6 +34,8 @@ STRINGS: list[str] = [
     N_("Nothing downloading."),
     N_("download"),
     N_("Update yt-dlp"),
+    N_("Check SponsorBlock"),
+    N_("Download again"),
     # dashboard.js and jobs.js: job statuses
     N_("queued"),
     N_("downloading"),

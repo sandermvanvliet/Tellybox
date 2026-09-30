@@ -13,7 +13,8 @@
 {%- endmacro %}
 
 {% macro job_type(value) -%}
-{{ {"download": _("download"), "update_ytdlp": _("Update yt-dlp")}.get(value, value) }}
+{{ {"download": _("download"), "update_ytdlp": _("Update yt-dlp"),
+    "sb_recheck": _("Check SponsorBlock"), "redownload": _("Download again")}.get(value, value) }}
 {%- endmacro %}
 
 {% macro connection(value) -%}

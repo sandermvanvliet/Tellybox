@@ -29,7 +29,8 @@ const JOB_STATUS_LABELS = {
   ready: t("ready"),
   failed: t("failed"),
 };
-const JOB_TYPE_LABELS = { download: t("download"), update_ytdlp: t("Update yt-dlp") };
+const JOB_TYPE_LABELS = { download: t("download"), update_ytdlp: t("Update yt-dlp"),
+  sb_recheck: t("Check SponsorBlock"), redownload: t("Download again") };
 
 // Titles come from YouTube and profile names from the admin: never put them into markup unescaped.
 function esc(value) {

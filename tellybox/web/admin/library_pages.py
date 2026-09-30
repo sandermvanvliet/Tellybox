@@ -13,9 +13,10 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 
-from tellybox import library
+from tellybox import ingest, jobs, library, sponsorblock
 from tellybox.i18n import _, ngettext
 from tellybox.images import MAX_UPLOAD_BYTES, ImageError, clean_upload, grab_frame, save_episode_thumbnail, save_show_artwork
+from tellybox.jobs import JobType
 from tellybox.web.admin.common import AdminContext, render, see_other
 
 PLAYLIST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")  # YouTube playlist ids (CI-7)
@@ -117,9 +118,13 @@ def create_router(ctx: AdminContext) -> APIRouter:
             return None
         episodes = library.list_episodes(conn, show_id, include_hidden=True)
         other_shows = [s for s in library.list_shows(conn) if s.id != show_id]
+        global_sb = sponsorblock.effective_categories(conn, None)
+        own_sb = sponsorblock.parse_csv(show.sponsorblock_categories)
         context = {
             "nav": "library", "show": show, "episodes": episodes, "other_shows": other_shows,
-            "art_preview": None, "thumb_preview": None, **extra,
+            "art_preview": None, "thumb_preview": None,
+            "sb_mode": "default" if show.sponsorblock_categories is None else "choose" if own_sb else "off",
+            "sb_global": global_sb, "sb_checked": own_sb or global_sb, **extra,
         }
         q = request.query_params if request is not None else {}
         episode_ids = {e.id for e in episodes}
@@ -212,6 +217,24 @@ def create_router(ctx: AdminContext) -> APIRouter:
     def set_autoplay_route(show_id: int, autoplay: bool = Form(...)) -> Response:
         try:
             library.set_show_autoplay(conn, show_id, autoplay)
+        except KeyError:
+            raise HTTPException(404) from None
+        return see_other(f"/admin/shows/{show_id}", flash=_("Saved."))
+
+    @router.post("/admin/shows/{show_id}/sponsorblock")
+    async def set_show_sponsorblock_route(request: Request, show_id: int) -> Response:  # SB-2
+        form = await request.form()
+        mode = form.get("mode")
+        if mode not in ("default", "off", "choose"):
+            raise HTTPException(422, "mode must be 'default', 'off' or 'choose'")
+        if mode == "default":
+            categories = None
+        elif mode == "off":
+            categories = []
+        else:  # nothing ticked means off, as in the global setting
+            categories = sponsorblock.parse_csv(",".join(str(v) for v in form.getlist("category")))
+        try:
+            library.set_show_sponsorblock(conn, show_id, categories)
         except KeyError:
             raise HTTPException(404) from None
         return see_other(f"/admin/shows/{show_id}", flash=_("Saved."))
@@ -315,6 +338,43 @@ def create_router(ctx: AdminContext) -> APIRouter:
                          **show_or_404(request, episode.show_id))
         library.delete_episode(conn, media_dir, episode_id)
         return see_other(f"/admin/shows/{episode.show_id}", flash=_("Episode deleted."))
+
+    # --------------------------------------------------------------------- episode page and SponsorBlock (SB-4)
+
+    def episode_context(episode: library.Episode, **extra) -> dict:
+        show = library.get_show(conn, episode.show_id)
+        info = library.get_sponsorblock_info(conn, episode.source_video_id) if episode.source_video_id else None
+        pending = info is not None and jobs.has_pending_for(
+            conn, info.source_id, (JobType.REDOWNLOAD, JobType.SB_RECHECK))
+        window_open = info is not None and info.recheck_until is not None and info.recheck_until > ctx.clock.now()
+        can_change = info is not None and info.ready and not info.split and not pending
+        return {
+            "nav": "library", "episode": episode, "show": show, "sb": info, "sb_pending": pending,
+            "sb_window_open": window_open, "tz": ctx.config.tz,
+            "sb_offer_without": can_change and info.status == "cut",
+            "sb_offer_with": can_change and info.status in (None, "admin_off"), **extra,
+        }
+
+    @router.get("/admin/episodes/{episode_id}")
+    def episode_page(request: Request, episode_id: int) -> Response:
+        return render(request, "episode.html", **episode_context(episode_or_404(episode_id)))
+
+    @router.post("/admin/episodes/{episode_id}/redownload")
+    def redownload_route(episode_id: int, with_sb: str = Form(..., alias="sponsorblock")) -> Response:
+        episode = episode_or_404(episode_id)
+        if with_sb not in ("0", "1"):
+            raise HTTPException(422, "sponsorblock must be '0' or '1'")
+        target = f"/admin/episodes/{episode_id}"
+        if episode.source_video_id is None:
+            return see_other(target, flash=_("This episode has no downloaded video to download again."))
+        try:
+            ingest.request_redownload(conn, episode.source_video_id, with_sponsorblock=with_sb == "1",
+                                      now=ctx.clock.now())
+        except ingest.RedownloadPending:
+            return see_other(target, flash=_("This video is already being checked or downloaded again."))
+        except KeyError:
+            return see_other(target, flash=_("This video can't be downloaded again right now."))
+        return see_other(target, flash=_("Queued: the video will be downloaded again."))
 
     # --------------------------------------------------------------------- episode thumbnails / frame picking
 

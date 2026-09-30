@@ -62,6 +62,20 @@
     </div>
   </section>
 
+  <section class="card">
+    <h2>{{ _("SponsorBlock") }}</h2>
+    <fieldset class="stack">
+      <legend class="muted">{{ _("Cut these kinds of segments out of videos. Tick nothing to turn SponsorBlock off.") }}</legend>
+      {% for key in sb_categories %}
+      <label class="check">
+        <input type="checkbox" name="sponsorblock" value="{{ key }}" {% if key in sb_selected %}checked{% endif %}>
+        {{ sb_label(key) }}
+      </label>
+      {% endfor %}
+    </fieldset>
+    <p class="muted">{{ _("Segments are cut from new downloads and from videos still inside their 7-day re-check. Each show can override this.") }}</p>
+  </section>
+
   <div class="row">
     <button class="btn primary" type="submit">{{ _("Save") }}</button>
   </div>

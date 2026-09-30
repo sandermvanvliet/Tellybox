@@ -20,7 +20,7 @@
     <tbody>
       {% for row in rows %}
       <tr data-job-id="{{ row.job.id }}">
-        <td>{{ row.title or labels.job_type(row.job.type.value) }}</td>
+        <td>{{ row.title or labels.job_type(row.job.type.value) }}{% if row.title and row.job.type.value != "download" %} <span class="muted">&middot; {{ labels.job_type(row.job.type.value) }}</span>{% endif %}</td>
         <td data-field="status"><span class="badge{% if row.badge %} {{ row.badge }}{% endif %}">{{ labels.job_status(row.job.status.value) }}</span></td>
         <td data-field="progress"><div class="progress"><span style="width: {{ ((row.job.progress or 0) * 100) | round | int }}%"></span></div></td>
         <td data-field="attempts">{{ row.job.attempts }} / {{ row.job.max_attempts }}</td>

@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from tellybox.clock import Clock
 from tellybox.config import Config
-from tellybox import auth, i18n
+from tellybox import auth, i18n, sponsorblock
 from tellybox.web.admin.js_strings import js_catalog
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -33,6 +33,16 @@ templates.env.install_gettext_callables(i18n.gettext, i18n.ngettext, newstyle=Tr
 templates.env.globals["current_locale"] = i18n.current_locale
 templates.env.globals["js_catalog"] = js_catalog
 templates.env.globals["format_date"] = i18n.format_date
+templates.env.globals["sb_categories"] = list(sponsorblock.CATEGORIES)
+
+
+def _sb_label(key: str) -> str:
+    """A SponsorBlock category's label in the current language (unknown keys as they are)."""
+    return i18n.gettext(sponsorblock.CATEGORIES[key]) if key in sponsorblock.CATEGORIES else key
+
+
+templates.env.globals["sb_label"] = _sb_label
+templates.env.filters["sb_label"] = _sb_label  # for map("sb_label")
 
 
 def _minutes(seconds: float | None) -> str:

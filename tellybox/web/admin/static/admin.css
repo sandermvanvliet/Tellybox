@@ -71,6 +71,7 @@ form.inline { display: inline; margin: 0; }
 
 label { display: grid; gap: .25rem; font-weight: 600; font-size: .95rem; }
 label.check { display: flex; gap: .5rem; align-items: center; font-weight: 400; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 input[type=text], input[type=url], input[type=password], input[type=number], input[type=time], input[type=file], select, textarea {
   font: inherit; color: inherit; width: 100%; padding: .55rem .65rem;
   border: 1px solid var(--line); border-radius: 8px; background: #fff; min-height: 44px;

@@ -148,7 +148,7 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 
 Three steps are open:
 
-1. **Step 13, Tellybox receiver (v7):** in progress on `step13/receiver`, which is pushed but has no PR yet. The contract (PR #2) is on `main`, and GitHub Pages serves the spike page at `https://sandermvanvliet.github.io/Tellybox/receiver/spike.html`. **Blocked on the owner:** registering in the Google Cast SDK Developer Console. The next steps are under "13." below.
+1. **Step 13, Tellybox receiver (v7):** the spike passed on 2026-09-30, and the branch `step13/receiver` is ready for its PR. The next steps are under "13." below.
 2. **Step 9, admin API for Home Assistant (v2.1):** merged as PR #3. The owner's device checks are open (`docs/plans/step9-ha-api.md`, "Real-device checks").
 3. **Step 8, kid profiles (v2):** deployed. The owner's playback checks on the real TV are open: `docs/plans/step8-device-checks.md`.
 
@@ -280,7 +280,7 @@ Sponsor segments are cut out of the file at download through yt-dlp's `--sponsor
   - A redownload of a split video completes without doing anything (SB-6, step 12 should add a message).
   - The admin API's job counts (HA-2) include the daily re-check jobs for a moment.
 
-### 13. Tellybox receiver (v7), in progress on `step13/receiver`
+### 13. Tellybox receiver (v7), spike passed; PR next
 Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29; it keeps number 13. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).
 - Contract merged as PR #2; GitHub Pages publishes `tellybox/web/receiver/` at `…/receiver/`.
@@ -307,31 +307,18 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
 - `main` merged into the branch after step 9 (PR #3). The conflicts were in `app.py` (both sides' constants kept) and the nl and de catalogs (both sides' translations kept, then re-extracted). 1064 tests pass.
 - **Controller fix:** with no app id (or during a fallback), `play` now moves any other running media app, such as the Tellybox receiver after its app id was cleared, to the Default Media Receiver first. Before, our media would have loaded into it and counted as taken over.
 - TV screenshots from `receiver/dev.html` were shown to the owner (private artifact page).
+- **Cast console (2026-09-30):** the owner registered an unpublished Custom Receiver and added the Chromecast as a test device. The app ID is kept out of the repository; it goes into admin Settings. The console URL is `https://sandermvanvliet.github.io/Tellybox/receiver/index.html`.
+- **Spike passed (2026-09-30):** S1..S9 all pass on the 1st gen, with findings in `docs/spike-receiver.md`.
+  - GitHub Pages hosting stays, and media and images over plain HTTP from the LAN load from the HTTPS page.
+  - CAF 3.0.0156 runs on Chrome 90. Every CAF call in `cast.js` exists there (checked through remote DevTools on port 9222).
+  - Tap-to-playing is ~4.3 s cold and 0.7 s warm, so no warm-up is needed. The overlay drops no frames.
+  - A wrong app id fails with `RequestFailed` in 0.02 s, which already becomes `ReceiverUnavailable`. The launch timeout stays at 8 s.
+- The seams needed no code changes. The spike pages and script are removed, the installation guide notes HTTP media, and `main` (step 10) is merged into the branch. 1168 tests pass.
 - **Next steps, in order:**
-  1. **The owner registers:**
-     - in the Google Cast SDK Developer Console (US$5 one-time), add a Custom Receiver, unpublished, with the URL `https://sandermvanvliet.github.io/Tellybox/receiver/spike.html`;
-     - add the Chromecast's serial number as a test device;
-     - wait about 15 minutes, then reboot the Chromecast;
-     - send the app ID. It is never committed; it goes into admin Settings later.
-  2. **Spike (S1..S9 in the plan)**, from the dev box on the same LAN, with the owner watching the TV's on-screen log. On `step13/receiver`, run a dev web service with a test clip, using data and media dirs outside the repository, because `./data` and `./media` belong to uid 1500:
-     ```bash
-     export TELLYBOX_DATA_DIR=~/tellybox-spike/data TELLYBOX_MEDIA_DIR=~/tellybox-spike/media
-     .venv/bin/tellybox migrate && .venv/bin/tellybox dev make-clips 2 && .venv/bin/tellybox dev seed dev-show
-     .venv/bin/python -m tellybox.web &     # serves /media and /img on http://<lan ip>:8080
-     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id CC1AD845 --episode 1  # baseline (S9)
-     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --episode 1 --overlay on
-     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --episode 1 --overlay off  # S6
-     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id <APPID> --no-play --seconds 660 --quit  # S7
-     .venv/bin/python scripts/receiver_spike.py --host <chromecast ip> --app-id 00000000 --episode 1  # S8
-     ```
-     - If CAF doesn't run (S2), point the console at `spike-v2.html`.
-     - If HTTP media or images are blocked from the HTTPS page (S3), switch to the home-server hosting: a public DNS name for the server's LAN address with a real certificate, set up in the owner's infrastructure repository, with media over HTTPS.
-     - Record the findings in `docs/spike-receiver.md`.
-  3. **Adapt the seams** to the findings: `_launch_receiver` in `tellybox/cast/pychromecast_device.py` (the readiness check and `RECEIVER_LAUNCH_TIMEOUT_S`) and `tellybox/web/receiver/cast.js` (SDK calls and event names). Also add a line on HTTP media to the installation guide's receiver section.
-  4. Point the console's app URL at `…/receiver/index.html`, and remove `spike*.html`, `spike-common.js`, `spike.css` and `scripts/receiver_spike.py`.
-  5. Open the PR, merge, and deploy. Set the app ID in admin Settings. Then run the real-device checks in the plan with the owner.
+  1. Open the PR, merge, and deploy.
+  2. Set the app ID in admin Settings.
+  3. Run the real-device checks in the plan with the owner.
 - **Open follow-ups from the subagents:**
-  - The CAF calls in `receiver/cast.js` are unverified on a device: `setMediaElement`, the event names `BUFFERING`, `MEDIA_FINISHED`, `TIME_UPDATE` and `PAUSE`, `getPlayerState()`, and the frame counters.
   - The receiver shows the loading layer from LOAD_START even before a `loading` message (documented in the protocol). The corner sky is drawn at night while a last episode finishes after time's up.
   - A parent stop-now keeps the night screen only when the day is already out of time; otherwise it quits as in v1.
   - `_sky()` in the controller runs one small profile query per tick while the receiver runs; cache it if it shows up.

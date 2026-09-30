@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, Response
-from fastapi.staticfiles import StaticFiles
 
 from tellybox import auth
 from tellybox.i18n import _
@@ -24,6 +23,7 @@ from tellybox.web.admin.common import (
     same_origin,
     see_other,
 )
+from tellybox.web.static_files import NoCacheStaticFiles
 
 PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history)
 
@@ -102,5 +102,5 @@ def mount_admin(app: FastAPI, ctx: AdminContext) -> None:
     app.include_router(public)
     for module in PAGE_MODULES:
         app.include_router(module.create_router(ctx), dependencies=[Depends(guard)])
-    # Stylesheet and scripts only; no data behind this mount.
-    app.mount("/admin/static", StaticFiles(directory=STATIC_DIR), name="admin-static")
+    # Stylesheet and scripts only; no data behind this mount. Revalidated on every load (see NoCacheStaticFiles).
+    app.mount("/admin/static", NoCacheStaticFiles(directory=STATIC_DIR), name="admin-static")

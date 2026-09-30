@@ -228,6 +228,7 @@ class CastController:
             raise KeyError(episode_id)
         now = self.clock.now()
         self._refresh_profiles(now)
+        self._apply_position_shifts(now)  # SB-3: resume from the remapped position
         if profile_ids is None:
             profiles = list(self._known_profiles)
         elif not profile_ids:
@@ -302,6 +303,7 @@ class CastController:
             self._give_up_recovery()
         if self.current and self._lost_at and (now - self._lost_at).total_seconds() >= RECONNECT_WAIT_S:
             self._end_current(EndReason.DISCONNECTED, ended_at=self._lost_at)
+        self._apply_position_shifts(now)
         self._refresh_profiles(now)
         self._decision = self.timer.tick(now)
         await self._apply_decision(self._decision)
@@ -317,6 +319,11 @@ class CastController:
         if (now - self._last_persist).total_seconds() >= PERSIST_EVERY_S:
             self.persist(now)
         self._broadcast()
+
+    def _apply_position_shifts(self, now: datetime) -> None:
+        """SB-3: positions the worker queued after replacing a file."""
+        if applied := store.apply_position_shifts(self.conn, now):
+            log.info("moved saved positions for %d replaced file(s) (SB-3)", applied)
 
     def persist(self, now: datetime) -> None:
         """Write timer state, usage, history heartbeat and position (WT-8, PB-4)."""

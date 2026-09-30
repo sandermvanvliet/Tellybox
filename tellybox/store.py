@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
+from tellybox import sponsorblock
 from tellybox.cast.device import DeviceInfo
 from tellybox.db import from_db, to_db
 from tellybox.timer import CountingMode, DayUsage, ProfilePolicy, TimerSettings
@@ -194,6 +195,40 @@ def save_position(
                  position_s = excluded.position_s, finished = excluded.finished, updated_at = excluded.updated_at""",
             (p, episode_id, position_s, int(finished), to_db(now)),
         )
+
+
+def apply_position_shifts(conn: sqlite3.Connection, now: datetime) -> int:
+    """SB-3: move saved positions after the worker replaced an episode's file; returns the rows applied.
+
+    The worker only queues `position_shift` rows; this is the one writer of playback_position.
+    Rows are applied in id order, so several replacements in a row compose.
+    """
+    if conn.execute("SELECT 1 FROM position_shift LIMIT 1").fetchone() is None:
+        return 0
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        shifts = conn.execute("SELECT id, episode_id, old_cuts_json, new_cuts_json FROM position_shift ORDER BY id").fetchall()
+        for shift in shifts:
+            old = sponsorblock.loads(shift["old_cuts_json"])
+            new = sponsorblock.loads(shift["new_cuts_json"])
+            row = conn.execute("SELECT duration_s FROM episode WHERE id = ?", (shift["episode_id"],)).fetchone()
+            duration_s = row["duration_s"] if row else None
+            for pos in conn.execute(
+                "SELECT profile_id, position_s FROM playback_position WHERE episode_id = ?", (shift["episode_id"],)
+            ).fetchall():
+                moved = sponsorblock.remap_position(pos["position_s"], old, new)
+                if duration_s:
+                    moved = min(moved, duration_s)
+                conn.execute(
+                    "UPDATE playback_position SET position_s = ?, updated_at = ? WHERE profile_id = ? AND episode_id = ?",
+                    (moved, to_db(now), pos["profile_id"], shift["episode_id"]),
+                )
+            conn.execute("DELETE FROM position_shift WHERE id = ?", (shift["id"],))
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    return len(shifts)
 
 
 def group_position(conn: sqlite3.Connection, profile_ids: list[int], episode_id: int) -> float | None:

@@ -23,7 +23,7 @@ DEFAULT_MEDIA_RECEIVER = "CC1AD845"
 # The Tellybox receiver (v7, CR-1..CR-8). Its app id comes from settings.receiver_app_id; the
 # messages on this namespace are in docs/receiver-protocol.md.
 RECEIVER_NAMESPACE = "urn:x-cast:tellybox"
-RECEIVER_LAUNCH_TIMEOUT_S = 8.0  # launch + first status; the spike (S8, S9) may tune it
+RECEIVER_LAUNCH_TIMEOUT_S = 8.0  # launch + first status; a cold launch takes ~3 s on the 1st gen (spike S1)
 
 
 class PlayerState(StrEnum):

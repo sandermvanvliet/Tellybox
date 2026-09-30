@@ -196,6 +196,8 @@ Google requires every custom receiver to be registered, so this is a one-time se
 1. **Host the receiver page over HTTPS.** Either:
    - **GitHub Pages of your fork** (easiest): in your fork, go to Settings → Pages and set the source to **GitHub Actions**. The `Publish receiver to GitHub Pages` workflow then publishes `tellybox/web/receiver/` to `https://<your-user>.github.io/<your-repo>/receiver/` on every change to it. Run the workflow once by hand for the first publish. The page contains no household data.
    - **Your own HTTPS host:** the `web` service serves the same files at `/receiver/`, so a reverse proxy address such as `https://tellybox.example.org/receiver/` works (see [HTTPS](#https-with-a-reverse-proxy)). The Chromecast must be able to reach it. Set `TELLYBOX_MEDIA_BASE_URL` so that the media URLs the receiver loads are reachable from the Chromecast.
+
+   Either way, the videos and images can stay on plain HTTP from your LAN (`http://<server ip>:8080`). The receiver page is HTTPS, but the Chromecast loads them anyway; this was tested on an original Chromecast.
 2. **Register as a Cast developer** at the [Google Cast SDK Developer Console](https://cast.google.com/publish). There is a one-time registration fee.
 3. **Add a new application**, type **Custom Receiver**, with the receiver URL from step 1 (ending in `/receiver/`). Note the 8-character **Application ID** it shows.
 4. **Add your Chromecast as a test device** under *Cast Receiver Devices*, using its serial number (in the Google Home app under the device's settings, or on the back of the device). Wait a few minutes, then **reboot the Chromecast** (unplug it for a few seconds). An unpublished receiver only runs on registered devices.

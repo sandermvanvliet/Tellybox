@@ -289,7 +289,8 @@ class PyChromecastDevice:
         """Start the Tellybox receiver unless it runs, and wait until it takes media (CR-1, CR-6).
         The media controller would launch the Default Media Receiver over a receiver that hasn't registered
         the media namespace yet, so 'running' means the app id matches *and* the namespace is there.
-        Kept small on purpose: the real-device spike (S1, S8) may change the launch details."""
+        On the 1st gen a cold launch takes ~3 s, and an unregistered app id fails at once with RequestFailed
+        (docs/spike-receiver.md, S1 and S8)."""
 
         def ready() -> bool:
             return cast.app_id == app_id and cast.media_controller.is_active

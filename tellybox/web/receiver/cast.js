@@ -63,7 +63,7 @@
     var E = cast.framework.events.EventType;
     ctx = cast.framework.CastReceiverContext.getInstance();
     pm = ctx.getPlayerManager();
-    pm.setMediaElement(video); // our own <video>: no CAF player UI (see the spike page)
+    pm.setMediaElement(video); // our own <video>: no CAF player UI (docs/spike-receiver.md, S2)
 
     ctx.addCustomMessageListener(NS, function (e) {
       var d = e.data;

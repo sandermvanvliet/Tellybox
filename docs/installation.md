@@ -210,6 +210,7 @@ Tellybox falls back on its own: if the Tellybox receiver can't be launched (page
 - The application ID has a typo.
 - The Chromecast can't reach GitHub Pages (no internet, or a DNS filter blocks `github.io`), or your own receiver's URL is wrong or not HTTPS.
 - The Chromecast can't reach the media URLs: check `TELLYBOX_MEDIA_BASE_URL`.
+- With your own receiver app: its settings were changed in the console, and the Chromecast hasn't been rebooted since. The reason then reads `launch failed: CANCELLED`.
 
 Once you've fixed the cause, the fallback ends by itself after 30 minutes, or restart the `cast` service to retry right away.
 
@@ -223,6 +224,8 @@ Only needed if you change the receiver in a fork, because the shared app always 
 2. **Register as a Cast developer** at the [Google Cast SDK Developer Console](https://cast.google.com/publish). There is a one-time registration fee.
 3. **Add a new application**, type **Custom Receiver**, with the receiver URL from step 1 (ending in `/receiver/`). Note the 8-character **Application ID** it shows.
 4. **Make it run on your Chromecast.** Either publish the app (this needs a 512×512 icon, such as `tellybox/web/static/icon-512.png`, a title, a description and an HTTPS URL), or add your Chromecast as a test device under *Cast Receiver Devices* using its serial number (in the Google Home app under the device's settings, or on the back of the device). An unpublished app only runs on registered devices. Wait a few minutes, then **reboot the Chromecast** (unplug it for a few seconds).
+
+   **Changed the application's settings later, such as the receiver URL? Reboot the Chromecast again.** It keeps the settings it had until it restarts, and until then every launch fails with `CANCELLED`.
 5. **Enter your application ID** under **Settings → Tellybox receiver app ID**, as above.
 
 ## HTTPS with a reverse proxy

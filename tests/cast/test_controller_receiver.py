@@ -354,6 +354,36 @@ async def test_time_up_keeps_the_night_then_quits_after_ten_minutes(conn, clock,
     assert not fake.receiver_running
 
 
+async def test_night_after_a_restart_still_ends(conn, clock, fake, episodes):  # CR-3, NF-7
+    configure(conn, allowance_min=5)
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, EPISODE_S + 2)  # time runs out mid-episode; it finishes into the night
+    await run_for(ctrl, fake, clock, NIGHT_HOLD_S - 120)
+    assert ctrl.current is None and fake.receiver_running  # the night screen is up
+
+    # A deploy restarts the cast service; the TV keeps our idle receiver on screen.
+    ctrl2 = await make_controller(conn, clock, fake)
+    await run_for(ctrl2, fake, clock, NIGHT_HOLD_S - 60)
+    assert ("stop",) not in fake.calls and fake.receiver_running  # a fresh hold, not cut short
+    await run_for(ctrl2, fake, clock, 70)
+    assert ("stop",) in fake.calls and not fake.receiver_running
+
+
+async def test_idle_receiver_found_on_reconnect_gets_a_night_hold(conn, clock, fake, episodes):  # CR-3
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await ctrl.override("block")  # the night screen, then the connection's state is lost
+    await pump(ctrl, fake)
+    ctrl._night_until = None
+    await run_for(ctrl, fake, clock, 5)
+    assert ctrl._night_until is not None and fake.receiver_running
+    await run_for(ctrl, fake, clock, NIGHT_HOLD_S)
+    assert ("stop",) in fake.calls and not fake.receiver_running
+
+
 async def test_night_is_not_quit_twice_or_over_another_app(conn, clock, fake, episodes):  # CR-3, WT-9
     configure(conn, allowance_min=5)
     enable(conn)

@@ -65,6 +65,8 @@ The receiver combines the last `state` with its own player state (from `PlayerMa
 
 **When the night hold applies (CR-3).** It applies only while the Tellybox receiver is the running app, and only when an episode ends because time is up: the allowance or session max ran out (after the grace), a block, or a parent stop-now on a day that's already out of time. The cast service then stops the media but keeps the app up (`stop_media`). Other ends, such as the end of a show or a stop with time left, quit the app as in v1.
 
+If the cast service restarts or reconnects and finds the receiver running with nothing of ours playing, it starts a fresh 10-minute hold and then quits the app. The receiver disables the TV's own idle timeout, so without this the night screen would stay up until the next cast.
+
 **On a cold launch** the receiver isn't up yet when the cast service first sends `loading`. The reply to its `hello` carries the full state, including `loading`.
 
 The sky states and colours are the kid app's (`tellybox/web/static/sky.js`, `app.css`), so kids recognise the same picture on the TV.

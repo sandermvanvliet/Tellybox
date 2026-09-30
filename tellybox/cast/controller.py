@@ -340,7 +340,14 @@ class CastController:
 
     async def _end_night(self, now: datetime) -> None:
         """CR-3: the night screen has been up long enough; quit our app so the TV can sleep."""
-        if self._night_until is None or now < self._night_until:
+        if self._night_until is None:
+            # Our receiver idle with nothing of ours to show: a restart or reconnect lost the night hold.
+            # Only during a hold is it left idle, and it disables the TV's idle timeout, so start a fresh one.
+            if self.current is None and self.connection == ConnectionState.CONNECTED and self._receiver_running():
+                self._night_until = now + timedelta(seconds=NIGHT_HOLD_S)
+                log.info("our receiver is idle with no night hold (restart or reconnect); quitting it at %s", self._night_until)
+            return
+        if now < self._night_until:
             return
         self._night_until = None
         if self.current is None and self.device and self._receiver_running():  # never quit somebody else's app (WT-9)

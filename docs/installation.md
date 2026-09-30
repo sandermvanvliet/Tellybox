@@ -22,8 +22,9 @@ This guide takes you from an empty server to kids picking videos on the TV. Setu
 | | |
 | --- | --- |
 | **Server** | A Linux machine that stays on, with Docker Engine and the Compose plugin (a home server, NAS or mini PC). Tellybox is developed on Ubuntu and Fedora. No GPU is needed. |
-| **Chromecast** | Any Chromecast or Google TV that plays through the standard Cast "Default Media Receiver". Even the original 2013 Chromecast works. |
+| **Chromecast** | Any Chromecast or Google TV that plays through the standard Cast "Default Media Receiver". Even the original 2013 Chromecast works. The optional [Tellybox receiver](#tellybox-receiver-optional) also runs on the original, but needs a one-time Google Cast developer registration. |
 | **Network** | The server and the Chromecast on the **same LAN segment**. Tellybox finds the Chromecast with mDNS, and the Chromecast downloads the video straight from the server. |
+| **Internet** | Outbound only: the server fetches videos from YouTube and segment data from the SponsorBlock API. With the Tellybox receiver, the Chromecast also loads the receiver page from GitHub Pages. Nothing comes in from the internet. |
 | **Disk** | About 0.5 to 1 GB per hour of video (720p H.264). |
 | **Ports** | One TCP port for the web app (8080 by default), reachable from your LAN, including the Chromecast. A second port (8081 by default) is used on localhost only. |
 
@@ -163,10 +164,12 @@ The cast API (8081) listens on `127.0.0.1` only, so it needs no rule. mDNS disco
    - how time is counted (only playing time, or wall clock);
    - the longest viewing session (default 90 minutes);
    - the finishing grace (default 15 minutes);
-   - the reset time (default 04:00).
+   - the reset time (default 04:00);
+   - the SponsorBlock segments to cut (default: sponsors, unpaid or self promotion, and interaction reminders). Tick nothing to turn it off. Each show can use the default, turn it off, or choose its own under **Library**.
 4. **Add something:** in **Add**, paste a YouTube video or playlist link. Check the preview and add it. Downloads show up under **Jobs**. Anything added with "hold" appears under **Library → Held downloads** until you publish it.
 5. **Give the kids the app:** open `http://<server>:8080` on their tablet or phone and use "Add to Home Screen". It opens full screen like an app.
 6. **Try it:** tap an episode. The TV should start within a few seconds.
+7. **Optionally, set up the Tellybox receiver** for the sky, loading and goodnight screens on the TV: see [Tellybox receiver](#tellybox-receiver-optional).
 
 ## Configuration reference
 
@@ -315,6 +318,7 @@ The repository contains a GitHub Actions workflow (`.github/workflows/docker-pub
 | **Permission denied in the logs** | The data folders must be owned by uid/gid 1500: `sudo chown -R 1500:1500 data media backups`. |
 | **Downloads fail with a YouTube error** | Press "Update yt-dlp" on the **Jobs** page, then retry the job on the **Jobs** page. Private, members-only and age-restricted videos can't be downloaded. |
 | **A page hangs while loading, with many Tellybox tabs open** | Your proxy serves HTTP/1.1, and every tab's live stream holds one of the browser's 6 connections. Enable HTTP/2 on the proxy (see [HTTPS](#https-with-a-reverse-proxy)) or close some tabs. |
+| **A video still has a sponsor segment** | SponsorBlock's data comes from its users and often arrives after a video is published. Tellybox checks each new video again every night for 7 days and replaces the file when segments are added. The episode's page (**Library** → the show → the episode) shows what was cut, or that SponsorBlock was unreachable or off for it. Videos added before SponsorBlock was available are only cut after **Download again with SponsorBlock** on that page. |
 | **Time isn't counted for something playing** | Only playback started from Tellybox is timed. Casting from the YouTube app on a phone is deliberately ignored. |
 | **The pages are in the wrong language** | Tellybox follows each browser's language preference (English, Dutch or German; anything else gets English). Change the order of preferred languages in the browser or phone settings. There's no language setting in Tellybox itself. |
 | **Port already in use** | Another service owns 8080 or 8081. Change `TELLYBOX_WEB_PORT` and `TELLYBOX_CAST_API_PORT` (and the media URL and healthcheck). |

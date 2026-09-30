@@ -69,8 +69,8 @@ class SpikeController(BaseController):
 
 
 def find(host: str):
-    casts, browser = pychromecast.get_listed_chromecasts(known_hosts=[host], discovery_timeout=8)
-    browser.stop_discovery()
+    # Keep the browser running: pychromecast resolves the host through it when connecting.
+    casts, _browser = pychromecast.get_chromecasts(known_hosts=[host])
     for c in casts:
         if c.cast_info.host == host:
             return c

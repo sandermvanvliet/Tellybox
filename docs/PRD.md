@@ -1,6 +1,6 @@
 # Tellybox — Product Requirements
 
-_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered)_
+_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered; Sep 30, 2026: receiver app published, CR-1)_
 
 ## Overview
 
@@ -107,7 +107,7 @@ The Default Media Receiver only plays a file and shows its own spinner and backd
 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
-| CR-1 | Tellybox has its own Cast Web Receiver. It is registered as an unpublished app in the Google Cast SDK Developer Console, with the household's Chromecast registered as a development device. It plays the same signed MP4 files as today. | Must | v7 |
+| CR-1 | Tellybox has its own Cast Web Receiver. It is published in the Google Cast SDK Developer Console, so it runs on any Chromecast without registering the device; the receiver page is served over HTTPS and contains no household data. It plays the same signed MP4 files as today. | Must | v7 |
 | CR-2 | During playback, a small sky in a corner of the TV shows the time left, in the same states as the kid app: the sun sinks, and it's dusk in the last 5 minutes. There's no text and no numbers. It's hidden on an unlimited day. | Must | v7 |
 | CR-3 | When the allowance runs out (or on block or stop now) and the episode has ended, the TV shows a night scene instead of the Chromecast backdrop. After 10 minutes the cast session closes, so the TV can go to sleep. | Must | v7 |
 | CR-4 | While an episode loads, and between autoplay episodes, the TV shows the show's artwork and the episode's thumbnail instead of a spinner. | Should | v7 |

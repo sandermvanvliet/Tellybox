@@ -201,6 +201,8 @@ Google requires every custom receiver to be registered, so this is a one-time se
 2. **Register as a Cast developer** at the [Google Cast SDK Developer Console](https://cast.google.com/publish). There is a one-time registration fee.
 3. **Add a new application**, type **Custom Receiver**, with the receiver URL from step 1 (ending in `/receiver/`). Note the 8-character **Application ID** it shows.
 4. **Add your Chromecast as a test device** under *Cast Receiver Devices*, using its serial number (in the Google Home app under the device's settings, or on the back of the device). Wait a few minutes, then **reboot the Chromecast** (unplug it for a few seconds). An unpublished receiver only runs on registered devices.
+
+   **Changed the application's settings later, such as the receiver URL? Reboot the Chromecast again.** It keeps the settings it had until it restarts, and until then every launch fails with `CANCELLED`.
 5. **Enter the application ID** in Tellybox under **Settings → Tellybox receiver app ID** and save. The cast service picks it up within 15 seconds. Leave it empty to go back to the Default Media Receiver.
 6. **Try it:** start an episode. The **TV receiver** line on the dashboard should read "Tellybox receiver".
 
@@ -213,6 +215,7 @@ Tellybox falls back on its own: if the Tellybox receiver can't be launched (not 
 - The Chromecast serial isn't registered yet, or the Chromecast wasn't rebooted after adding it.
 - The receiver URL in the console is wrong or not HTTPS, or the page isn't reachable from the Chromecast.
 - The application ID has a typo.
+- The application's settings were changed in the console, and the Chromecast hasn't been rebooted since. The reason then reads `launch failed: CANCELLED`.
 
 Once you've fixed the cause, the fallback ends by itself after 30 minutes, or restart the `cast` service to retry right away.
 

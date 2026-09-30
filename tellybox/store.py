@@ -201,7 +201,8 @@ def apply_position_shifts(conn: sqlite3.Connection, now: datetime) -> int:
     """SB-3: move saved positions after the worker replaced an episode's file; returns the rows applied.
 
     The worker only queues `position_shift` rows; this is the one writer of playback_position.
-    Rows are applied in id order, so several replacements in a row compose.
+    Rows are applied in id order, so several replacements in a row compose. updated_at is
+    kept: a replaced file doesn't move the episode up in continue watching (PB-4).
     """
     if conn.execute("SELECT 1 FROM position_shift LIMIT 1").fetchone() is None:
         return 0
@@ -220,8 +221,8 @@ def apply_position_shifts(conn: sqlite3.Connection, now: datetime) -> int:
                 if duration_s:
                     moved = min(moved, duration_s)
                 conn.execute(
-                    "UPDATE playback_position SET position_s = ?, updated_at = ? WHERE profile_id = ? AND episode_id = ?",
-                    (moved, to_db(now), pos["profile_id"], shift["episode_id"]),
+                    "UPDATE playback_position SET position_s = ? WHERE profile_id = ? AND episode_id = ?",
+                    (moved, pos["profile_id"], shift["episode_id"]),
                 )
             conn.execute("DELETE FROM position_shift WHERE id = ?", (shift["id"],))
         conn.execute("COMMIT")

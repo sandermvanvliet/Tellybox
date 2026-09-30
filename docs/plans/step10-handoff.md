@@ -74,7 +74,7 @@ Rules for everyone: follow CLAUDE.md, including NF-13. Every interface string is
 
 1. **`store.apply_position_shifts(conn, now) -> int`** (the rows applied):
    - for each `position_shift` row in id order, and each `playback_position` of that episode: `position_s = remap_position(position_s, old, new)`, clamped to at most the episode's current `duration_s` when known;
-   - keep `finished`, set `updated_at = now`;
+   - keep `finished` and `updated_at` (so continue watching keeps its order; changed from `updated_at = now` in review);
    - delete the row, all in one `BEGIN IMMEDIATE`. It's cheap when the queue is empty (`SELECT 1 ... LIMIT 1` first).
 2. **Call it** from the controller's `tick()` and in `play` before the resume position is read (`group_position`). Log how many were applied.
 3. **Tests:** the store function (several profiles, a position inside a new cut, a cut undone, several queued shifts applied in order, other episodes untouched), and a controller test with the fake clock and fake Chromecast. A shift queued before `play` resumes at the remapped position.

@@ -64,7 +64,7 @@ def test_positions_of_every_profile_move_and_the_row_is_deleted(conn, episodes):
     assert position(conn, b, episodes[0]) == (50.0, False)  # before the cut: unchanged
     assert conn.execute("SELECT COUNT(*) FROM position_shift").fetchone()[0] == 0
     row = conn.execute("SELECT updated_at FROM playback_position WHERE profile_id = ?", (a,)).fetchone()
-    assert row["updated_at"] == to_db(later)
+    assert row["updated_at"] != to_db(later)  # keeps its place in continue watching (PB-4)
 
 
 def test_position_inside_a_new_cut_lands_where_the_cut_was(conn, episodes):

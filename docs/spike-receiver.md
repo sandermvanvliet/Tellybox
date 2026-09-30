@@ -19,7 +19,7 @@ _2026-09-30 · run from the Fedora dev machine on the same LAN as the Chromecast
 | S4 | Namespace round trip | ✅ | `urn:x-cast:tellybox` is listed in the app's namespaces. The page sends `hello` on sender connect, and ping/pong round-trips in ~20 ms. |
 | S5 | `play_media` loads into our app (WT-9) | ✅ | Status shows `app_id=55AAC641` (ours), a session id, our signed `content_id`, `PLAYING`. |
 | S6 | 720p for 2 minutes, overlay on vs off | ✅ | **0 dropped of 2736** frames with the corner sky and moving sun; 0 of 2737 without. No stalls. |
-| S7 | Idle 10+ minutes with `disableIdleTimeout`; `quit_app` | _pending_ | |
+| S7 | Idle 10+ minutes with `disableIdleTimeout`; `quit_app` | ✅ | The page stayed up for **11 minutes** with no media (after another ~4.5 minutes idle from the S8 run), still reporting stats every 10 s. After `quit_app`, `app_id` is `None` at once, and the device then returns to Backdrop (`E8C28D3C`). |
 | S8 | Wrong or unregistered app id | ✅ | `start_app("00000000")` raises `RequestFailed('Failed to execute start app 00000000.')` after **0.02 s**. The running app stays. |
 | S9 | Tap-to-playing, cold and warm (NF-5) | ✅ | Default Media Receiver: 2.5 s launch + 1.45 s = **~4.0 s** cold. Ours: 3.2 s + 1.10 s = **~4.3 s** cold, **0.70 s** warm. Both are within the 5 s target. |
 

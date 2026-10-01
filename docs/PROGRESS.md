@@ -154,7 +154,7 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 
 On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4).
 
-### 12. Manual splitting (v5), built; deploy and device checks open
+### 12. Manual splitting (v5), deployed; device checks open
 Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
 - **Decision (owner, 2026-10-01):** the approve form has "delete the original video after cutting", unticked by default; a kept source can be split again (A-21).
 - **Contract:**
@@ -179,6 +179,7 @@ Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01.
   - Dropping a 2 s intro, renaming and approving with "delete the original" cut 88 s into parts of exactly 28.0, 30.0 and 30.0 s in about 9 s. The parts took the compilation's place between the neighbouring episodes, each with a thumbnail. The untitled one became "Demo compilation (3)", and `file_path` was cleared.
   - Screenshots at 375 and 1280 px were reviewed, with no horizontal scroll.
   - **Found and fixed:** the "delete the original" box came up ticked after an earlier approval with it; it's now unticked every time (A-21).
+- Merged as PR #16 and deployed (version 2026.10.01.26).
 - **Real-device checks (owner, after deploy):**
   1. Split a real compilation (with chapters if possible) on the phone: the chapters are offered; move a cut, drop an intro, rename, approve.
   2. Play a part on the TV: it starts cleanly, without frames from the previous episode, and autoplay moves on to the next part.
@@ -316,6 +317,52 @@ Sponsor segments are cut out of the file at download through yt-dlp's `--sponsor
   - the owner's real-device checks above. v3 is done when they pass.
   - A redownload of a split video completes without doing anything (SB-6, step 12 should add a message).
   - The admin API's job counts (HA-2) include the daily re-check jobs for a moment.
+
+### 14. Smart splitting (v6), built; device checks and the v6 gate open
+Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/plans/step14-handoff.md`. Branch `step14/smart-split`, started before the step 12 TV checks; it merges only after they pass.
+- **Decisions (owner, 2026-10-01):**
+  - A-22: a compilation picked up by automatic detection stays hidden until its split is approved or it's published whole.
+  - No PySceneDetect: version 0.7 requires the desktop OpenCV build. Scene changes come from ffmpeg `scdet`, and black frames from `blackdetect`. The CLAUDE.md stack line and the PRD are updated.
+  - Tesseract with English, Dutch and German in the image. CI installs it so the OCR test runs there; on the dev box it skips without the `tesseract` binary.
+- **Contract:**
+  - migration 010 (`split_profile`, `split_reference`, `split_proposal.detected_json`, `source_video.awaiting_split`);
+  - `tellybox/detect` types and hashing;
+  - the profile storage in `library`;
+  - `tests/detect_clips.py` (synthetic compilations with title cards and black at known times).
+- **Measured while writing the contract:**
+  - pHash was unstable on mostly flat logo crops: an identical card scored 10–14 bits from itself.
+  - Using one scaler for both sides also matters: every frame, sampled or marked, goes through the same ffmpeg filter (`SAMPLE_FILTER`).
+  - With dHash: the same card 0–1, a heavily degraded one 9–12, anything else 22 or more. So the default threshold is 6, and an ES-5 re-scan accepts threshold + 8.
+- Built by three Sonnet subagents and merged by the controller. 1344 tests, plus a `slow` benchmark run on request. 1Password commit signing was locked for part of the run, so A and B were applied as patches and committed together with C.
+  - **Engine (A):**
+    - 2 fps sampling through one ffmpeg pipe;
+    - runs of matching frames become one hit;
+    - the length hint drops hits that are too close and re-scans gaps at 5 fps with the looser threshold, at half the confidence;
+    - snapping to the black start (preferred) or a scene change, up to the snap window before the card;
+    - OCR with Otsu thresholding, inverted for light-on-dark text.
+    - **Controller fix:** a snap window ends at the previous card, so a short episode can't snap back past it (regression test).
+    - **NF-6:** a 30-minute 720p compilation is detected in 79 s (4.4 % of its length).
+  - **Worker (B):**
+    - the `detect` job writes a `review` proposal (OCR titles, a `detected_json` entry per cut); cuts that would leave a part under 5 s are merged away;
+    - ES-10: after a new download in a show with auto-detect, a video longer than 1.5× the hint (20 minutes without one) is published hidden with `awaiting_split`, and detection is queued;
+    - approving its split makes the parts visible and clears the flag (A-22).
+  - **Admin (C):**
+    - the split page: "Mark as title card" (freeze the frame, drag a region or take the whole frame; touch works), the title cards, "Find cuts" with progress, "sure / check / unsure" and snap-kind badges, and "Publish as one video" while held;
+    - the show page's "Splitting" card (references, threshold, episode length in minutes or mm:ss, snap window, OCR and its region in percent, auto-detect);
+    - "Detected" and "Hidden until approved" badges on the library page;
+    - nl and de.
+- **Smoke test** on the dev box: a real web service and worker against a stub cast service, with a synthetic 3-minute compilation: an 8 s intro and four episodes, one with a degraded card.
+  - Detection was refused before any card was marked (409).
+  - Marking the card and setting a 0:42 episode length, then "Find cuts", gave a proposal in about 6 s. All four cuts landed exactly on the black before each card. The degraded one was found by the re-scan and marked "unsure" (0.37 against 0.93).
+  - Leaving out the intro and approving cut four visible parts (42.6, 47.6, 40.6 and 44.6 s: black, card and episode each).
+  - Screenshots of the split page at 375 px and the show page at 1280 px were reviewed.
+- **Open:**
+  - the owner's v6 gate: detection accepted on two real shows;
+  - an auto-detected compilation waits hidden in review, then plays split on the TV;
+  - OCR on real title cards;
+  - the image size growth from OpenCV and Tesseract, to measure on the first CI build;
+  - a failed detect job leaves an auto-held compilation hidden until "Publish as one video" (by design);
+  - no dashboard count for proposals to review (optional, skipped).
 
 ### 13. Tellybox receiver (v7), done
 Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29; it keeps number 13. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.

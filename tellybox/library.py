@@ -570,8 +570,8 @@ def list_held_downloads(conn: sqlite3.Connection) -> list[HeldDownload]:
     """Source videos added with 'hold' (ingest._publish), oldest first. Not-yet-ready ones show only their status."""
     rows = conn.execute(
         """SELECT sv.id, sv.title, sv.status, sv.error, sv.thumbnail_path, sv.playlist_id, sv.playlist_title,
-                  e.id AS episode_id
-           FROM source_video sv LEFT JOIN episode e ON e.source_video_id = sv.id
+                  (SELECT MIN(e.id) FROM episode e WHERE e.source_video_id = sv.id) AS episode_id
+           FROM source_video sv
            WHERE sv.publish = 'hold' ORDER BY sv.id"""
     ).fetchall()
     return [

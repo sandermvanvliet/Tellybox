@@ -94,17 +94,22 @@ class Worker:
         return self._last_recheck_day != day_for(now, UPDATE_AT, self.tz)
 
     def _enqueue_rechecks(self, now: datetime) -> None:
-        """SB-3: one re-check per published video still inside its window, unless the admin turned SponsorBlock off."""
+        """SB-3: one re-check per published video still inside its window, unless the admin turned SponsorBlock off.
+
+        Split videos are skipped (SB-6): new cuts would break the split points.
+        """
         self._last_recheck_day = day_for(now, UPDATE_AT, self.tz)  # marked first, like the purge
         rows = self.conn.execute(
             """SELECT id FROM source_video
                WHERE status = 'ready' AND sb_recheck_until > ? AND COALESCE(sb_status, '') != 'admin_off'
+                 AND NOT EXISTS (SELECT 1 FROM episode e WHERE e.source_video_id = source_video.id
+                                 AND e.start_s IS NOT NULL)
                ORDER BY id""",
             (to_db(now),),
         ).fetchall()
         queued = 0
         for row in rows:
-            if not jobs.has_pending_for(self.conn, row["id"], (JobType.SB_RECHECK, JobType.REDOWNLOAD)):
+            if not jobs.has_pending_for(self.conn, row["id"], (JobType.SB_RECHECK, JobType.REDOWNLOAD, JobType.SPLIT)):
                 jobs.enqueue(self.conn, JobType.SB_RECHECK, row["id"], now=now, max_attempts=2)
                 queued += 1
         if queued:

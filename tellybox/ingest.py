@@ -17,10 +17,11 @@ from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from tellybox import jobs, library, media_format, sponsorblock
+from tellybox import images, jobs, library, media_format, sponsorblock, splitting
 from tellybox.clock import Clock
 from tellybox.db import from_db, to_db
 from tellybox.jobs import Job, JobStatus, JobType
+from tellybox.images import ImageError
 from tellybox.media_format import MediaError
 from tellybox.sponsorblock import Segment
 from tellybox.ytdlp import PlaylistInfo, SponsorBlockUnavailable, VideoInfo, YtDlp, YtDlpError
@@ -200,16 +201,23 @@ class RedownloadPending(Exception):
     """A re-check or redownload of this video is already queued or running."""
 
 
+class SourceSplit(Exception):
+    """The video is split, or being split: its file must not change (SB-6)."""
+
+
 def request_redownload(conn: sqlite3.Connection, source_id: int, *, with_sponsorblock: bool, now: datetime) -> int:
     """SB-4: "Download again without SponsorBlock" (or with it again). Returns the job id.
 
     Without: the video is marked admin_off, so the redownload keeps every second and the
     daily re-checks stop. With: the mark is cleared and the re-check window starts again.
-    Raises KeyError for an unknown or unpublished video, RedownloadPending when one is queued.
+    Raises KeyError for an unknown or unpublished video, RedownloadPending when one is queued,
+    SourceSplit when the video is split or a split is queued (SB-6).
     """
     source = get_source_video(conn, source_id)
     if source is None or source.status != "ready":
         raise KeyError(source_id)
+    if library.is_split(conn, source_id) or jobs.has_pending_for(conn, source_id, (JobType.SPLIT,)):
+        raise SourceSplit(source_id)
     if jobs.has_pending_for(conn, source_id, (JobType.REDOWNLOAD, JobType.SB_RECHECK)):
         raise RedownloadPending(source_id)
     conn.execute("BEGIN IMMEDIATE")
@@ -302,6 +310,10 @@ class JobRunner:
             self._run_sb_recheck(job)
         elif job.type == JobType.REDOWNLOAD:
             self._run_redownload(job)
+        elif job.type == JobType.SPLIT:
+            self._run_split(job)
+        elif job.type == JobType.DETECT:
+            jobs.fail(self.conn, job.id, "title-card detection arrives in v6", now=self.clock.now(), retryable=False)
         elif job.type == JobType.UPDATE_YTDLP:
             self._run_update(job)
         else:  # pragma: no cover - guarded by the schema
@@ -422,7 +434,7 @@ class JobRunner:
             self.conn.execute(
                 """UPDATE source_video SET file_path = ?, thumbnail_path = ?, show_id = ?, duration_s = COALESCE(?, duration_s),
                      channel_id = COALESCE(channel_id, ?), channel_name = COALESCE(channel_name, ?),
-                     chapters_json = COALESCE(chapters_json, ?),
+                     chapters_json = COALESCE(?, chapters_json),
                      sb_categories = ?, sb_segments_json = ?, sb_removed_s = ?, sb_status = ?, sb_checked_at = ?,
                      sb_recheck_until = ?,
                      status = 'ready', error = NULL, updated_at = ? WHERE id = ?""",
@@ -459,6 +471,8 @@ class JobRunner:
             or self._is_split(source.id)  # SB-6: cuts would break the split points
             or jobs.has_pending_for(self.conn, source.id, (JobType.REDOWNLOAD,))
         ):
+            if source is not None and self._is_split(source.id):
+                log.info("job %d: source video %d is split, no SponsorBlock re-check (SB-6)", job.id, source.id)
             jobs.complete(self.conn, job.id, now=now)
             return
         try:
@@ -484,9 +498,8 @@ class JobRunner:
             jobs.fail(self.conn, job.id, f"{type(exc).__name__}: {exc}", now=now, retryable=True)
 
     def _is_split(self, source_id: int) -> bool:
-        return self.conn.execute(
-            "SELECT 1 FROM episode WHERE source_video_id = ? AND start_s IS NOT NULL LIMIT 1", (source_id,)
-        ).fetchone() is not None
+        """SB-6: split, or about to be: a replaced file would break the cut points."""
+        return library.is_split(self.conn, source_id) or jobs.has_pending_for(self.conn, source_id, (JobType.SPLIT,))
 
     def _defer_if_playing(self, job: Job, episode_ids: list[int]) -> bool:
         """SB-3: never replace a file that may be on the TV. Unknown (cast service unreachable) counts as playing."""
@@ -517,6 +530,7 @@ class JobRunner:
         episodes = [r["id"] for r in self.conn.execute(
             "SELECT id FROM episode WHERE source_video_id = ? AND start_s IS NULL", (source.id,))]
         if self._is_split(source.id):  # SB-6
+            log.info("job %d: source video %d is split, not downloading again (SB-6)", job.id, source.id)
             jobs.complete(self.conn, job.id, now=self.clock.now())
             return
         if self._defer_if_playing(job, episodes):
@@ -567,8 +581,10 @@ class JobRunner:
                     )
             self.conn.execute(
                 """UPDATE source_video SET sb_categories = ?, sb_segments_json = ?, sb_removed_s = ?, sb_status = ?,
-                     sb_checked_at = ?, updated_at = ? WHERE id = ?""",
-                (*_sb_columns(fetched, now), to_db(now), source.id),
+                     sb_checked_at = ?, chapters_json = COALESCE(?, chapters_json), updated_at = ? WHERE id = ?""",
+                (*_sb_columns(fetched, now),
+                 json.dumps([asdict(c) for c in fetched.info.chapters]) if fetched.info.chapters else None,
+                 to_db(now), source.id),
             )
             jobs.complete(self.conn, job.id, now=now)
             self.conn.execute("COMMIT")
@@ -580,6 +596,152 @@ class JobRunner:
         backup.unlink(missing_ok=True)
         log.info("job %d: replaced the file of source video %d (%s)", job.id, source.id,
                  f"{sponsorblock.removed_s(fetched.segments):.0f}s cut" if fetched.segments else fetched.sb_status)
+
+    # ------------------------------------------------------------ splitting (ES-8)
+
+    def _split_failed(self, job: Job, source_id: int, error: str, *, retryable: bool) -> None:
+        """Fail the job; the proposal follows: back to approved while a retry is queued, else failed."""
+        now = self.clock.now()
+        updated = jobs.fail(self.conn, job.id, error, now=now, retryable=retryable)
+        if updated.status == JobStatus.QUEUED:
+            self.conn.execute(
+                "UPDATE split_proposal SET status = 'approved', updated_at = ? WHERE source_video_id = ?",
+                (to_db(now), source_id),
+            )
+        else:
+            library.mark_split(self.conn, source_id, "failed", now=now, error=error)
+        log.warning("job %d %s: %s", job.id, "will retry" if updated.status == JobStatus.QUEUED else "failed", error)
+
+    def _defer_split(self, job: Job, source_id: int, episode_ids: list[int]) -> bool:
+        """Like _defer_if_playing, for a job that already marked its proposal as cutting."""
+        if not self._defer_if_playing(job, episode_ids):
+            return False
+        self.conn.execute(
+            "UPDATE split_proposal SET status = 'approved', updated_at = ? WHERE source_video_id = ?",
+            (to_db(self.clock.now()), source_id),
+        )
+        return True
+
+    def _run_split(self, job: Job) -> None:
+        """ES-8: cut the approved plan into episodes that replace the source's current ones.
+
+        The old episodes stay playable until the one transaction that swaps them for the parts (NF-8).
+        """
+        now = self.clock.now()
+        source = get_source_video(self.conn, job.target_id) if job.target_id is not None else None
+        proposal = library.get_split(self.conn, source.id) if source else None
+        if source is None or proposal is None or not proposal.stored or proposal.status not in ("approved", "cutting"):
+            jobs.fail(self.conn, job.id, "no approved split plan for this video", now=now, retryable=False)
+            return
+        src_path = self.media_dir / source.file_path if source.file_path else None
+        if src_path is None or not src_path.is_file():
+            error = "the source video file is gone"
+            jobs.fail(self.conn, job.id, error, now=now, retryable=False)
+            library.mark_split(self.conn, source.id, "failed", now=now, error=error)
+            return
+        episode_ids = [e.id for e in library.list_source_episodes(self.conn, source.id)]
+        if self._defer_if_playing(job, episode_ids):
+            return
+        library.mark_split(self.conn, source.id, "cutting", now=now)
+        tmp = self.tmp_dir(job.id)
+        shutil.rmtree(tmp, ignore_errors=True)
+        tmp.mkdir(parents=True)
+        try:
+            duration = media_format.probe(src_path).duration_s or proposal.duration_s
+            splitting.validate(proposal.segments, duration)  # the file may differ from what the plan was made on
+            kept = [s for s in proposal.segments if s.keep]
+            total = sum(s.length_s for s in kept)
+            report = self._progress(job.id)
+            parts: list[tuple[Path, Path, float]] = []  # (video, thumbnail, duration)
+            done_s = 0.0
+            for n, seg in enumerate(kept, 1):
+                part = tmp / f"part-{n:02d}.mp4"
+                end = min(seg.end_s, duration)
+                media_format.cut(
+                    src_path, part, seg.start_s, end,
+                    on_progress=lambda f, base=done_s, seg=seg: report((base + f * seg.length_s) / total),
+                )
+                length = media_format.verify(part).duration_s or end - seg.start_s
+                thumb = tmp / f"part-{n:02d}.jpg"
+                thumb.write_bytes(images.grab_frame(part, min(3.0, length / 4)))
+                parts.append((part, thumb, length))
+                done_s += seg.length_s
+            if self._defer_split(job, source.id, episode_ids):  # a part may have been picked during the cut
+                return
+            self._publish_split(job, source, proposal, kept, parts, duration)
+        except splitting.SplitInvalid as exc:
+            self._split_failed(job, source.id, str(exc), retryable=False)
+        except MediaError as exc:
+            self._split_failed(job, source.id, f"media: {exc}", retryable=True)
+        except ImageError as exc:
+            self._split_failed(job, source.id, f"image: {exc}", retryable=True)
+        except Exception as exc:
+            log.exception("job %d failed", job.id)
+            self._split_failed(job, source.id, f"{type(exc).__name__}: {exc}", retryable=True)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def _publish_split(
+        self, job: Job, source: SourceVideo, proposal: library.SplitProposal, kept: list[splitting.Segment],
+        parts: list[tuple[Path, Path, float]], duration: float,
+    ) -> None:
+        """Move the parts into place and swap them for the source's episodes in one step (NF-8)."""
+        now = self.clock.now()
+        old = library.list_source_episodes(self.conn, source.id)
+        titles = splitting.kept_titles(proposal.segments, source.title)
+        delete_source = proposal.delete_source
+        show_id = old[0].show_id if old else source.show_id
+        hidden = source.publish == "hold" or (bool(old) and all(e.hidden for e in old))
+        rel_dir = Path(SHOWS_DIR) / str(show_id)
+        written: list[Path] = []
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            (self.media_dir / rel_dir).mkdir(parents=True, exist_ok=True)
+            new_ids: list[int] = []
+            for n, (seg, title, (video, thumb, length)) in enumerate(zip(kept, titles, parts), 1):
+                rel_video = rel_dir / splitting.episode_file_name(source.youtube_id, job.id, n)
+                os.chmod(video, FILE_MODE)
+                os.replace(video, self.media_dir / rel_video)
+                written.append(self.media_dir / rel_video)
+                episode_id = library.add_episode(
+                    self.conn, show_id, title, str(rel_video), now=now, duration_s=length,
+                    source_video_id=source.id, hidden=hidden,
+                )
+                self.conn.execute("UPDATE episode SET start_s = ?, end_s = ? WHERE id = ?",
+                                  (seg.start_s, min(seg.end_s, duration), episode_id))
+                rel_thumb = images.save_episode_thumbnail(self.media_dir, episode_id, thumb.read_bytes())
+                written.append(self.media_dir / rel_thumb)
+                self.conn.execute("UPDATE episode SET thumbnail_path = ? WHERE id = ?", (rel_thumb, episode_id))
+                new_ids.append(episode_id)
+            # The parts take the first old episode's place in the show's order.
+            old_ids = {e.id for e in old}
+            current = [r["id"] for r in self.conn.execute(
+                "SELECT id FROM episode WHERE show_id = ? ORDER BY sort_order, id", (show_id,)) if r["id"] not in new_ids]
+            first_old = next((i for i, eid in enumerate(current) if eid in old_ids), len(current))
+            order = [eid for eid in current if eid not in old_ids]
+            at = sum(1 for eid in current[:first_old] if eid not in old_ids)
+            order[at:at] = new_ids
+            for i, eid in enumerate(order):
+                self.conn.execute("UPDATE episode SET sort_order = ? WHERE id = ?", (i, eid))
+            for eid in old_ids:
+                self.conn.execute("DELETE FROM episode WHERE id = ?", (eid,))
+            if delete_source:
+                self.conn.execute("UPDATE source_video SET file_path = NULL, updated_at = ? WHERE id = ?",
+                                  (to_db(now), source.id))
+            library.mark_split(self.conn, source.id, "done", now=now)
+            jobs.complete(self.conn, job.id, now=now)
+            self.conn.execute("COMMIT")
+        except Exception:
+            self.conn.execute("ROLLBACK")
+            for path in written:
+                path.unlink(missing_ok=True)
+            raise
+        candidates = [p for e in old for p in (e.file_path, e.thumbnail_path) if p]
+        if delete_source and source.file_path:
+            candidates.append(source.file_path)
+        library._remove_unreferenced(self.conn, self.media_dir, candidates)
+        log.info("job %d: split source video %d into %d episodes%s", job.id, source.id, len(kept),
+                 " (hidden)" if hidden else "")
 
     # ------------------------------------------------------------ yt-dlp update (CI-5)
 

@@ -5,6 +5,24 @@
 {% block content %}
 <h1>{{ _("Library") }}</h1>
 
+{% if splits %}
+<div class="card">
+  <h2>{{ _("Splits to review") }}</h2>
+  <table class="list">
+    <tbody>
+      {% for item in splits %}
+      <tr>
+        <td>{% if item.episode_id %}<img class="thumb small" src="/admin/img/episode/{{ item.episode_id }}.jpg" alt="">{% endif %}</td>
+        <td>{{ item.title }}<br><span class="muted">{{ ngettext("%(num)d part", "%(num)d parts", item.parts) }}</span></td>
+        <td>{{ labels.split_status(item.status) }}</td>
+        <td><a class="btn small" href="/admin/sources/{{ item.source_video_id }}/split">{{ _("Open") }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 <div class="card">
   <h2>{{ _("Shows") }}</h2>
   <p class="muted">{{ _("Total disk use: %(size)s", size=total_bytes | bytes) }}</p>

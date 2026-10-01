@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from tellybox import auth
 from tellybox.i18n import _
-from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page
+from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages
 from tellybox.web.admin.common import (
     STATIC_DIR,
     AdminContext,
@@ -25,7 +25,7 @@ from tellybox.web.admin.common import (
 )
 from tellybox.web.static_files import NoCacheStaticFiles
 
-PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history)
+PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history, split_pages)
 
 
 def _safe_next(target: str | None) -> str:

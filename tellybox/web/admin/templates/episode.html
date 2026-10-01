@@ -13,6 +13,16 @@
       <p class="muted">{{ episode.duration_s | duration }}</p>
     </div>
   </div>
+  {% if split %}
+  {% if split.part %}
+  <p>{{ _("Part %(n)d of %(of)d of %(title)s", n=split.part.n, of=split.part.of, title=split.part.title) }}</p>
+  {% endif %}
+  {% if split.can_split or (split.part and split.has_file) %}
+  <p><a class="btn small" href="/admin/sources/{{ split.source_id }}/split">{{ _("Split again") if split.part else _("Split into episodes") }}</a></p>
+  {% elif split.part %}
+  <p class="muted">{{ _("The original video was deleted after splitting, so it can't be split again.") }}</p>
+  {% endif %}
+  {% endif %}
 </div>
 
 {% if sb %}
@@ -49,7 +59,7 @@
   {% if sb_pending %}
     <p><span class="badge warn">{{ _("Being downloaded again") }}</span></p>
   {% elif sb.split %}
-    <p class="muted">{{ _("This video is split into episodes, so it can't be downloaded again.") }}</p>
+    <p class="muted">{{ _("This video was split into episodes; SponsorBlock no longer re-checks it.") }}</p>
   {% else %}
     {% if sb_offer_without %}
     <form method="post" action="/admin/episodes/{{ episode.id }}/redownload" class="inline"

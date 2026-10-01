@@ -202,7 +202,7 @@ def test_episode_page_pending_redownload_shows_no_buttons(admin, admin_env):
 def test_episode_page_split_video_has_no_buttons(admin, admin_env):
     _, eid = _source(admin_env, status="cut", segments=SEGMENTS, split=True)
     html = _page(admin, f"/admin/episodes/{eid}")
-    assert "be downloaded again" in html
+    assert "SponsorBlock no longer re-checks it" in html
     assert f'action="/admin/episodes/{eid}/redownload"' not in html
 
 

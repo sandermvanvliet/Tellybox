@@ -14,7 +14,14 @@
 
 {% macro job_type(value) -%}
 {{ {"download": _("download"), "update_ytdlp": _("Update yt-dlp"),
-    "sb_recheck": _("Check SponsorBlock"), "redownload": _("Download again")}.get(value, value) }}
+    "sb_recheck": _("Check SponsorBlock"), "redownload": _("Download again"),
+    "split": _("Split into episodes"), "detect": _("Find title cards")}.get(value, value) }}
+{%- endmacro %}
+
+{#- split_proposal.status (ES-7, ES-8). -#}
+{% macro split_status(value) -%}
+{{ {"draft": _("draft"), "review": _("to review"), "approved": _("queued"), "cutting": _("cutting"),
+    "done": _("done"), "failed": _("failed")}.get(value, value) }}
 {%- endmacro %}
 
 {% macro connection(value) -%}

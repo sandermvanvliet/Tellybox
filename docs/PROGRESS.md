@@ -152,7 +152,19 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 2. **Step 8, kid profiles (v2):** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`.
 3. **PR #10** (installation guide: reboot the Chromecast after changing the receiver app) is open.
 
-The next step to build is 11, channel subscriptions (v4).
+On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4).
+
+### 12. Manual splitting (v5), in progress
+Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
+- **Decision (owner, 2026-10-01):** the approve form has "delete the original video after cutting", unticked by default; a kept source can be split again (A-21).
+- **Contract:**
+  - migration 009 (`split_proposal`; job types `split` and `detect`);
+  - `tellybox/splitting.py` (segments, chapters on the file timeline, validation);
+  - the split storage in `library`;
+  - `media_format.cut`, a frame-accurate re-encode. A test checks the first frame of a cut in a clip with a single keyframe.
+  - 1205 tests.
+- **Found while planning:** `_publish` kept the add-time chapters, which are on the original timeline, over the download's (already shifted by SponsorBlock). Fixed in slice A; `splitting.chapters_on_file` maps older rows.
+- Three Sonnet subagents in parallel: A (worker: the split job, SB-6, the chapters fix), B (admin routes and pages), C (the split editor JS).
 
 ### 8. Kid profiles (v2), deployed; device checks open
 "Who's watching" screen, per-profile allowance, usage, continue watching and history, watching together (PR-1..PR-4). There's no PIN, and every profile sees the whole library.

@@ -24,7 +24,7 @@ dependencies = [
     # Smart splitting (v6): frame handling and title-card hashes; scene changes come from ffmpeg.
     "opencv-python-headless>=4.10",
     "numpy>=2",
-    "imagehash>=4.3",
+    "pillow>=10",  # resizing for our dHash (tellybox.detect.dhash)
     "pytesseract>=0.3.13",  # ES-9 OCR; needs the tesseract binary (in the image), skipped without it
 ]
 

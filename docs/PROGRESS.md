@@ -321,7 +321,7 @@ Sponsor segments are cut out of the file at download through yt-dlp's `--sponsor
 ### 14. Smart splitting (v6), deployed; v6 gate open
 Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/plans/step14-handoff.md`. Branch `step14/smart-split`, merged as PR #17 on 2026-10-01, after the step 12 TV checks passed.
 - **Deployed** as version 2026.10.01.27. CI ran 1346 tests with none skipped, so the OCR tests ran with Tesseract installed.
-- **Image size:** 294 → 467 MB compressed (amd64), from OpenCV, Tesseract with three languages, and imagehash's scipy and PyWavelets. Only dHash is used, which is a few lines of numpy, so dropping imagehash is a possible trim.
+- **Image size:** 294 → 467 MB compressed (amd64), from OpenCV, Tesseract with three languages, and imagehash's scipy and PyWavelets. Only dHash is used, so imagehash was replaced by our own bit-identical dHash (`detect.dhash`, guarded by `tests/test_dhash.py`).
 - **Decisions (owner, 2026-10-01):**
   - A-22: a compilation picked up by automatic detection stays hidden until its split is approved or it's published whole.
   - No PySceneDetect: version 0.7 requires the desktop OpenCV build. Scene changes come from ffmpeg `scdet`, and black frames from `blackdetect`. The CLAUDE.md stack line and the PRD are updated.

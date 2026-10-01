@@ -251,7 +251,7 @@ flowchart LR
 
 The cast controller is the single owner of the Chromecast connection and the timer. The web app sends it commands (play, pause, override), and it pushes state changes back to all open pages.
 
-**Stack.** Python 3 with FastAPI, pychromecast, yt-dlp, ffmpeg (including its scene and black-frame detection), OpenCV and imagehash; Tesseract optional for OCR. Frontend is a lightweight server-rendered or small SPA app, installable as a home-screen web app.
+**Stack.** Python 3 with FastAPI, pychromecast, yt-dlp, ffmpeg (including its scene and black-frame detection), OpenCV (with our own dHash); Tesseract optional for OCR. Frontend is a lightweight server-rendered or small SPA app, installable as a home-screen web app.
 
 ### Data model
 

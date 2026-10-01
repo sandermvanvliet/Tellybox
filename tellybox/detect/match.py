@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 
 import numpy as np
 
-from tellybox.detect import Hit, Reference, hash_region
+from tellybox.detect import Hit, Reference, hamming, hash_region
 
 
 def hits(
@@ -20,7 +20,7 @@ def hits(
     for t, frame in frames:
         best, best_i = None, 0
         for i, ref in enumerate(references):
-            d = int(hash_region(frame, ref.region) - hashes[i])
+            d = hamming(hash_region(frame, ref.region), hashes[i])
             if best is None or d < best:
                 best, best_i = d, i
         if best is not None and best <= threshold:

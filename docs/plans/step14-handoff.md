@@ -5,7 +5,7 @@ Plan: `docs/plans/step12-14-splitting.md` (the step 14 part). Branch `step14/sma
 ## Contract (done)
 
 - **Dependencies:**
-  - `opencv-python-headless`, `numpy`, `imagehash`, `pytesseract` in `pyproject.toml`;
+  - `opencv-python-headless`, `numpy`, `pillow`, `pytesseract` in `pyproject.toml`;
   - the Dockerfile installs `tesseract-ocr` with `eng`, `nld` and `deu`;
   - CI installs `tesseract-ocr` and `eng`;
   - **no PySceneDetect** (owner, 2026-10-01): ffmpeg `scdet` and `blackdetect` do the scene snapping.

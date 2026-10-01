@@ -149,7 +149,7 @@ Per CLAUDE.md there is one step per branch: `step12/manual-split` first (merged,
   - No PySceneDetect: version 0.7 requires the desktop OpenCV build. Scene changes come from ffmpeg `scdet`, and black frames from `blackdetect`.
   - Tesseract with English, Dutch and German goes into the image.
 - **Dependencies:**
-  - `opencv-python-headless`, `numpy`, `imagehash`, `pytesseract`;
+  - `opencv-python-headless`, `numpy`, `pillow`, `pytesseract`;
   - `tesseract-ocr` plus `eng`/`nld`/`deu` in the image (ES-9, optional at runtime: skipped when the binary is missing);
   - CI installs `tesseract-ocr` so the OCR tests run there.
   - Measure the image size growth.

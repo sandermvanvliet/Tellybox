@@ -20,7 +20,7 @@ Self-hosted app that lets young kids pick parent-approved videos on any device a
 ## Stack
 
 - Python 3.12, FastAPI, SQLite (single file), pychromecast, yt-dlp, ffmpeg.
-- Smart splitting (v6): OpenCV (headless), imagehash (dHash), ffmpeg `scdet`/`blackdetect` for scene snapping (PySceneDetect dropped: it needs the desktop OpenCV build); Tesseract (eng, nld, deu) for OCR titles, optional at runtime.
+- Smart splitting (v6): OpenCV (headless), our own dHash (numpy + Pillow), ffmpeg `scdet`/`blackdetect` for scene snapping (PySceneDetect dropped: it needs the desktop OpenCV build); Tesseract (eng, nld, deu) for OCR titles, optional at runtime.
 - SponsorBlock (v3): through yt-dlp's built-in support (`--sponsorblock-remove`); no separate client.
 - Frontend: lightweight, server-rendered or a small SPA; live updates via SSE.
 - Interface languages (NF-13): English, Dutch, German via gettext catalogs read with Babel.

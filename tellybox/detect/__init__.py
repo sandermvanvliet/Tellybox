@@ -17,7 +17,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import imagehash
 import numpy as np
 from PIL import Image
 
@@ -70,8 +69,8 @@ class Reference:
     card_hash: str  # hex dHash, from reference_hash
     region: Region | None  # None = the whole frame
 
-    def hash(self) -> imagehash.ImageHash:
-        return imagehash.hex_to_hash(self.card_hash)
+    def hash(self) -> int:
+        return int(self.card_hash, 16)
 
 
 @dataclass(frozen=True)
@@ -122,15 +121,38 @@ def normalise_image(data: bytes) -> np.ndarray:
     return np.frombuffer(out.stdout, dtype=np.uint8).reshape(-1, SAMPLE_WIDTH)
 
 
-def hash_region(frame: np.ndarray, region: Region | None) -> imagehash.ImageHash:
+def dhash(crop: np.ndarray, hash_size: int = HASH_SIZE) -> int:
+    """Difference hash of a gray (or RGB) array, as an int of hash_size**2 bits.
+
+    Our own version of imagehash.dhash, bit for bit: Lanczos-resize to (hash_size + 1) x hash_size,
+    set a bit where a pixel is brighter than its left neighbour, row by row, first bit most
+    significant. Hashes stored in split_reference.card_hash stay valid (see tests/test_dhash.py).
+    """
+    image = Image.fromarray(crop).convert("L").resize((hash_size + 1, hash_size), Image.Resampling.LANCZOS)
+    pixels = np.asarray(image)
+    bits = (pixels[:, 1:] > pixels[:, :-1]).flatten()
+    return int("".join("1" if b else "0" for b in bits), 2)
+
+
+def hash_hex(value: int, hash_size: int = HASH_SIZE) -> str:
+    """The stored form of a hash: zero-padded hex, hash_size**2 / 4 digits."""
+    return f"{value:0{(hash_size * hash_size + 3) // 4}x}"
+
+
+def hamming(a: int, b: int) -> int:
+    """Number of differing bits between two hashes."""
+    return (a ^ b).bit_count()
+
+
+def hash_region(frame: np.ndarray, region: Region | None) -> int:
     """dHash of a normalised frame's region. Sampled frames and references both go through this."""
     crop = region.crop(frame) if region else frame
-    return imagehash.dhash(Image.fromarray(crop), hash_size=HASH_SIZE)
+    return dhash(crop)
 
 
 def reference_hash(image: bytes, region: Region | None) -> str:
     """ES-3: the hex hash of a marked title card (a JPEG from images.grab_frame)."""
-    return str(hash_region(normalise_image(image), region))
+    return hash_hex(hash_region(normalise_image(image), region))
 
 
 def detect(video: Path, profile: Profile, *, on_progress: Progress | None = None) -> list[Cut]:

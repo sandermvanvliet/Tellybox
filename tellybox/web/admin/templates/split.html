@@ -72,7 +72,7 @@
   <div class="card split-approve">
     <form data-split-approve method="post" action="/admin/sources/{{ sid }}/split/approve" class="stack">
       <label class="check">
-        <input type="checkbox" name="delete_source" value="1"{% if proposal.delete_source %} checked{% endif %}>
+        <input type="checkbox" name="delete_source" value="1">{# A-21: unticked every time #}
         {{ _("Delete the original video after cutting (it can't be split again)") }}
       </label>
       <p class="muted"><span data-split-estimate></span></p>

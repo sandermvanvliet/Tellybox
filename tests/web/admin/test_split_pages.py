@@ -380,3 +380,13 @@ def test_dutch_labels(admin, admin_env):
     admin_env.conn.execute("UPDATE source_video SET file_path = 'eps/long.mp4' WHERE id = ?", (sid,))
     page = _body(admin.get(f"/admin/episodes/{eid}", headers={"Accept-Language": "nl"}).text)
     assert "Split into episodes" not in page
+
+
+@needs_ffmpeg
+def test_delete_source_is_unticked_even_after_an_earlier_approval(admin, admin_env):  # A-21
+    sid, _ = _source(admin_env)
+    library.save_split(admin_env.conn, sid, splitting.segments_from_cuts(DURATION, [10]), now=NOW)
+    library.approve_split(admin_env.conn, sid, delete_source=True, now=NOW)
+    library.mark_split(admin_env.conn, sid, "done", now=NOW)
+    html = admin.get(f"/admin/sources/{sid}/split").text
+    assert 'name="delete_source" value="1">' in html

@@ -198,13 +198,22 @@ def plan_for(info: StreamInfo) -> Plan:
 # --- conversion ---------------------------------------------------------------------------------
 
 
-def _ffmpeg_cmd(src: Path, tmp: Path, plan: Plan, nice: int) -> list[str]:
+def _ffmpeg_cmd(
+    src: Path, tmp: Path, plan: Plan, nice: int, span: tuple[float, float] | None = None
+) -> list[str]:
+    """``span`` = (start_s, length_s) encodes only that part. Seeking before ``-i`` while
+    re-encoding decodes from the previous keyframe and drops up to the start, so the
+    part starts on the exact frame (ES-8)."""
     cmd: list[str] = []
     if nice > 0 and (nice_bin := shutil.which("nice")):
         cmd += [nice_bin, "-n", str(nice)]
+    cmd += ["ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "warning", "-y"]
+    if span is not None:
+        cmd += ["-ss", f"{span[0]:.3f}"]
+    cmd += ["-i", str(src)]
+    if span is not None:
+        cmd += ["-t", f"{span[1]:.3f}"]
     cmd += [
-        "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "warning", "-y",
-        "-i", str(src),
         "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn",
     ]
     if plan.copy_video:
@@ -255,6 +264,45 @@ def convert(
     tmp = Path(tmp_name)
     try:
         _run_ffmpeg(_ffmpeg_cmd(src, tmp, plan, nice), duration_s, on_progress, timeout)
+        os.replace(tmp, dst)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def cut(
+    src: Path,
+    dst: Path,
+    start_s: float,
+    end_s: float,
+    *,
+    on_progress: Callable[[float], None] | None = None,
+    nice: int = 10,
+    timeout: float | None = None,
+) -> None:
+    """Encode ``[start_s, end_s)`` of ``src`` into a target-format MP4 at ``dst`` (ES-8).
+
+    Always re-encodes (frame-accurate start and end), with the same settings as ``convert``;
+    taller than 720p is scaled down. Same temp-file and failure behaviour as ``convert``.
+    Doesn't verify; the caller runs ``verify`` on the result.
+    """
+    src, dst = Path(src), Path(dst)
+    if end_s - start_s <= 0:
+        raise MediaError(f"empty part {start_s:.3f}..{end_s:.3f}")
+    info = probe(src)
+    plan = Plan(
+        copy_video=False,
+        copy_audio=False,
+        scale_to_720=info.height is not None and info.height > MAX_HEIGHT,
+        has_audio=info.audio_codec is not None,
+    )
+    length_s = end_s - start_s
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{dst.name}.", suffix=".part", dir=dst.parent)
+    os.close(fd)
+    tmp = Path(tmp_name)
+    try:
+        _run_ffmpeg(_ffmpeg_cmd(src, tmp, plan, nice, (start_s, length_s)), length_s, on_progress, timeout)
         os.replace(tmp, dst)
     except BaseException:
         tmp.unlink(missing_ok=True)

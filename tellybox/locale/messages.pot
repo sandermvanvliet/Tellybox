@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-30 12:11+0200\n"
+"POT-Creation-Date: 2026-10-01 09:33+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -91,9 +91,52 @@ msgstr ""
 msgid "file is not a JPEG, PNG or WebP image"
 msgstr ""
 
-#: tellybox/jobs.py:202
+#: tellybox/jobs.py:204
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
+msgstr ""
+
+#: tellybox/splitting.py:110
+msgid "The plan has no parts."
+msgstr ""
+
+#: tellybox/splitting.py:112
+#, python-format
+msgid "A video can be split into at most %(n)d parts."
+msgstr ""
+
+#: tellybox/splitting.py:114
+msgid "The first part must start at the beginning of the video."
+msgstr ""
+
+#: tellybox/splitting.py:116
+msgid "The last part must end at the end of the video."
+msgstr ""
+
+#: tellybox/splitting.py:119 tellybox/splitting.py:122
+msgid "Parts must follow each other without gaps."
+msgstr ""
+
+#: tellybox/splitting.py:124
+#, python-format
+msgid "Titles can be at most %(n)d characters."
+msgstr ""
+
+#: tellybox/splitting.py:132
+#, python-format
+msgid "Each part must be at least %(n)d seconds long."
+msgstr ""
+
+#: tellybox/splitting.py:135
+msgid "Keep at least one part."
+msgstr ""
+
+#: tellybox/splitting.py:137
+msgid "Add a cut, or leave out a part, before approving."
+msgstr ""
+
+#: tellybox/splitting.py:164
+msgid "The plan is malformed."
 msgstr ""
 
 #: tellybox/sponsorblock.py:20

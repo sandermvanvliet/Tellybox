@@ -129,3 +129,8 @@ def save_episode_thumbnail(media_dir: Path, episode_id: int, data: bytes) -> str
 def save_profile_photo(media_dir: Path, profile_id: int, data: bytes) -> str:
     """A kid profile's photo (PR-1), under media/profiles/."""
     return _save(media_dir, "profiles", _fresh_name("profile", profile_id), data)
+
+
+def save_split_reference(media_dir: Path, show_id: int, data: bytes) -> str:
+    """A title card marked for a show's splitting profile (ES-3), under media/split/."""
+    return _save(media_dir, "split", _fresh_name("show", show_id), data)

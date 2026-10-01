@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg \
+    tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld tesseract-ocr-deu \
  && rm -rf /var/lib/apt/lists/* \
  # A fixed uid/gid, 1500, unlikely to clash with accounts on the host; the data folders
  # on the host must be owned by it (docs/installation.md).

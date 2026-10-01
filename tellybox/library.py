@@ -347,6 +347,7 @@ _FILE_REFS = (
     ("source_video", "thumbnail_path"),
     ("show", "artwork_path"),
     ("profile", "picture_path"),
+    ("split_reference", "image_path"),
 )
 
 
@@ -539,13 +540,15 @@ def delete_show(conn: sqlite3.Connection, media_dir: Path, show_id: int) -> None
             "SELECT file_path, thumbnail_path, source_video_id FROM episode WHERE show_id = ?", (show_id,)
         ).fetchall()
         sources = conn.execute("SELECT id FROM source_video WHERE show_id = ?", (show_id,)).fetchall()
+        references = [r["image_path"] for r in conn.execute(
+            "SELECT image_path FROM split_reference WHERE show_id = ?", (show_id,))]
         conn.execute("DELETE FROM episode WHERE show_id = ?", (show_id,))
         conn.execute("DELETE FROM show WHERE id = ?", (show_id,))
         # Sources filed under this show or used by its episodes, unless another show's episode uses them.
         linked = {s["id"] for s in sources} | {e["source_video_id"] for e in eps if e["source_video_id"] is not None}
         doomed = {s["id"]: s for s in _orphan_sources(conn, linked)}
         conn.executemany("DELETE FROM source_video WHERE id = ?", [(sid,) for sid in doomed])
-        candidates = [show["artwork_path"]]
+        candidates = [show["artwork_path"], *references]  # references go with the show (cascade)
         candidates += [p for e in eps for p in (e["file_path"], e["thumbnail_path"])]
         candidates += [p for s in doomed.values() for p in (s["file_path"], s["thumbnail_path"])]
     _remove_unreferenced(conn, media_dir, candidates)
@@ -783,13 +786,14 @@ class SplitListItem:
     error: str | None
     updated_at: datetime
     episode_id: int | None  # an episode of the source, for its thumbnail and a link
+    awaiting_split: bool = False  # ES-10, A-22: hidden from the kids until this is approved (or published whole)
 
 
 def list_splits_for_review(conn: sqlite3.Connection) -> list[SplitListItem]:
     """Every proposal that isn't done, newest first: drafts, proposals to review, queued, cutting, failed."""
     rows = conn.execute(
         """SELECT sp.source_video_id, sv.title, sp.status, sp.origin, sp.segments_json, sp.error, sp.updated_at,
-                  (SELECT MIN(e.id) FROM episode e WHERE e.source_video_id = sp.source_video_id) AS episode_id
+                  sv.awaiting_split, (SELECT MIN(e.id) FROM episode e WHERE e.source_video_id = sp.source_video_id) AS episode_id
            FROM split_proposal sp JOIN source_video sv ON sv.id = sp.source_video_id
            WHERE sp.status != 'done' ORDER BY sp.updated_at DESC, sp.id DESC"""
     ).fetchall()
@@ -797,7 +801,7 @@ def list_splits_for_review(conn: sqlite3.Connection) -> list[SplitListItem]:
         SplitListItem(
             source_video_id=r["source_video_id"], title=r["title"], status=r["status"], origin=r["origin"],
             parts=sum(1 for s in splitting.loads(r["segments_json"]) if s.keep), error=r["error"],
-            updated_at=from_db(r["updated_at"]), episode_id=r["episode_id"],
+            updated_at=from_db(r["updated_at"]), episode_id=r["episode_id"], awaiting_split=bool(r["awaiting_split"]),
         )
         for r in rows
     ]
@@ -817,3 +821,211 @@ def is_split(conn: sqlite3.Connection, source_id: int) -> bool:
     return conn.execute(
         "SELECT 1 FROM episode WHERE source_video_id = ? AND start_s IS NOT NULL LIMIT 1", (source_id,)
     ).fetchone() is not None
+
+
+# --- Splitting profiles (v6, ES-3..ES-6, ES-9, ES-10) ---
+
+
+@dataclass(frozen=True)
+class SplitReference:
+    id: int
+    show_id: int
+    image_path: str
+    region: list[float] | None  # [x, y, w, h], 0..1 of the frame
+    card_hash: str  # hex dHash (detect.reference_hash)
+    source_video_id: int | None
+    at_s: float | None
+
+
+@dataclass(frozen=True)
+class SplitProfile:
+    show_id: int
+    match_threshold: int
+    length_hint_s: float | None
+    snap_window_s: float
+    ocr: bool
+    ocr_region: list[float] | None
+    auto_detect: bool
+    references: list[SplitReference]
+    stored: bool  # False: the defaults, nothing saved yet
+
+    @property
+    def usable(self) -> bool:
+        """Detection needs at least one marked title card."""
+        return bool(self.references)
+
+
+def _reference(row: sqlite3.Row) -> SplitReference:
+    return SplitReference(
+        id=row["id"], show_id=row["show_id"], image_path=row["image_path"],
+        region=json.loads(row["region_json"]) if row["region_json"] else None, card_hash=row["card_hash"],
+        source_video_id=row["source_video_id"], at_s=row["at_s"],
+    )
+
+
+def get_split_profile(conn: sqlite3.Connection, show_id: int) -> SplitProfile:
+    """The show's profile, or the defaults when none is saved (references may exist without a saved row)."""
+    refs = [_reference(r) for r in conn.execute(
+        "SELECT * FROM split_reference WHERE show_id = ? ORDER BY id", (show_id,))]
+    row = conn.execute("SELECT * FROM split_profile WHERE show_id = ?", (show_id,)).fetchone()
+    if row is None:
+        return SplitProfile(show_id=show_id, match_threshold=6, length_hint_s=None, snap_window_s=30.0,
+                            ocr=False, ocr_region=None, auto_detect=False, references=refs, stored=False)
+    return SplitProfile(
+        show_id=show_id, match_threshold=row["match_threshold"], length_hint_s=row["length_hint_s"],
+        snap_window_s=row["snap_window_s"], ocr=bool(row["ocr"]),
+        ocr_region=json.loads(row["ocr_region_json"]) if row["ocr_region_json"] else None,
+        auto_detect=bool(row["auto_detect"]), references=refs, stored=True,
+    )
+
+
+def save_split_profile(
+    conn: sqlite3.Connection, show_id: int, *, match_threshold: int, length_hint_s: float | None,
+    snap_window_s: float, ocr: bool, ocr_region: list[float] | None, auto_detect: bool, now: datetime,
+) -> None:
+    """Save the show's settings (ES-5, ES-6, ES-9, ES-10). Raises ValueError on out-of-range values."""
+    if not 0 <= match_threshold <= 32:
+        raise ValueError("match_threshold")
+    if length_hint_s is not None and not 30 <= length_hint_s <= 4 * 3600:
+        raise ValueError("length_hint_s")
+    if not 0 <= snap_window_s <= 120:
+        raise ValueError("snap_window_s")
+    if ocr_region is not None:
+        _check_region(ocr_region)
+    if conn.execute("SELECT 1 FROM show WHERE id = ?", (show_id,)).fetchone() is None:
+        raise KeyError(show_id)
+    conn.execute(
+        """INSERT INTO split_profile (show_id, match_threshold, length_hint_s, snap_window_s, ocr, ocr_region_json,
+                                      auto_detect, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (show_id) DO UPDATE SET match_threshold = excluded.match_threshold,
+             length_hint_s = excluded.length_hint_s, snap_window_s = excluded.snap_window_s, ocr = excluded.ocr,
+             ocr_region_json = excluded.ocr_region_json, auto_detect = excluded.auto_detect,
+             updated_at = excluded.updated_at""",
+        (show_id, match_threshold, length_hint_s, snap_window_s, int(ocr),
+         json.dumps(ocr_region) if ocr_region else None, int(auto_detect), to_db(now)),
+    )
+
+
+def _check_region(region: list[float]) -> None:
+    from tellybox.detect import Region  # imported here: OpenCV isn't needed by the cast service
+
+    if len(region) != 4:
+        raise ValueError("region")
+    Region(*(float(v) for v in region))
+
+
+def add_split_reference(
+    conn: sqlite3.Connection, media_dir: Path, show_id: int, jpeg: bytes, region: list[float] | None, *,
+    source_video_id: int | None, at_s: float | None, now: datetime,
+) -> int:
+    """ES-3: keep a marked title card (a frame from images.grab_frame) and its hash. Raises ValueError."""
+    from tellybox import detect, images
+
+    region_obj = None
+    if region is not None:
+        _check_region(region)
+        region_obj = detect.Region(*(float(v) for v in region))
+    card_hash = detect.reference_hash(jpeg, region_obj)
+    if conn.execute("SELECT 1 FROM show WHERE id = ?", (show_id,)).fetchone() is None:
+        raise KeyError(show_id)
+    rel = images.save_split_reference(media_dir, show_id, jpeg)
+    try:
+        cur = conn.execute(
+            """INSERT INTO split_reference (show_id, image_path, region_json, card_hash, source_video_id, at_s, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (show_id, rel, json.dumps(region) if region else None, card_hash, source_video_id, at_s, to_db(now)),
+        )
+    except BaseException:
+        (media_dir / rel).unlink(missing_ok=True)
+        raise
+    return cur.lastrowid
+
+
+def delete_split_reference(conn: sqlite3.Connection, media_dir: Path, reference_id: int) -> None:
+    row = conn.execute("SELECT image_path FROM split_reference WHERE id = ?", (reference_id,)).fetchone()
+    if row is None:
+        raise KeyError(reference_id)
+    conn.execute("DELETE FROM split_reference WHERE id = ?", (reference_id,))
+    _remove_unreferenced(conn, media_dir, [row["image_path"]])
+
+
+def request_detect(conn: sqlite3.Connection, source_id: int, *, now: datetime) -> int:
+    """ES-4: queue title-card detection for a source (admin button, or ES-10 after a download).
+
+    Raises KeyError, SourceGone (not ready / no file), LookupError (its show has no marked title card)
+    or SplitLocked (a detect or split job is pending, or the proposal is approved or cutting).
+    """
+    with _transaction(conn):
+        src = conn.execute("SELECT status, file_path, show_id FROM source_video WHERE id = ?", (source_id,)).fetchone()
+        if src is None:
+            raise KeyError(source_id)
+        if src["status"] != "ready" or src["file_path"] is None:
+            raise SourceGone(source_id)
+        show_id = split_show_id(conn, source_id)
+        if show_id is None or not get_split_profile(conn, show_id).usable:
+            raise LookupError(source_id)
+        status = conn.execute("SELECT status FROM split_proposal WHERE source_video_id = ?", (source_id,)).fetchone()
+        if (status and status["status"] in ("approved", "cutting")) or jobs.has_pending_for(
+                conn, source_id, (jobs.JobType.DETECT, jobs.JobType.SPLIT)):
+            raise SplitLocked(source_id)
+        return jobs.enqueue(conn, jobs.JobType.DETECT, source_id, now=now, max_attempts=2)
+
+
+def split_show_id(conn: sqlite3.Connection, source_id: int) -> int | None:
+    """The show whose profile applies to a source: that of its episodes, else the one it was filed under."""
+    row = conn.execute(
+        """SELECT COALESCE((SELECT show_id FROM episode WHERE source_video_id = sv.id ORDER BY id LIMIT 1), sv.show_id)
+           AS show_id FROM source_video sv WHERE sv.id = ?""",
+        (source_id,),
+    ).fetchone()
+    return row["show_id"] if row else None
+
+
+def save_detected_split(
+    conn: sqlite3.Connection, source_id: int, segments: list[splitting.Segment], detected: list[dict], *,
+    now: datetime,
+) -> None:
+    """The detect job's result (ES-4): a proposal to review (ES-7), replacing an unapproved one.
+
+    ``detected`` holds one dict per cut (``at_s``, ``title_hit_s``, ``confidence``, ``snapped``, ``title``).
+    Raises SplitLocked when the proposal was approved meanwhile, SplitInvalid on a bad shape.
+    """
+    with _transaction(conn):
+        current = get_split(conn, source_id)
+        if current is None or not current.has_file:
+            raise SourceGone(source_id)
+        if current.stored and current.status not in ("draft", "review", "failed", "done"):
+            raise SplitLocked(source_id)
+        splitting.check_shape(segments, current.duration_s)
+        ts = to_db(now)
+        conn.execute(
+            """INSERT INTO split_proposal (source_video_id, status, origin, segments_json, detected_json,
+                                           created_at, updated_at)
+               VALUES (?, 'review', 'detected', ?, ?, ?, ?)
+               ON CONFLICT (source_video_id) DO UPDATE SET status = 'review', origin = 'detected',
+                 segments_json = excluded.segments_json, detected_json = excluded.detected_json, error = NULL,
+                 updated_at = excluded.updated_at""",
+            (source_id, splitting.dumps(segments), json.dumps(detected), ts, ts),
+        )
+
+
+def get_detected(conn: sqlite3.Connection, source_id: int) -> list[dict] | None:
+    """Detection details of the source's proposal, while it still holds the detected cuts (else None)."""
+    row = conn.execute(
+        "SELECT origin, detected_json FROM split_proposal WHERE source_video_id = ?", (source_id,)
+    ).fetchone()
+    if row is None or row["origin"] != "detected" or not row["detected_json"]:
+        return None
+    return json.loads(row["detected_json"])
+
+
+def publish_unsplit(conn: sqlite3.Connection, source_id: int, *, now: datetime) -> None:
+    """ES-10, A-22: the admin publishes a compilation held for its split as one episode."""
+    with _transaction(conn):
+        row = conn.execute("SELECT awaiting_split, publish FROM source_video WHERE id = ?", (source_id,)).fetchone()
+        if row is None or not row["awaiting_split"]:
+            raise KeyError(source_id)
+        conn.execute("UPDATE source_video SET awaiting_split = 0, updated_at = ? WHERE id = ?", (to_db(now), source_id))
+        if row["publish"] != "hold":  # a held download stays held until it's published (LM-3)
+            conn.execute("UPDATE episode SET hidden = 0 WHERE source_video_id = ?", (source_id,))

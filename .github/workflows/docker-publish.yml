@@ -25,7 +25,7 @@ jobs:
           cache: pip
 
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr tesseract-ocr-eng
 
       - name: Install
         run: pip install ".[dev]"

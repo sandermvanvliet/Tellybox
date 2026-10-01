@@ -144,25 +144,36 @@ Per CLAUDE.md there is one step per branch: `step12/manual-split` first (merged,
 # Step 14: Smart splitting (v6)
 
 ## Design
+- **Decisions (owner, 2026-10-01):**
+  - A-22 agreed: an auto-detected compilation stays hidden until its split is approved or it's published whole.
+  - No PySceneDetect: version 0.7 requires the desktop OpenCV build. Scene changes come from ffmpeg `scdet`, and black frames from `blackdetect`.
+  - Tesseract with English, Dutch and German goes into the image.
 - **Dependencies:**
-  - `opencv-python-headless`, `imagehash`, `scenedetect`, `pytesseract`;
-  - `tesseract-ocr` with English in the image (ES-9, optional at runtime: skipped when the binary is missing).
+  - `opencv-python-headless`, `numpy`, `imagehash`, `pytesseract`;
+  - `tesseract-ocr` plus `eng`/`nld`/`deu` in the image (ES-9, optional at runtime: skipped when the binary is missing);
+  - CI installs `tesseract-ocr` so the OCR tests run there.
   - Measure the image size growth.
+- **Matching measured (contract):**
+  - pHash proved unstable on mostly flat crops: an identical card scored 10–14 bits.
+  - Using the same scaler on both sides also matters. Every frame, sampled or marked, goes through `detect.SAMPLE_FILTER` in ffmpeg.
+  - With **dHash**, on the synthetic cards: the same card 0–1, a heavily degraded card 9–12, anything else 22 or more. So the default threshold is 6, and an ES-5 re-scan accepts threshold + 8.
 - **Migration `010_split_profile.sql`:**
   - `split_profile (show_id PK, match_threshold, length_hint_s, snap_window_s DEFAULT 30, ocr INTEGER, auto_detect INTEGER, ocr_region_json, updated_at)`;
-  - `split_reference (id, show_id, image_path, region_json, phash, created_at)`. The image paths go into `_FILE_REFS` (media `split/show-<id>-<ts>.jpg`).
+  - `split_reference (id, show_id, image_path, region_json, card_hash, source_video_id, at_s, created_at)`. The image paths go into `_FILE_REFS` (media `split/show-<id>-<ts>.jpg`).
+  - `split_proposal.detected_json`: per-cut details for the review screen.
+  - `source_video.awaiting_split` (A-22).
 - **New package `tellybox/detect/`** (pure, tested with synthetic lavfi clips that have title cards inserted at known times):
   - `sample.py`: decode at about 2 fps through an ffmpeg pipe into small grayscale frames (ES-4). NF-6 says under half the video's length; measure it.
-  - `match.py`: crop the region, compute the phash, and compare its Hamming distance to the references. A run of matching frames becomes one hit at the run's start.
+  - `match.py`: crop the region, compute the dHash, and compare its Hamming distance to the references. A run of matching frames becomes one hit at the run's start.
   - `hint.py` (ES-5):
     - drop hits closer than 0.5× the length hint;
     - when a gap is over 1.5× the hint, re-scan ±20 % around the expected boundary at 5 fps with a looser threshold.
-  - `snap.py` (ES-6): PySceneDetect `ContentDetector` plus ffmpeg `blackdetect` in `[hit − window, hit]`. It takes the nearest change before the hit, or else the hit itself.
+  - `snap.py` (ES-6): ffmpeg `scdet` plus `blackdetect` in `[hit − window, hit]`. It takes the nearest change before the hit, or else the hit itself.
   - `ocr.py` (ES-9): Tesseract on the title-card frame (or the OCR region), cleaned up. An empty result means no title.
-  - `detect(video, profile, on_progress) -> list[Segment]` with a confidence per cut.
+  - `detect(video, profile, on_progress) -> list[Cut]` with a confidence per cut.
 - **Worker:**
   - The `detect` job writes a proposal (`origin='detected'`, `status='review'`). It never cuts by itself (ES-7 review stays mandatory).
-  - ES-10: after a download, when the show's profile has `auto_detect` and the video is longer than 1.5× the length hint, it queues `detect`. **Proposed decision (A-22):** such a compilation is published *hidden* until its split is approved or the admin publishes it whole, so a long unsplit video never appears by surprise.
+  - ES-10: after a download, when the show's profile has `auto_detect` and the video is longer than 1.5× the length hint, it queues `detect`. **A-22 (agreed 2026-10-01):** such a compilation is published *hidden* until its split is approved or the admin publishes it whole, so a long unsplit video never appears by surprise.
 - **Admin:**
   - Split page:
     - "Mark as title card" at the current frame (ES-3), with a region drawn over the still frame (canvas drag, normalised coordinates) and saved to the show's profile;
@@ -172,10 +183,10 @@ Per CLAUDE.md there is one step per branch: `step12/manual-split` first (merged,
   - Detected proposals appear in "Splits to review", and as a dashboard count.
 
 ## Execution (step 14)
-- **Contract:** dependencies, migration 010, the `detect/` signatures, `library` profile functions (stubs), the API and DOM additions, and the synthetic test-clip fixture.
+- **Contract:** dependencies, migration 010, the `detect/` types and hashing (implemented) and engine signatures, the `library` profile functions (implemented), the API and DOM additions, and the synthetic test-clip fixture (`tests/detect_clips.py`).
 - **A:** the `detect/` engine and its tests, plus a benchmark on a 30-minute synthetic clip against NF-6.
-- **B:** worker integration (the detect job, ES-10 hold and auto-queue), the profile library functions, migration tests.
-- **C:** the admin UI (marking with the region editor, the profile card, the Detect button, confidence badges), with nl and de.
+- **B:** worker integration (the detect job, ES-10 hold and auto-queue, A-22 in the split job).
+- **C:** the admin routes and UI (marking with the region editor, the profile card, the Detect button, confidence badges, publish whole), with nl and de.
 - Same rules: Sonnet, worktrees, the controller merges and reviews.
 
 ## Verification (step 14)

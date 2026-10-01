@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Split into episodes") }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/admin/static/library.css">
+  <link rel="stylesheet" href="/admin/static/split.css">{% endblock %}
+{% block content %}
+{% set sid = proposal.source_video_id %}
+{% if episodes %}<p><a href="/admin/episodes/{{ episodes[0].id }}">&larr; {{ proposal.title }}</a></p>
+{% else %}<p><a href="/admin/library">&larr; {{ _("Library") }}</a></p>{% endif %}
+<h1>{{ _("Split into episodes") }}</h1>
+<p class="muted">{{ proposal.title }} · {{ proposal.duration_s | duration }}</p>
+
+<noscript><p class="flash error">{{ _("The split editor needs JavaScript.") }}</p></noscript>
+
+{% if not proposal.has_file %}
+<div class="card"><p>{{ _("The original video was deleted after splitting, so it can't be split again.") }}</p></div>
+{% endif %}
+
+{% if proposal.status in ("approved", "cutting") %}
+<div class="card" role="status">
+  <h2>{{ _("Cutting…") }}</h2>
+  <p class="muted">{{ _("The video is cut into parts in the background. You can leave this page.") }}</p>
+  <div class="progress" data-split-progress><span style="width: {{ ((state.job.progress if state.job and state.job.progress else 0) * 100) | round | int }}%"></span></div>
+</div>
+{% elif proposal.status == "failed" %}
+<div class="card">
+  <h2>{{ _("Splitting failed") }}</h2>
+  <p><span class="badge bad">{{ proposal.error or _("failed") }}</span></p>
+  <p class="muted">{{ _("The existing episodes are unchanged. Check the plan and approve it again.") }}</p>
+</div>
+{% elif proposal.status == "done" %}
+<div class="card">
+  <h2>{{ ngettext("Split into %(num)d episode", "Split into %(num)d episodes", episodes | length) }}</h2>
+  <ul>
+    {% for ep in episodes %}<li><a href="/admin/episodes/{{ ep.id }}">{{ ep.title }}</a>{% if ep.hidden %} <span class="badge warn">{{ _("Hidden") }}</span>{% endif %}</li>{% endfor %}
+  </ul>
+  {% if proposal.has_file %}<p class="muted">{{ _("Change the plan below to split it again.") }}</p>{% endif %}
+</div>
+{% endif %}
+
+{% if proposal.has_file %}
+<section id="split-editor" data-editable="{{ 'true' if proposal.editable else 'false' }}" data-api="/admin/api/splits/{{ sid }}">
+  <div class="card split-player">
+    <video data-split-video src="{{ state.video_url }}" preload="metadata" playsinline controls></video>
+    <div class="row split-steps">
+      <button class="btn step-btn" type="button" data-step="-10">{{ _("−10 s") }}</button>
+      <button class="btn step-btn" type="button" data-step="-1">{{ _("−1 s") }}</button>
+      <button class="btn step-btn" type="button" data-step="-frame" aria-label="{{ _("Previous frame") }}">{{ _("◀ frame") }}</button>
+      <output data-split-time>0:00.00</output>
+      <button class="btn step-btn" type="button" data-step="+frame" aria-label="{{ _("Next frame") }}">{{ _("frame ▶") }}</button>
+      <button class="btn step-btn" type="button" data-step="+1">{{ _("+1 s") }}</button>
+      <button class="btn step-btn" type="button" data-step="+10">{{ _("+10 s") }}</button>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" data-action="cut">{{ _("Cut here") }}</button>
+      {% if proposal.chapters | length >= 2 %}
+      <button class="btn" type="button" data-action="use-chapters">{{ _("Use chapters") }}</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card split-plan">
+    <h2>{{ _("Parts") }}</h2>
+    <ol data-split-segments></ol>
+    <p data-split-status role="status" aria-live="polite" class="muted"></p>
+  </div>
+
+  <div class="card split-strip-card">
+    <div data-split-strip></div>
+  </div>
+
+  {% if proposal.editable %}
+  <div class="card split-approve">
+    <form data-split-approve method="post" action="/admin/sources/{{ sid }}/split/approve" class="stack">
+      <label class="check">
+        <input type="checkbox" name="delete_source" value="1"{% if proposal.delete_source %} checked{% endif %}>
+        {{ _("Delete the original video after cutting (it can't be split again)") }}
+      </label>
+      <p class="muted"><span data-split-estimate></span></p>
+      <button class="btn primary" type="submit" style="justify-self:start">{{ _("Approve and cut") }}</button>
+    </form>
+    {% if can_discard %}
+    <form data-split-discard method="post" action="/admin/sources/{{ sid }}/split/discard" class="inline"
+          onsubmit="return confirm({{ _("Throw away this split plan?") | tojson | forceescape }})">
+      <button class="btn small danger" type="submit">{{ _("Discard plan") }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+<script type="application/json" id="split-state">{{ state | tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if proposal.has_file %}<script type="module" src="/admin/static/split.js"></script>{% endif %}{% endblock %}

@@ -109,7 +109,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         shows, total_bytes = library.list_shows_for_admin(conn, media_dir)
         held = library.list_held_downloads(conn)
         held_single, held_groups = group_held(held)
-        return {"nav": "library", "shows": shows, "held": held, "held_single": held_single,
+        return {"nav": "library", "splits": library.list_splits_for_review(conn), "shows": shows, "held": held, "held_single": held_single,
                 "held_groups": held_groups, "total_bytes": total_bytes, **extra}
 
     def show_context(show_id: int, request: Request | None = None, **extra) -> dict | None:
@@ -341,6 +341,20 @@ def create_router(ctx: AdminContext) -> APIRouter:
 
     # --------------------------------------------------------------------- episode page and SponsorBlock (SB-4)
 
+    def split_links(episode: library.Episode) -> dict:
+        """What the episode page offers for splitting (ES-2): split it, or the part it is."""
+        source = conn.execute("SELECT title, status, file_path FROM source_video WHERE id = ?",
+                              (episode.source_video_id,)).fetchone()
+        has_file = source is not None and source["file_path"] is not None
+        part = None
+        if episode.start_s is not None and source is not None:
+            siblings = library.list_source_episodes(conn, episode.source_video_id)
+            ids = [e.id for e in siblings]
+            part = {"n": ids.index(episode.id) + 1, "of": len(ids), "title": source["title"]}
+        can_split = source is not None and source["status"] == "ready" and has_file
+        return {"source_id": episode.source_video_id, "part": part, "has_file": has_file,
+                "can_split": can_split and part is None}
+
     def episode_context(episode: library.Episode, **extra) -> dict:
         show = library.get_show(conn, episode.show_id)
         info = library.get_sponsorblock_info(conn, episode.source_video_id) if episode.source_video_id else None
@@ -348,7 +362,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
             conn, info.source_id, (JobType.REDOWNLOAD, JobType.SB_RECHECK))
         window_open = info is not None and info.recheck_until is not None and info.recheck_until > ctx.clock.now()
         can_change = info is not None and info.ready and not info.split and not pending
-        return {
+        split = split_links(episode) if info is not None else None
+        return {"split": split, 
             "nav": "library", "episode": episode, "show": show, "sb": info, "sb_pending": pending,
             "sb_window_open": window_open, "tz": ctx.config.tz,
             "sb_offer_without": can_change and info.status == "cut",
@@ -367,9 +382,14 @@ def create_router(ctx: AdminContext) -> APIRouter:
         target = f"/admin/episodes/{episode_id}"
         if episode.source_video_id is None:
             return see_other(target, flash=_("This episode has no downloaded video to download again."))
+        split_error = _("This video is split into episodes, so it can't be downloaded again.")
+        if library.is_split(conn, episode.source_video_id):
+            return see_other(target, flash=split_error)
         try:
             ingest.request_redownload(conn, episode.source_video_id, with_sponsorblock=with_sb == "1",
                                       now=ctx.clock.now())
+        except getattr(ingest, "SourceSplit", ()):  # SB-6 (also a pending split job)
+            return see_other(target, flash=split_error)
         except ingest.RedownloadPending:
             return see_other(target, flash=_("This video is already being checked or downloaded again."))
         except KeyError:

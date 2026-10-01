@@ -39,11 +39,40 @@ STRINGS: list[str] = [
     N_("Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"),
     N_("Check SponsorBlock"),
     N_("Download again"),
+    N_("Split into episodes"),
+    N_("Find title cards"),
     # dashboard.js and jobs.js: job statuses
     N_("queued"),
     N_("downloading"),
     N_("processing"),
     N_("ready"),
+    # split.js: the split editor
+    N_("Part %(n)d"),
+    N_("Keep"),
+    N_("Left out"),
+    N_("Cut at %(time)s"),
+    N_("Go to"),
+    N_("Go to part %(n)d at %(time)s"),
+    N_("Remove cut"),
+    N_("Title"),
+    N_("Title (optional)"),
+    N_("Move the cut back by %(amount)s s"),
+    N_("Move the cut forward by %(amount)s s"),
+    N_("Saving…"),
+    N_("Saved"),
+    N_("Saving failed. Your changes are not saved yet."),
+    N_("This plan can't be changed any more."),
+    N_("A cut needs at least half a second on both sides."),
+    N_("Replace your cuts with the video's chapters?"),
+    N_("The plan has no parts."),
+    N_("A video can be split into at most %(n)d parts."),
+    N_("The first part must start at the beginning of the video."),
+    N_("The last part must end at the end of the video."),
+    N_("Parts must follow each other without gaps."),
+    N_("Titles can be at most %(n)d characters."),
+    N_("Each part must be at least %(n)d seconds long."),
+    N_("Keep at least one part."),
+    N_("Add a cut, or leave out a part, before approving."),
     # formatting, the twins of the minutes and bytes filters (common.py)
     N_("%(hours)s h %(minutes)s min"),
     N_("%(minutes)s min"),
@@ -58,6 +87,7 @@ STRINGS: list[str] = [
 PLURALS: list[tuple[str, str]] = [
     Nn_("Add %(num)d video", "Add %(num)d videos"),  # add.js
     Nn_("%(num)d failed job", "%(num)d failed jobs"),  # dashboard.js
+    Nn_("Cutting takes up to about %(num)d minute", "Cutting takes up to about %(num)d minutes"),  # split.js
 ]
 
 

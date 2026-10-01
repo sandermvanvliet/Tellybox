@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 09:43+0200\n"
+"POT-Creation-Date: 2026-10-01 09:51+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -96,42 +96,43 @@ msgstr ""
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr ""
 
-#: tellybox/splitting.py:110
+#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:67
 msgid "The plan has no parts."
 msgstr ""
 
-#: tellybox/splitting.py:112
+#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:68
 #, python-format
 msgid "A video can be split into at most %(n)d parts."
 msgstr ""
 
-#: tellybox/splitting.py:114
+#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:69
 msgid "The first part must start at the beginning of the video."
 msgstr ""
 
-#: tellybox/splitting.py:116
+#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:70
 msgid "The last part must end at the end of the video."
 msgstr ""
 
 #: tellybox/splitting.py:119 tellybox/splitting.py:122
+#: tellybox/web/admin/js_strings.py:71
 msgid "Parts must follow each other without gaps."
 msgstr ""
 
-#: tellybox/splitting.py:124
+#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:72
 #, python-format
 msgid "Titles can be at most %(n)d characters."
 msgstr ""
 
-#: tellybox/splitting.py:132
+#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:73
 #, python-format
 msgid "Each part must be at least %(n)d seconds long."
 msgstr ""
 
-#: tellybox/splitting.py:135
+#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:74
 msgid "Keep at least one part."
 msgstr ""
 
-#: tellybox/splitting.py:137
+#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:75
 msgid "Add a cut, or leave out a part, before approving."
 msgstr ""
 
@@ -287,30 +288,30 @@ msgstr ""
 msgid "Tick at least one video to add."
 msgstr ""
 
-#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:48
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:77
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:49
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:78
 #: tellybox/web/admin/templates/history.html:40
 #, python-format
 msgid "%(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:51
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:80
 msgid "KB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:52
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:81
 msgid "MB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:53
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:82
 msgid "GB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:50
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:79
 #, python-format
 msgid "%(size)s B"
 msgstr ""
@@ -396,7 +397,7 @@ msgstr ""
 msgid "Download again"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:45
+#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:42
 #: tellybox/web/admin/templates/_labels.html:18
 #: tellybox/web/admin/templates/episode.html:21
 #: tellybox/web/admin/templates/split.html:2
@@ -404,7 +405,7 @@ msgstr ""
 msgid "Split into episodes"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:46
+#: tellybox/web/admin/jobs_page.py:46 tellybox/web/admin/js_strings.py:43
 #: tellybox/web/admin/templates/_labels.html:18
 msgid "Find title cards"
 msgstr ""
@@ -548,32 +549,106 @@ msgstr ""
 msgid "Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:43
+#: tellybox/web/admin/js_strings.py:45
 #: tellybox/web/admin/templates/_labels.html:11
 #: tellybox/web/admin/templates/_labels.html:23
 msgid "queued"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:44
+#: tellybox/web/admin/js_strings.py:46
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "downloading"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:45
+#: tellybox/web/admin/js_strings.py:47
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "processing"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:46
+#: tellybox/web/admin/js_strings.py:48
 #: tellybox/web/admin/templates/_labels.html:12
 msgid "ready"
 msgstr ""
 
+#: tellybox/web/admin/js_strings.py:50
+#, python-format
+msgid "Part %(n)d"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:51
+msgid "Keep"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:52
+msgid "Left out"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:53
+#, python-format
+msgid "Cut at %(time)s"
+msgstr ""
+
 #: tellybox/web/admin/js_strings.py:54
-msgid "TB"
+msgid "Go to"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:55
+#, python-format
+msgid "Go to part %(n)d at %(time)s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:56
+msgid "Remove cut"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:57
+#: tellybox/web/admin/templates/library.html:90
+msgid "Title"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:58
+msgid "Title (optional)"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:59
+#, python-format
+msgid "Move the cut back by %(amount)s s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:60
+#, python-format
+msgid "Move the cut forward by %(amount)s s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:61
+msgid "Saving…"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:62
+msgid "Saved"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:63
+msgid "Saving failed. Your changes are not saved yet."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:64
+msgid "This plan can't be changed any more."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:65
+msgid "A cut needs at least half a second on both sides."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:66
+msgid "Replace your cuts with the video's chapters?"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:83
+msgid "TB"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:88
 #: tellybox/web/admin/templates/add.html:116
 #, python-format
 msgid "Add %(num)d video"
@@ -581,11 +656,18 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:60
+#: tellybox/web/admin/js_strings.py:89
 #: tellybox/web/admin/templates/dashboard.html:99
 #, python-format
 msgid "%(num)d failed job"
 msgid_plural "%(num)d failed jobs"
+msgstr[0] ""
+msgstr[1] ""
+
+#: tellybox/web/admin/js_strings.py:90
+#, python-format
+msgid "Cutting takes up to about %(num)d minute"
+msgid_plural "Cutting takes up to about %(num)d minutes"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -697,28 +779,28 @@ msgstr ""
 msgid "This episode has no downloaded video to download again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:385
+#: tellybox/web/admin/library_pages.py:389
 msgid "This video is split into episodes, so it can't be downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:394
+#: tellybox/web/admin/library_pages.py:391
 msgid "This video is already being checked or downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:396
+#: tellybox/web/admin/library_pages.py:393
 msgid "This video can't be downloaded again right now."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:397
+#: tellybox/web/admin/library_pages.py:394
 msgid "Queued: the video will be downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:424
-#: tellybox/web/admin/library_pages.py:439
+#: tellybox/web/admin/library_pages.py:421
+#: tellybox/web/admin/library_pages.py:436
 msgid "Thumbnail updated."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:431
+#: tellybox/web/admin/library_pages.py:428
 msgid "This episode's video file is missing."
 msgstr ""
 
@@ -1476,10 +1558,6 @@ msgstr ""
 
 #: tellybox/web/admin/templates/library.html:83
 msgid "Merge"
-msgstr ""
-
-#: tellybox/web/admin/templates/library.html:90
-msgid "Title"
 msgstr ""
 
 #: tellybox/web/admin/templates/library.html:102

@@ -79,7 +79,7 @@ Plan: `docs/plans/step12-14-splitting.md` (the step 14 part). Branch `step14/sma
    - each hit becomes a `Cut`:
      - `at_s` = the snap of `hit.start_s`;
      - `confidence` = `1 − distance / (threshold + RESCAN_LOOSER + 1)`, halved for re-scan hits;
-     - `title` from OCR when `profile.ocr`. Grab the frame at `hit.start_s + 0.5` at full resolution with `images.grab_frame` and decode it with `cv2.imdecode`. The region is `profile.ocr_region` or the matched reference's region; when that is None, use the whole frame;
+     - `title` from OCR when `profile.ocr`. Grab the frame at `hit.start_s + 0.5` at full resolution with `images.grab_frame` and decode it with `cv2.imdecode`. The region is `profile.ocr_region`, or the whole frame when it is None (changed after testing: titles rarely sit inside the matched logo);
    - progress: sampling is 80 %, the rest 20 %.
 7. **Tests**, with `make_compilation` (session-scoped fixtures, small sizes):
    - `frames` count and times;

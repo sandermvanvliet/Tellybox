@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 11:02+0200\n"
+"POT-Creation-Date: 2026-10-01 12:56+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -1949,8 +1949,8 @@ msgid "Where the title is (optional)"
 msgstr "Wo der Titel steht (optional)"
 
 #: tellybox/web/admin/templates/show.html:104
-msgid "Left, top, width and height as a percentage of the frame. Leave empty to read the marked region."
-msgstr "Links, oben, Breite und Höhe in Prozent des Bildes. Leer lassen, um den markierten Bereich zu lesen."
+msgid "Left, top, width and height as a percentage of the frame. Leave empty to read the whole frame."
+msgstr "Links, oben, Breite und Höhe in Prozent des Bildes. Leer lassen, um das ganze Bild zu lesen."
 
 #: tellybox/web/admin/templates/show.html:106
 msgid "Left"

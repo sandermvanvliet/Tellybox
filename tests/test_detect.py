@@ -163,6 +163,12 @@ def test_ocr_reads_episode_title(comp, ref):
     assert cuts[1].title == "Episode 2"
 
 
+@pytest.mark.skipif(not ocr.available() or font_file() is None, reason="needs tesseract and a system font")
+def test_detect_reads_titles_from_the_whole_frame_by_default(comp, ref):
+    cuts = detect.detect(comp.path, detect.Profile([ref], ocr=True))  # ref's region is the logo, not the text
+    assert [c.title for c in cuts if c.title] and all(c.title.startswith("Episode") for c in cuts if c.title)
+
+
 def test_ocr_unavailable_returns_empty(monkeypatch):
     import numpy as np
 

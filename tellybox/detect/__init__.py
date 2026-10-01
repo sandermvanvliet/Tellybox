@@ -81,7 +81,7 @@ class Profile:
     length_hint_s: float | None = None
     snap_window_s: float = DEFAULT_SNAP_WINDOW_S
     ocr: bool = False
-    ocr_region: Region | None = None  # None = the matched reference's region
+    ocr_region: Region | None = None  # None = the whole frame (titles rarely sit inside the matched logo)
 
 
 @dataclass(frozen=True)
@@ -168,7 +168,7 @@ def detect(video: Path, profile: Profile, *, on_progress: Progress | None = None
             confidence /= 2
         title = ""
         if profile.ocr and ocr.available():
-            region = profile.ocr_region or refs[h.reference].region
+            region = profile.ocr_region  # None: the whole frame
             try:
                 import cv2
 

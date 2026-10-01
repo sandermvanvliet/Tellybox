@@ -6,7 +6,7 @@ CREATE TABLE split_profile (
     length_hint_s   REAL,                          -- ES-5: approximate episode length; NULL = no hint
     snap_window_s   REAL    NOT NULL DEFAULT 30,   -- ES-6: look this far back for a scene change or black
     ocr             INTEGER NOT NULL DEFAULT 0,    -- ES-9: read titles from the title card
-    ocr_region_json TEXT,                          -- [x, y, w, h], 0..1 of the frame; NULL = the matched region
+    ocr_region_json TEXT,                          -- [x, y, w, h], 0..1 of the frame; NULL = the whole frame
     auto_detect     INTEGER NOT NULL DEFAULT 0,    -- ES-10: detect new compilations after download
     updated_at      TEXT    NOT NULL
 );

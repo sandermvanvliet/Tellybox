@@ -101,7 +101,7 @@
     </label>
     <details {% if split_form.ocr_region | select | list %}open{% endif %}>
       <summary>{{ _("Where the title is (optional)") }}</summary>
-      <p class="muted">{{ _("Left, top, width and height as a percentage of the frame. Leave empty to read the marked region.") }}</p>
+      <p class="muted">{{ _("Left, top, width and height as a percentage of the frame. Leave empty to read the whole frame.") }}</p>
       <div class="row">
         {% for key, label in (("x", _("Left")), ("y", _("Top")), ("w", _("Width")), ("h", _("Height"))) %}
         <label>{{ label }}

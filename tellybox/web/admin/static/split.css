@@ -1,0 +1,70 @@
+/* Split editor (ES-1, ES-2, ES-7), split.html. Phone-first (NF-12): the player full width, big step
+ * buttons, the parts under it. From 900 px the player and strip are on the left, the list on the right. */
+
+#split-editor { display: grid; gap: 1rem; min-width: 0; }
+#split-editor > * { min-width: 0; }
+#split-editor video { width: 100%; max-height: 60vh; background: #000; border-radius: var(--radius); display: block; }
+
+#split-editor [data-split-time] {
+  font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.3rem; text-align: center; display: block;
+}
+
+/* Step buttons: one wrapping row of large tap targets. */
+#split-editor button[data-step], #split-editor button[data-action] { min-height: 48px; min-width: 48px; flex: 1 1 4.5rem; }
+#split-editor button[data-action="cut"] { background: var(--yolk); border-color: var(--yolk); flex-basis: 8rem; }
+#split-editor :has(> button[data-step]) { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/* The parts. */
+[data-split-segments] { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.seg {
+  display: grid; gap: .5rem; padding: .7rem; background: var(--panel);
+  border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: var(--radius);
+}
+.seg.current { border-left-color: var(--yolk); background: #FFFBEA; }
+.seg.left-out { opacity: .6; background: #EEF0F5; }
+.seg.left-out input.seg-title { text-decoration: line-through; }
+.seg-head { display: flex; flex-wrap: wrap; gap: .25rem .6rem; align-items: center; }
+.seg-head .seg-range { flex: 1 1 auto; font-variant-numeric: tabular-nums; }
+.seg-keep[aria-pressed="true"] { background: #DDF3E6; border-color: var(--ok); color: var(--ok); }
+.seg-keep[aria-pressed="false"] { background: #fff; border-color: var(--muted); color: var(--muted); }
+.seg-tools, .seg-cut { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.seg-tools { border-top: 1px dashed var(--line); padding-top: .5rem; }
+.seg-cut { flex: 1 1 100%; }
+.seg-cut-time { flex: 1 1 100%; font-variant-numeric: tabular-nums; }
+
+/* ES-7: the frame at the start of each part; scrolls sideways on a phone. */
+[data-split-strip] {
+  display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .4rem; scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+#split-editor .strip-card {
+  position: relative; flex: none; width: 150px; padding: 0; display: grid; gap: .2rem; text-align: center; align-content: start;
+  border: 2px solid var(--line); border-radius: 8px; background: var(--panel); scroll-snap-align: start; overflow: hidden;
+  min-height: 0; font-weight: 400; font-size: .85rem;
+}
+.strip-card .thumb { border-radius: 0; }
+.strip-card .card-time { padding-bottom: .25rem; font-variant-numeric: tabular-nums; }
+.strip-card .card-n {
+  position: absolute; top: 4px; left: 4px; min-width: 1.5rem; padding: 0 .35rem; border-radius: 999px;
+  background: var(--ink); color: #fff; font-weight: 700; font-size: .8rem; line-height: 1.5rem;
+}
+.strip-card.current { border-color: var(--yolk); box-shadow: 0 0 0 2px var(--yolk); }
+.strip-card.left-out .thumb { opacity: .4; filter: grayscale(1); }
+
+[data-split-status] { min-height: 1.4rem; margin: 0; color: var(--muted); }
+[data-split-status].ok { color: var(--ok); }
+[data-split-status].error { color: var(--bad); font-weight: 600; }
+
+/* The approve button looks disabled while the plan has problems, but stays clickable to say why. */
+[data-split-approve] [type="submit"].blocked { opacity: .45; }
+
+@media (min-width: 900px) {
+  main:has(#split-editor) { max-width: 1280px; }
+  #split-editor { grid-template-columns: minmax(0, 3fr) minmax(340px, 2fr); column-gap: 1.25rem; row-gap: 0; align-items: start; }
+  #split-editor > * { grid-column: 1; margin-bottom: 1rem; }
+  #split-editor > [data-split-segments], #split-editor > :has([data-split-segments]) {
+    grid-column: 2; grid-row: 1 / span 12; margin-bottom: 0;
+    position: sticky; top: 4.5rem; max-height: calc(100vh - 5.5rem); overflow-y: auto; padding-right: .25rem;
+  }
+  .seg-cut { flex-basis: auto; }
+}

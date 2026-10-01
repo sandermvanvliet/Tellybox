@@ -68,7 +68,7 @@ Out of the box, episodes play through the Chromecast's standard Default Media Re
 - **Up next:** before autoplay continues, a card with the next episode's thumbnail.
 - **Goodnight:** when time is up and the last episode has finished, a calm night scene. After 10 minutes the Chromecast goes back to its backdrop and the TV can sleep.
 
-If the Tellybox receiver can't start, the same episode plays on the Default Media Receiver instead, and the dashboard says so. Setting it up takes a one-time registration with Google; see the [installation guide](docs/installation.md#tellybox-receiver-optional).
+If the Tellybox receiver can't start, the same episode plays on the Default Media Receiver instead, and the dashboard says so. Turning it on takes one app ID in Settings; see the [installation guide](docs/installation.md#tellybox-receiver-optional).
 
 ## What you see
 

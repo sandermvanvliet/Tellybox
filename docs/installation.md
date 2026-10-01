@@ -194,30 +194,39 @@ All settings are environment variables. What you can change in the admin pages (
 
 By default, episodes play on the Chromecast's Default Media Receiver, which works out of the box. The Tellybox receiver is an optional Cast app of your own that adds the sky clock, a "loading" screen, an "up next" card and a calm night screen on the TV. It shows no text, and it plays the same MP4 files from your server. If you skip this section, nothing changes.
 
-Google requires every custom receiver to be registered, so this is a one-time setup:
+The Tellybox receiver is a published Cast app, so it runs on any Chromecast without registering anything with Google:
 
-1. **Host the receiver page over HTTPS.** Either:
-   - **GitHub Pages of your fork** (easiest): in your fork, go to Settings → Pages and set the source to **GitHub Actions**. The `Publish receiver to GitHub Pages` workflow then publishes `tellybox/web/receiver/` to `https://<your-user>.github.io/<your-repo>/receiver/` on every change to it. Run the workflow once by hand for the first publish. The page contains no household data.
-   - **Your own HTTPS host:** the `web` service serves the same files at `/receiver/`, so a reverse proxy address such as `https://tellybox.example.org/receiver/` works (see [HTTPS](#https-with-a-reverse-proxy)). The Chromecast must be able to reach it. Set `TELLYBOX_MEDIA_BASE_URL` so that the media URLs the receiver loads are reachable from the Chromecast.
+1. **Enter the application ID** `55AAC641` in Tellybox under **Settings → Tellybox receiver app ID** and save. The cast service picks it up within 15 seconds. Leave it empty to go back to the Default Media Receiver.
+2. **Try it:** start an episode. The **TV receiver** line on the dashboard should read "Tellybox receiver".
 
-   Either way, the videos and images can stay on plain HTTP from your LAN (`http://<server ip>:8080`). The receiver page is HTTPS, but the Chromecast loads them anyway; this was tested on an original Chromecast.
-2. **Register as a Cast developer** at the [Google Cast SDK Developer Console](https://cast.google.com/publish). There is a one-time registration fee.
-3. **Add a new application**, type **Custom Receiver**, with the receiver URL from step 1 (ending in `/receiver/`). Note the 8-character **Application ID** it shows.
-4. **Add your Chromecast as a test device** under *Cast Receiver Devices*, using its serial number (in the Google Home app under the device's settings, or on the back of the device). Wait a few minutes, then **reboot the Chromecast** (unplug it for a few seconds). An unpublished receiver only runs on registered devices.
-5. **Enter the application ID** in Tellybox under **Settings → Tellybox receiver app ID** and save. The cast service picks it up within 15 seconds. Leave it empty to go back to the Default Media Receiver.
-6. **Try it:** start an episode. The **TV receiver** line on the dashboard should read "Tellybox receiver".
+The receiver page is hosted on this repository's GitHub Pages (`https://sandermvanvliet.github.io/Tellybox/receiver/`). It holds no household data: the cast service sends it the timer state, and the videos and images still come from your server over your LAN, on plain HTTP if you like. The page follows the latest version of Tellybox, so keep your server up to date (see [Updating](#updating)).
 
 The receiver protocol and the states it shows are described in `docs/receiver-protocol.md`.
 
 ### If the receiver doesn't start
 
-Tellybox falls back on its own: if the Tellybox receiver can't be launched (not registered for that device, page unreachable, or a timeout), the same episode starts at once on the Default Media Receiver, and Tellybox keeps using the Default Media Receiver for the next 30 minutes before trying again. The dashboard's **TV receiver** line then reads "Default Media Receiver (Tellybox receiver unavailable until 16:30: reason)". Watching and time limits work the same either way. Common causes:
+Tellybox falls back on its own: if the Tellybox receiver can't be launched (page unreachable, or a timeout), the same episode starts at once on the Default Media Receiver, and Tellybox keeps using the Default Media Receiver for the next 30 minutes before trying again. The dashboard's **TV receiver** line then reads "Default Media Receiver (Tellybox receiver unavailable until 16:30: reason)". Watching and time limits work the same either way. Common causes:
 
-- The Chromecast serial isn't registered yet, or the Chromecast wasn't rebooted after adding it.
-- The receiver URL in the console is wrong or not HTTPS, or the page isn't reachable from the Chromecast.
 - The application ID has a typo.
+- The Chromecast can't reach GitHub Pages (no internet, or a DNS filter blocks `github.io`), or your own receiver's URL is wrong or not HTTPS.
+- The Chromecast can't reach the media URLs: check `TELLYBOX_MEDIA_BASE_URL`.
+- With your own receiver app: its settings were changed in the console, and the Chromecast hasn't been rebooted since. The reason then reads `launch failed: CANCELLED`.
 
 Once you've fixed the cause, the fallback ends by itself after 30 minutes, or restart the `cast` service to retry right away.
+
+### Your own receiver app
+
+Only needed if you change the receiver in a fork, because the shared app always loads this repository's page:
+
+1. **Host the receiver page over HTTPS.** Either:
+   - **GitHub Pages of your fork:** in your fork, go to Settings → Pages and set the source to **GitHub Actions**. The `Publish receiver to GitHub Pages` workflow then publishes `tellybox/web/receiver/` to `https://<your-user>.github.io/<your-repo>/receiver/` on every change to it. Run the workflow once by hand for the first publish.
+   - **Your own HTTPS host:** the `web` service serves the same files at `/receiver/`, so a reverse proxy address such as `https://tellybox.example.org/receiver/` works (see [HTTPS](#https-with-a-reverse-proxy)). The Chromecast must be able to reach it.
+2. **Register as a Cast developer** at the [Google Cast SDK Developer Console](https://cast.google.com/publish). There is a one-time registration fee.
+3. **Add a new application**, type **Custom Receiver**, with the receiver URL from step 1 (ending in `/receiver/`). Note the 8-character **Application ID** it shows.
+4. **Make it run on your Chromecast.** Either publish the app (this needs a 512×512 icon, such as `tellybox/web/static/icon-512.png`, a title, a description and an HTTPS URL), or add your Chromecast as a test device under *Cast Receiver Devices* using its serial number (in the Google Home app under the device's settings, or on the back of the device). An unpublished app only runs on registered devices. Wait a few minutes, then **reboot the Chromecast** (unplug it for a few seconds).
+
+   **Changed the application's settings later, such as the receiver URL? Reboot the Chromecast again.** It keeps the settings it had until it restarts, and until then every launch fails with `CANCELLED`.
+5. **Enter your application ID** under **Settings → Tellybox receiver app ID**, as above.
 
 ## HTTPS with a reverse proxy
 

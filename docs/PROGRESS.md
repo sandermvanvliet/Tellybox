@@ -154,7 +154,7 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 
 On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4).
 
-### 12. Manual splitting (v5), deployed; device checks open
+### 12. Manual splitting (v5), done
 Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
 - **Decision (owner, 2026-10-01):** the approve form has "delete the original video after cutting", unticked by default; a kept source can be split again (A-21).
 - **Contract:**
@@ -180,7 +180,7 @@ Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01.
   - Screenshots at 375 and 1280 px were reviewed, with no horizontal scroll.
   - **Found and fixed:** the "delete the original" box came up ticked after an earlier approval with it; it's now unticked every time (A-21).
 - Merged as PR #16 and deployed (version 2026.10.01.26).
-- **Real-device checks (owner, after deploy):**
+- **Real-device checks passed (owner, 2026-10-01).** v5 is done. The checks were:
   1. Split a real compilation (with chapters if possible) on the phone: the chapters are offered; move a cut, drop an intro, rename, approve.
   2. Play a part on the TV: it starts cleanly, without frames from the previous episode, and autoplay moves on to the next part.
   3. Approve a split while the compilation is playing: the job waits ("waiting: …" on Jobs) and runs after it stops.
@@ -318,8 +318,8 @@ Sponsor segments are cut out of the file at download through yt-dlp's `--sponsor
   - A redownload of a split video completes without doing anything (SB-6, step 12 should add a message).
   - The admin API's job counts (HA-2) include the daily re-check jobs for a moment.
 
-### 14. Smart splitting (v6), built; device checks and the v6 gate open
-Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/plans/step14-handoff.md`. Branch `step14/smart-split`, started before the step 12 TV checks; it merges only after they pass.
+### 14. Smart splitting (v6), merged after the step 12 checks passed; v6 gate open
+Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/plans/step14-handoff.md`. Branch `step14/smart-split`, merged as PR #17 on 2026-10-01.
 - **Decisions (owner, 2026-10-01):**
   - A-22: a compilation picked up by automatic detection stays hidden until its split is approved or it's published whole.
   - No PySceneDetect: version 0.7 requires the desktop OpenCV build. Scene changes come from ffmpeg `scdet`, and black frames from `blackdetect`. The CLAUDE.md stack line and the PRD are updated.

@@ -356,8 +356,10 @@ Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/pla
   - Marking the card and setting a 0:42 episode length, then "Find cuts", gave a proposal in about 6 s. All four cuts landed exactly on the black before each card. The degraded one was found by the re-scan and marked "unsure" (0.37 against 0.93).
   - Leaving out the intro and approving cut four visible parts (42.6, 47.6, 40.6 and 44.6 s: black, card and episode each).
   - Screenshots of the split page at 375 px and the show page at 1280 px were reviewed.
+- **OCR with Tesseract installed** (dev box, 2026-10-01): the matched logo region rarely holds the title, so it read nothing. OCR now reads the whole frame unless a title region is set, and every title on the test cards was read.
+- **Owner's local check** (2026-10-01, a local web service and worker with a stub cast service, `.local-test/`, git-ignored): detection on real videos "working well enough".
 - **Open:**
-  - the owner's v6 gate: detection accepted on two real shows;
+  - the owner's v6 gate on the deployed version: detection accepted on two real shows;
   - an auto-detected compilation waits hidden in review, then plays split on the TV;
   - OCR on real title cards;
   - the image size growth from OpenCV and Tesseract, to measure on the first CI build;

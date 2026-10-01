@@ -273,14 +273,21 @@ def test_download_fills_chapters_and_channel_for_playlist_videos(conn, clock, ru
     assert episode.hidden  # held for approval
 
 
-def test_download_keeps_existing_chapters_and_channel(conn, clock, runner, fake):
+def test_download_stores_its_chapters_and_keeps_the_channel(conn, clock, runner, fake):  # ES-1, SB-1
+    """The download's chapters are already shifted for the SponsorBlock cuts, so they replace the add-time ones."""
     source_id, _ = ingest.add(conn, info("abc123", chapters=[Chapter(0, 1, "Mine")]), publish=True, now=clock.now())
     fake.download_infos["https://www.youtube.com/watch?v=abc123"] = info(
         "abc123", channel_id="UCother", channel_name="Other", chapters=[Chapter(0, 2, "Theirs")])
     run_next(runner, clock)
     row = source(conn, source_id)
-    assert json.loads(row["chapters_json"])[0]["title"] == "Mine"
+    assert json.loads(row["chapters_json"])[0]["title"] == "Theirs"
     assert row["channel_id"] == "UCkids"
+
+
+def test_download_without_chapters_keeps_the_add_time_ones(conn, clock, runner):
+    source_id, _ = ingest.add(conn, info("abc123", chapters=[Chapter(0, 1, "Mine")]), publish=True, now=clock.now())
+    run_next(runner, clock)
+    assert json.loads(source(conn, source_id)["chapters_json"])[0]["title"] == "Mine"
 
 
 # --------------------------------------------------------------------------- download job
@@ -730,9 +737,38 @@ def test_redownload_with_the_same_cuts_queues_no_position_shift(conn, clock, run
 def test_redownload_of_a_split_video_does_nothing(conn, clock, runner, fake):  # SB-6
     sid = published(conn, clock, runner)
     conn.execute("UPDATE episode SET start_s = 5 WHERE source_video_id = ?", (sid,))
-    ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+    jobs.enqueue(conn, JobType.REDOWNLOAD, sid, now=clock.now())  # queued before the split, say
     assert run_next(runner, clock).status == JobStatus.READY
     assert len(fake.downloads) == 1
+
+
+def test_request_redownload_of_a_split_video_is_refused(conn, clock, runner):  # SB-6
+    sid = published(conn, clock, runner)
+    conn.execute("UPDATE episode SET start_s = 5 WHERE source_video_id = ?", (sid,))
+    with pytest.raises(ingest.SourceSplit):
+        ingest.request_redownload(conn, sid, with_sponsorblock=False, now=clock.now())
+
+
+def test_request_redownload_while_a_split_is_queued_is_refused(conn, clock, runner):  # SB-6
+    sid = published(conn, clock, runner)
+    jobs.enqueue(conn, JobType.SPLIT, sid, now=clock.now())
+    with pytest.raises(ingest.SourceSplit):
+        ingest.request_redownload(conn, sid, with_sponsorblock=True, now=clock.now())
+
+
+def test_redownload_while_a_split_is_queued_does_nothing(conn, clock, runner, fake):  # SB-6
+    sid = published(conn, clock, runner)
+    jobs.enqueue(conn, JobType.REDOWNLOAD, sid, now=clock.now())
+    jobs.enqueue(conn, JobType.SPLIT, sid, now=clock.now())
+    assert run_next(runner, clock).status == JobStatus.READY
+    assert len(fake.downloads) == 1
+
+
+def test_detect_job_fails_without_retry(conn, clock, runner):  # ES-3 arrives in v6
+    sid = published(conn, clock, runner)
+    jobs.enqueue(conn, JobType.DETECT, sid, now=clock.now(), max_attempts=3)
+    job = run_next(runner, clock)
+    assert job.status == JobStatus.FAILED and "v6" in job.error
 
 
 def queued_redownload(conn, clock, runner, fake):

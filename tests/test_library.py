@@ -565,3 +565,13 @@ def test_publish_held_playlist_unknown(conn):
         library.publish_held_playlist(conn, "PL1", now=NOW)  # nothing held any more
     with pytest.raises(KeyError):
         library.publish_held_playlist(conn, "nope", now=NOW)
+
+
+def test_list_held_downloads_has_one_row_per_source(conn):  # a split source has several episodes
+    show = library.create_show(conn, "S", now=NOW)
+    src = _source(conn, "split1")
+    conn.execute("UPDATE source_video SET publish = 'hold', status = 'ready' WHERE id = ?", (src,))
+    ids = [library.add_episode(conn, show, f"Part {i}", f"s/{i}.mp4", now=NOW, source_video_id=src, hidden=True)
+           for i in range(3)]
+    (held,) = library.list_held_downloads(conn)
+    assert held.source_id == src and held.episode_id == ids[0]

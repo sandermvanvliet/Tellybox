@@ -185,6 +185,19 @@ def test_a_video_with_a_pending_recheck_is_not_queued_again(conn):
     assert _rechecks(conn) == [sid]
 
 
+def test_split_videos_are_not_rechecked(conn):  # SB-6
+    clock = FakeClock(local(2026, 9, 28, 12))
+    split = _source(conn, "split", clock.now())
+    plain = _source(conn, "plain", clock.now())
+    queued = _source(conn, "queued", clock.now())
+    show = conn.execute("INSERT INTO show (name, created_at) VALUES ('s', 'x')").lastrowid
+    conn.execute("INSERT INTO episode (show_id, title, file_path, source_video_id, start_s, end_s, created_at)"
+                 " VALUES (?, 't', 'f.mp4', ?, 0, 10, 'x')", (show, split))
+    jobs.enqueue(conn, JobType.SPLIT, queued, now=clock.now(), max_attempts=2)
+    Worker(RecordingRunner(conn, clock), TZ, auto_update=False, auto_purge=False)._enqueue_rechecks(clock.now())
+    assert _rechecks(conn) == [plain]
+
+
 def test_no_auto_recheck_when_disabled(conn):
     clock = FakeClock(local(2026, 9, 28, 12))
     _source(conn, "a", clock.now())

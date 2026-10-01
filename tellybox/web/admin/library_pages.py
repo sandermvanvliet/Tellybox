@@ -382,14 +382,11 @@ def create_router(ctx: AdminContext) -> APIRouter:
         target = f"/admin/episodes/{episode_id}"
         if episode.source_video_id is None:
             return see_other(target, flash=_("This episode has no downloaded video to download again."))
-        split_error = _("This video is split into episodes, so it can't be downloaded again.")
-        if library.is_split(conn, episode.source_video_id):
-            return see_other(target, flash=split_error)
         try:
             ingest.request_redownload(conn, episode.source_video_id, with_sponsorblock=with_sb == "1",
                                       now=ctx.clock.now())
-        except getattr(ingest, "SourceSplit", ()):  # SB-6 (also a pending split job)
-            return see_other(target, flash=split_error)
+        except ingest.SourceSplit:  # SB-6 (also a pending split job)
+            return see_other(target, flash=_("This video is split into episodes, so it can't be downloaded again."))
         except ingest.RedownloadPending:
             return see_other(target, flash=_("This video is already being checked or downloaded again."))
         except KeyError:

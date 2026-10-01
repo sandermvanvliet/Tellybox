@@ -31,6 +31,8 @@ class JobType(StrEnum):
     UPDATE_YTDLP = "update_ytdlp"
     SB_RECHECK = "sb_recheck"  # SB-3: look up a published video's segments again
     REDOWNLOAD = "redownload"  # SB-3, SB-4: download a published video again and replace its file
+    SPLIT = "split"  # ES-8: cut an approved split proposal into episode files
+    DETECT = "detect"  # ES-4 (v6): propose cuts from the show's title cards
 
 
 RUNNING = (JobStatus.DOWNLOADING, JobStatus.PROCESSING)
@@ -42,7 +44,7 @@ STALE_AFTER_S = 60  # NF-7: a running job without a heartbeat this long is orpha
 class Job:
     id: int
     type: JobType
-    target_id: int | None  # source_video.id for download, sb_recheck and redownload jobs
+    target_id: int | None  # source_video.id for every type except update_ytdlp
     status: JobStatus
     progress: float | None  # 0..1 within the current status
     error: str | None  # last error; kept visible while retrying, cleared on success

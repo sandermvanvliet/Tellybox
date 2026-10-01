@@ -4,6 +4,7 @@ the admin library management (CI-4, CI-6, LM-1, LM-3).
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from collections.abc import Iterator
@@ -12,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from tellybox import sponsorblock
+from tellybox import jobs, sponsorblock, splitting
 from tellybox.db import from_db, to_db
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class Episode:
     sort_order: int
     hidden: bool
     source_video_id: int | None = None
-    start_s: float | None = None  # segment of the source (splitting, step 6)
+    start_s: float | None = None  # part of the source it was cut from (ES-8); set = split (SB-6)
     end_s: float | None = None
     thumbnail_path: str | None = None  # relative to the media dir
 
@@ -618,3 +619,201 @@ def publish_held(conn: sqlite3.Connection, source_video_id: int, *, now: datetim
             (to_db(now), source_video_id),
         )
         conn.execute("UPDATE episode SET hidden = 0 WHERE source_video_id = ?", (source_video_id,))
+
+
+# --- Episode splitting (v5, ES-1, ES-2, ES-7, ES-8) ---
+
+
+class SplitLocked(Exception):
+    """The proposal can't change now: a split job is queued or running, or (discard) it's already done."""
+
+
+class SourceGone(Exception):
+    """The source video isn't ready or its file was deleted after an earlier split (A-21)."""
+
+
+@dataclass(frozen=True)
+class SplitProposal:
+    source_video_id: int
+    title: str  # the source video's
+    duration_s: float  # the file's, the timeline of the segments
+    status: str  # splitting.STATUSES
+    origin: str  # splitting.ORIGINS
+    segments: list[splitting.Segment]
+    delete_source: bool
+    error: str | None
+    stored: bool  # False: made up from chapters or the whole video, not saved yet
+    has_file: bool  # the source file is still there, so it can be (re-)split
+    chapters: list[dict]  # ES-1, on the file timeline
+    updated_at: datetime | None = None
+
+    @property
+    def editable(self) -> bool:
+        return self.has_file and self.status in splitting.EDITABLE
+
+
+def _source_for_split(conn: sqlite3.Connection, source_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        """SELECT sv.id, sv.title, sv.status, sv.file_path, sv.chapters_json, sv.sb_segments_json,
+                  COALESCE(sv.duration_s, (SELECT MAX(e.duration_s) FROM episode e
+                                           WHERE e.source_video_id = sv.id AND e.start_s IS NULL)) AS duration_s
+           FROM source_video sv WHERE sv.id = ?""",
+        (source_id,),
+    ).fetchone()
+
+
+def get_split(conn: sqlite3.Connection, source_id: int) -> SplitProposal | None:
+    """The source's proposal; if none is saved, one from its chapters (ES-1) or the whole video.
+
+    None when the source doesn't exist, isn't downloaded yet, or has no known duration.
+    """
+    src = _source_for_split(conn, source_id)
+    if src is None or src["status"] != "ready" or not src["duration_s"]:
+        return None
+    duration = float(src["duration_s"])
+    chapters = splitting.chapters_on_file(
+        json.loads(src["chapters_json"]) if src["chapters_json"] else None,
+        duration,
+        sponsorblock.loads(src["sb_segments_json"]) if src["sb_segments_json"] else [],
+    )
+    common = dict(source_video_id=source_id, title=src["title"], duration_s=duration,
+                  has_file=src["file_path"] is not None, chapters=chapters)
+    row = conn.execute("SELECT * FROM split_proposal WHERE source_video_id = ?", (source_id,)).fetchone()
+    if row is not None:
+        return SplitProposal(
+            **common, status=row["status"], origin=row["origin"], segments=splitting.loads(row["segments_json"]),
+            delete_source=bool(row["delete_source"]), error=row["error"], stored=True,
+            updated_at=from_db(row["updated_at"]),
+        )
+    if len(chapters) >= 2:
+        segments, origin = splitting.segments_from_chapters(chapters, duration), "chapters"
+    else:
+        segments, origin = splitting.whole(duration, src["title"]), "manual"
+    return SplitProposal(**common, status="draft", origin=origin, segments=segments, delete_source=False,
+                         error=None, stored=False)
+
+
+def save_split(
+    conn: sqlite3.Connection, source_id: int, segments: list[splitting.Segment], *, now: datetime,
+    origin: str | None = None,
+) -> SplitProposal:
+    """Save the admin's draft (ES-2, ES-7). It only has to be well formed; approve_split checks the rest.
+
+    A done proposal becomes a draft again (a re-split). ``origin`` sets it on a new row (default
+    manual) and is kept otherwise. Raises KeyError, SourceGone, SplitLocked or SplitInvalid.
+    """
+    with _transaction(conn):
+        current = get_split(conn, source_id)
+        if current is None:
+            if conn.execute("SELECT 1 FROM source_video WHERE id = ?", (source_id,)).fetchone() is None:
+                raise KeyError(source_id)
+            raise SourceGone(source_id)
+        if not current.has_file:
+            raise SourceGone(source_id)
+        if current.status not in splitting.EDITABLE:
+            raise SplitLocked(source_id)
+        splitting.check_shape(segments, current.duration_s)
+        if origin is not None and origin not in splitting.ORIGINS:
+            raise ValueError(origin)
+        ts = to_db(now)
+        conn.execute(
+            """INSERT INTO split_proposal (source_video_id, status, origin, segments_json, created_at, updated_at)
+               VALUES (?, 'draft', ?, ?, ?, ?)
+               ON CONFLICT (source_video_id) DO UPDATE SET
+                 status = 'draft', origin = COALESCE(?, origin), segments_json = excluded.segments_json,
+                 error = NULL, updated_at = excluded.updated_at""",
+            (source_id, origin or "manual", splitting.dumps(segments), ts, ts, origin),
+        )
+    return get_split(conn, source_id)
+
+
+def approve_split(conn: sqlite3.Connection, source_id: int, *, delete_source: bool, now: datetime) -> int:
+    """ES-7 approve: check the saved plan and queue the split job (ES-8). Returns the job id.
+
+    Raises KeyError (nothing saved), SourceGone, SplitLocked or SplitInvalid.
+    """
+    with _transaction(conn):
+        current = get_split(conn, source_id)
+        if current is None or not current.has_file:
+            if conn.execute("SELECT 1 FROM source_video WHERE id = ?", (source_id,)).fetchone() is None:
+                raise KeyError(source_id)
+            raise SourceGone(source_id)
+        if not current.stored:
+            raise KeyError(source_id)
+        if current.status not in splitting.EDITABLE or jobs.has_pending_for(conn, source_id, (jobs.JobType.SPLIT,)):
+            raise SplitLocked(source_id)
+        splitting.validate(current.segments, current.duration_s)
+        ts = to_db(now)
+        conn.execute(
+            """UPDATE split_proposal SET status = 'approved', delete_source = ?, error = NULL, approved_at = ?,
+                 updated_at = ? WHERE source_video_id = ?""",
+            (int(delete_source), ts, ts, source_id),
+        )
+        return jobs.enqueue(conn, jobs.JobType.SPLIT, source_id, now=now, max_attempts=2)
+
+
+def discard_split(conn: sqlite3.Connection, source_id: int) -> None:
+    """Throw away an unapproved proposal. A done one stays (it describes the current episodes): SplitLocked."""
+    with _transaction(conn):
+        row = conn.execute("SELECT status FROM split_proposal WHERE source_video_id = ?", (source_id,)).fetchone()
+        if row is None:
+            return
+        if row["status"] not in ("draft", "review", "failed"):
+            raise SplitLocked(source_id)
+        conn.execute("DELETE FROM split_proposal WHERE source_video_id = ?", (source_id,))
+
+
+def mark_split(conn: sqlite3.Connection, source_id: int, status: str, *, now: datetime, error: str | None = None) -> None:
+    """The split job's progress on the proposal: cutting, done or failed (worker only)."""
+    if status not in ("cutting", "done", "failed"):
+        raise ValueError(status)
+    conn.execute(
+        "UPDATE split_proposal SET status = ?, error = ?, updated_at = ? WHERE source_video_id = ?",
+        (status, error, to_db(now), source_id),
+    )
+
+
+@dataclass(frozen=True)
+class SplitListItem:
+    source_video_id: int
+    title: str
+    status: str
+    origin: str
+    parts: int  # kept segments
+    error: str | None
+    updated_at: datetime
+    episode_id: int | None  # an episode of the source, for its thumbnail and a link
+
+
+def list_splits_for_review(conn: sqlite3.Connection) -> list[SplitListItem]:
+    """Every proposal that isn't done, newest first: drafts, proposals to review, queued, cutting, failed."""
+    rows = conn.execute(
+        """SELECT sp.source_video_id, sv.title, sp.status, sp.origin, sp.segments_json, sp.error, sp.updated_at,
+                  (SELECT MIN(e.id) FROM episode e WHERE e.source_video_id = sp.source_video_id) AS episode_id
+           FROM split_proposal sp JOIN source_video sv ON sv.id = sp.source_video_id
+           WHERE sp.status != 'done' ORDER BY sp.updated_at DESC, sp.id DESC"""
+    ).fetchall()
+    return [
+        SplitListItem(
+            source_video_id=r["source_video_id"], title=r["title"], status=r["status"], origin=r["origin"],
+            parts=sum(1 for s in splitting.loads(r["segments_json"]) if s.keep), error=r["error"],
+            updated_at=from_db(r["updated_at"]), episode_id=r["episode_id"],
+        )
+        for r in rows
+    ]
+
+
+def list_source_episodes(conn: sqlite3.Connection, source_id: int) -> list[Episode]:
+    """The episodes made from this source, hidden ones too: the whole video, or its parts in timeline order."""
+    rows = conn.execute(
+        f"SELECT {_EPISODE_COLS} FROM episode WHERE source_video_id = ? ORDER BY COALESCE(start_s, 0), id",
+        (source_id,),
+    ).fetchall()
+    return [_episode(r) for r in rows]
+
+
+def is_split(conn: sqlite3.Connection, source_id: int) -> bool:
+    """SB-6: an episode is a part of this source, so its file must not change."""
+    return conn.execute(
+        "SELECT 1 FROM episode WHERE source_video_id = ? AND start_s IS NOT NULL LIMIT 1", (source_id,)
+    ).fetchone() is not None

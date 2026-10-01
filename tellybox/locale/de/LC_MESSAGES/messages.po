@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-30 12:11+0200\n"
+"POT-Creation-Date: 2026-10-01 09:33+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -91,10 +91,53 @@ msgstr "Bild ist zu groß (max. 5 MB)"
 msgid "file is not a JPEG, PNG or WebP image"
 msgstr "Datei ist kein JPEG-, PNG- oder WebP-Bild"
 
-#: tellybox/jobs.py:202
+#: tellybox/jobs.py:204
 #, python-format
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr "Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich wiederholen"
+
+#: tellybox/splitting.py:110
+msgid "The plan has no parts."
+msgstr "Der Plan hat keine Teile."
+
+#: tellybox/splitting.py:112
+#, python-format
+msgid "A video can be split into at most %(n)d parts."
+msgstr "Ein Video kann in höchstens %(n)d Teile geteilt werden."
+
+#: tellybox/splitting.py:114
+msgid "The first part must start at the beginning of the video."
+msgstr "Der erste Teil muss am Anfang des Videos beginnen."
+
+#: tellybox/splitting.py:116
+msgid "The last part must end at the end of the video."
+msgstr "Der letzte Teil muss am Ende des Videos enden."
+
+#: tellybox/splitting.py:119 tellybox/splitting.py:122
+msgid "Parts must follow each other without gaps."
+msgstr "Die Teile müssen lückenlos aufeinander folgen."
+
+#: tellybox/splitting.py:124
+#, python-format
+msgid "Titles can be at most %(n)d characters."
+msgstr "Titel dürfen höchstens %(n)d Zeichen lang sein."
+
+#: tellybox/splitting.py:132
+#, python-format
+msgid "Each part must be at least %(n)d seconds long."
+msgstr "Jeder Teil muss mindestens %(n)d Sekunden lang sein."
+
+#: tellybox/splitting.py:135
+msgid "Keep at least one part."
+msgstr "Behalte mindestens einen Teil."
+
+#: tellybox/splitting.py:137
+msgid "Add a cut, or leave out a part, before approving."
+msgstr "Füge einen Schnitt hinzu oder lass einen Teil weg, bevor du freigibst."
+
+#: tellybox/splitting.py:164
+msgid "The plan is malformed."
+msgstr "Der Plan ist ungültig."
 
 #: tellybox/sponsorblock.py:20
 msgid "Sponsor"

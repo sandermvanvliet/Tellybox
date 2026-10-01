@@ -353,11 +353,12 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-18 | The kid app doesn't show where an override came from (owner, 2026-09-29). |
 | A-19 | SponsorBlock cuts are made at keyframes by yt-dlp (stream copy), without re-encoding. A cut may be off by up to about two seconds (owner, 2026-09-30). |
 | A-20 | Videos downloaded before v3 are not cut by the daily re-check; the admin can download one again with SponsorBlock from its episode page (step 10, 2026-09-30). |
+| A-21 | After a split, the source file is kept unless the admin ticks "delete the original video after cutting" when approving (unticked by default). A kept source can be split again (owner, 2026-10-01). |
 
 ### Open questions
 
 - ☑ Should each kid profile be protected with a picture PIN? No, not for now (A-7).
 - ☐ Should the wall-clock limit apply per session, or also as allowed viewing hours in the day (e.g. 16:00 to 18:30)?
-- ☐ Should the source compilation file be kept after splitting, for re-cutting later, or deleted to save space?
+- ☑ Should the source compilation file be kept after splitting, for re-cutting later, or deleted to save space? The admin chooses per split; kept by default (A-21).
 - ☐ Where is the Tellybox receiver hosted so the Chromecast can load it over HTTPS (v7 spike)?
 - ☑ Which conventions from the deploy-flow repository apply? Settled in step 6 (the owner's private runbook; `docs/installation.md` is the general guide).

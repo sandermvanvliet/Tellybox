@@ -154,7 +154,7 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 
 On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4).
 
-### 12. Manual splitting (v5), in progress
+### 12. Manual splitting (v5), built; deploy and device checks open
 Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
 - **Decision (owner, 2026-10-01):** the approve form has "delete the original video after cutting", unticked by default; a kept source can be split again (A-21).
 - **Contract:**
@@ -164,7 +164,30 @@ Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01.
   - `media_format.cut`, a frame-accurate re-encode. A test checks the first frame of a cut in a clip with a single keyframe.
   - 1205 tests.
 - **Found while planning:** `_publish` kept the add-time chapters, which are on the original timeline, over the download's (already shifted by SponsorBlock). Fixed in slice A; `splitting.chapters_on_file` maps older rows.
-- Three Sonnet subagents in parallel: A (worker: the split job, SB-6, the chapters fix), B (admin routes and pages), C (the split editor JS).
+- Built by three Sonnet subagents in parallel worktrees and merged by the controller (2026-10-01). 1262 tests, including 17 node tests for the plan logic.
+  - **Worker (A):**
+    - the `split` job: it waits 20 minutes while a part of the source is on the TV or the cast service can't be reached (checked before and after cutting);
+    - it re-validates against the probed file, cuts and verifies each kept part, and takes a thumbnail 3 s in;
+    - in one transaction: the parts take the old episode's place in the show, hidden when the source is held, the old episodes are deleted (positions by cascade) and, when asked, the source's `file_path` is cleared;
+    - SB-6: `request_redownload` raises `SourceSplit`, and split sources get no re-checks;
+    - the download's chapters are stored; held downloads list once per source.
+  - **Admin (B):** the source video (Range) and frame routes, `GET`/`PUT /admin/api/splits/{id}`, the split page with approve and discard, the episode page's "Split into episodes" / "Part n of m" / "Split again", the SB-6 note, "Splits to review" on the library page, job labels, nl and de.
+  - **Editor (C):** `split_plan.js` (pure, node-tested) and `split.js`: step buttons and keys, cut here, use chapters, the parts list (title, keep or leave out, nudges, remove cut), the start-frame strip (ES-7), autosave, the approve check and estimate, progress polling. Phone-first, two columns from 900 px.
+- **Merging:** local `main` was behind `origin/main` (PRs #10 and #15), so `origin/main` is merged into the branch. The catalogs conflicted between B and C; both sides' translations are kept.
+- **Smoke test** on the dev box: a real web service and worker against a stub cast service (so the real Chromecast was never touched), with a 90 s three-chapter 720p compilation.
+  - The page offered the three chapters. The API refused a bad plan (422) and a PUT without Origin (403).
+  - Dropping a 2 s intro, renaming and approving with "delete the original" cut 88 s into parts of exactly 28.0, 30.0 and 30.0 s in about 9 s. The parts took the compilation's place between the neighbouring episodes, each with a thumbnail. The untitled one became "Demo compilation (3)", and `file_path` was cleared.
+  - Screenshots at 375 and 1280 px were reviewed, with no horizontal scroll.
+  - **Found and fixed:** the "delete the original" box came up ticked after an earlier approval with it; it's now unticked every time (A-21).
+- **Real-device checks (owner, after deploy):**
+  1. Split a real compilation (with chapters if possible) on the phone: the chapters are offered; move a cut, drop an intro, rename, approve.
+  2. Play a part on the TV: it starts cleanly, without frames from the previous episode, and autoplay moves on to the next part.
+  3. Approve a split while the compilation is playing: the job waits ("waiting: …" on Jobs) and runs after it stops.
+  4. The episode page of a part shows "Part n of m", and the SponsorBlock card shows the SB-6 note instead of the download-again buttons.
+- **Open:**
+  - The probed fps is the average frame rate (25.011 for a 25 fps clip), so frame steps are off by a hair.
+  - The step buttons' "◀ frame"/"frame ▶" wrap onto two lines, which makes them taller than their neighbours.
+  - The split job runs on the single worker thread, so a long compilation holds up downloads while it's cut.
 
 ### 8. Kid profiles (v2), deployed; device checks open
 "Who's watching" screen, per-profile allowance, usage, continue watching and history, watching together (PR-1..PR-4). There's no PIN, and every profile sees the whole library.

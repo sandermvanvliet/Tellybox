@@ -10,10 +10,13 @@ from tellybox import library
 from tellybox.cast.controller import (
     NIGHT_HOLD_S,
     RECEIVER_FALLBACK_S,
+    RECEIVER_VANISH_SETTLE_S,
     EndReason,
     PlayRefused,
 )
 from tellybox.cast.fake import YOUTUBE_APP, FakeCastDevice
+
+SETTLE = RECEIVER_VANISH_SETTLE_S + 2  # past the wait for another app after a vanish
 
 from test_controller import (  # noqa: F401  (fixtures)
     EPISODE_S,
@@ -293,7 +296,7 @@ async def test_a_vanished_receiver_is_relaunched_at_the_position(conn, clock, fa
     fake.vanish()  # stopped from a phone's Google Home: the Backdrop, not another app
     await pump(ctrl, fake)
     assert ctrl.current is not None  # not ended at once: it may be the step before another app
-    await run_for(ctrl, fake, clock, 5)
+    await run_for(ctrl, fake, clock, SETTLE)
     assert ctrl.current is not None and ctrl.current.watch_session_id == watch_id
     assert len(play_calls(fake)) == 2 and play_calls(fake)[1][2] == pytest.approx(60, abs=1)
     assert fake.play_app_ids == [TB, TB] and ctrl.current.cast_session_id == "tellybox-2"
@@ -315,12 +318,12 @@ async def test_a_second_vanish_in_the_same_episode_ends_it(conn, clock, fake, ep
     await run_for(ctrl, fake, clock, 30)
     fake.vanish()
     await pump(ctrl, fake)
-    await run_for(ctrl, fake, clock, 5)
+    await run_for(ctrl, fake, clock, SETTLE)
     assert len(play_calls(fake)) == 2 and ctrl.current is not None
     await run_for(ctrl, fake, clock, 20)
     fake.vanish()
     await pump(ctrl, fake)
-    await run_for(ctrl, fake, clock, 5)
+    await run_for(ctrl, fake, clock, SETTLE)
     assert ctrl.current is None and len(play_calls(fake)) == 2
     assert sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
     assert len(events(conn, "lost")) == 2 and len(events(conn, "recovered")) == 1
@@ -353,6 +356,23 @@ async def test_another_app_right_after_the_backdrop_is_still_a_takeover(conn, cl
     assert len(play_calls(fake)) == 1 and not events(conn, "lost", "recovered")
 
 
+async def test_a_slow_cold_start_of_another_app_is_not_cut_off(conn, clock, fake, episodes):  # WT-9
+    """A 1st gen shows no app for seconds while it cold-starts e.g. YouTube; relaunching ours then would end that cast."""
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.vanish()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 8)
+    assert len(play_calls(fake)) == 1  # still waiting: no relaunch yet
+    fake.takeover(YOUTUBE_APP)
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, SETTLE)
+    assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    assert len(play_calls(fake)) == 1 and not events(conn, "recovered")
+
+
 async def test_no_recovery_when_time_is_up(conn, clock, fake, episodes):  # CR-6, WT-5
     configure(conn, allowance_min=5)
     enable(conn)
@@ -362,7 +382,7 @@ async def test_no_recovery_when_time_is_up(conn, clock, fake, episodes):  # CR-6
     assert ctrl.current is not None and not ctrl.state()["timer"]["can_start"]
     fake.vanish()
     await pump(ctrl, fake)
-    await run_for(ctrl, fake, clock, 5)
+    await run_for(ctrl, fake, clock, SETTLE)
     assert ctrl.current is None and len(play_calls(fake)) == 1
     assert sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
     assert not events(conn, "recovered")
@@ -414,7 +434,7 @@ async def test_a_failed_relaunch_ends_the_episode(conn, clock, fake, episodes): 
     fake.vanish()
     await pump(ctrl, fake)
     fake.fail_next_command = True  # the device refuses the load itself
-    await run_for(ctrl, fake, clock, 5)
+    await run_for(ctrl, fake, clock, SETTLE)
     assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
     failed = events(conn, "recover_failed")
     assert len(failed) == 1 and "injected failure" in failed[0]["detail"]

@@ -764,11 +764,11 @@ def test_redownload_while_a_split_is_queued_does_nothing(conn, clock, runner, fa
     assert len(fake.downloads) == 1
 
 
-def test_detect_job_fails_without_retry(conn, clock, runner):  # ES-3 arrives in v6
+def test_detect_job_without_a_title_card_fails_without_retry(conn, clock, runner):  # ES-3
     sid = published(conn, clock, runner)
     jobs.enqueue(conn, JobType.DETECT, sid, now=clock.now(), max_attempts=3)
     job = run_next(runner, clock)
-    assert job.status == JobStatus.FAILED and "v6" in job.error
+    assert job.status == JobStatus.FAILED and "no title card" in job.error
 
 
 def queued_redownload(conn, clock, runner, fake):

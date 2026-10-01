@@ -62,6 +62,62 @@
   <p class="muted">{{ _("Applies to new downloads and to videos still inside their 7-day re-check.") }}</p>
 </div>
 
+<div class="card" id="splitting">
+  <h2>{{ _("Splitting") }}</h2>
+  <p class="muted">{{ _("Tellybox finds where each episode starts in a compilation by recognising the title card. Mark a title card on the split page of a long video.") }}</p>
+  {% if not split_profile.references %}
+  <p class="muted">{{ _("No title cards marked yet. Open a long video of this show, go to its split page and choose “Mark as title card”.") }}</p>
+  {% else %}
+  <ul class="ref-list">
+    {% for ref in split_profile.references %}
+    <li>
+      <div class="ref-thumb">
+        <img src="/admin/img/split-reference/{{ ref.id }}.jpg" alt="">
+        {% if ref.region %}<span class="ref-region" style="left:{{ ref.region[0] * 100 }}%;top:{{ ref.region[1] * 100 }}%;width:{{ ref.region[2] * 100 }}%;height:{{ ref.region[3] * 100 }}%"></span>{% endif %}
+      </div>
+      <form method="post" action="/admin/split-references/{{ ref.id }}/delete" class="inline">
+        <button class="btn small danger" type="submit">{{ _("Remove") }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/admin/shows/{{ show.id }}/split-profile" class="stack">
+    <label>{{ _("Match threshold") }}
+      <input type="number" name="threshold" min="0" max="32" step="1" value="{{ split_form.threshold }}" required inputmode="numeric">
+    </label>
+    <p class="muted">{{ _("How different a frame may be from the title card and still count as a match. Lower is stricter.") }}</p>
+    <label>{{ _("Episode length (optional)") }}
+      <input type="text" name="length_hint" value="{{ split_form.length_hint }}" placeholder="{{ _("minutes, or mm:ss") | forceescape }}" inputmode="text">
+    </label>
+    <p class="muted">{{ _("A typical episode. Matches that are much too close together are dropped, and the search looks again where a whole episode seems to be missing.") }}</p>
+    <label>{{ _("Snap window (seconds)") }}
+      <input type="number" name="snap_window" min="0" max="120" step="any" value="{{ split_form.snap_window }}" required inputmode="decimal">
+    </label>
+    <p class="muted">{{ _("A cut moves back to a black frame or scene change at most this many seconds before the title card.") }}</p>
+    <label class="check">
+      <input type="checkbox" name="ocr" value="1" {% if split_form.ocr %}checked{% endif %}>
+      {{ _("Read the episode title from the title card") }}
+    </label>
+    <details {% if split_form.ocr_region | select | list %}open{% endif %}>
+      <summary>{{ _("Where the title is (optional)") }}</summary>
+      <p class="muted">{{ _("Left, top, width and height as a percentage of the frame. Leave empty to read the marked region.") }}</p>
+      <div class="row">
+        {% for key, label in (("x", _("Left")), ("y", _("Top")), ("w", _("Width")), ("h", _("Height"))) %}
+        <label>{{ label }}
+          <input type="number" name="ocr_{{ key }}" min="0" max="100" step="any" value="{{ split_form.ocr_region[loop.index0] }}" inputmode="decimal" style="width:6rem">
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+    <label class="check">
+      <input type="checkbox" name="auto_detect" value="1" {% if split_form.auto_detect %}checked{% endif %}>
+      {{ _("Find episodes in new long videos automatically; they stay hidden until you approve them") }}
+    </label>
+    <div><button class="btn small" type="submit">{{ _("Save") }}</button></div>
+  </form>
+</div>
+
 <div class="card">
   <h2>{{ _("Artwork") }}</h2>
   <div class="row">

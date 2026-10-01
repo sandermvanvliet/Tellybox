@@ -92,6 +92,7 @@ class Hit:
     end_s: float  # last matching frame
     distance: int  # best (lowest) Hamming distance in the run
     reference: int = 0  # index into Profile.references
+    rescanned: bool = False  # found by the ES-5 re-scan (looser threshold), so less certain
 
 
 @dataclass(frozen=True)
@@ -133,5 +134,53 @@ def reference_hash(image: bytes, region: Region | None) -> str:
 
 
 def detect(video: Path, profile: Profile, *, on_progress: Progress | None = None) -> list[Cut]:
-    """ES-4..ES-6, ES-9: the proposed cuts in ``video``, in time order. Implemented in slice A."""
-    raise NotImplementedError
+    """ES-4..ES-6, ES-9: the proposed cuts in ``video``, in time order.
+
+    Sampling is 80 % of the progress, snapping and reading titles the rest.
+    """
+    from tellybox import images, media_format
+    from tellybox.detect import hint, match, ocr, sample, snap
+
+    refs = list(profile.references)
+    if not refs:
+        return []
+    threshold = profile.match_threshold
+    duration = media_format.probe(video).duration_s or 0.0
+
+    def sampling(p: float) -> None:
+        if on_progress:
+            on_progress(0.8 * p)
+
+    found = match.hits(sample.frames(video, on_progress=sampling), refs, threshold)
+
+    def rescan(start_s: float, end_s: float) -> list[Hit]:
+        return match.hits(sample.frames(video, fps=5.0, start_s=start_s, end_s=end_s), refs,
+                          threshold + RESCAN_LOOSER)
+
+    hits = [h for h in hint.apply(found, duration, profile.length_hint_s, rescan) if h.start_s > 1.0]
+    cuts: list[Cut] = []
+    for n, h in enumerate(hits):
+        # Never snap back past the previous title card (short episodes, long window).
+        window = min(profile.snap_window_s, h.start_s - hits[n - 1].end_s) if n else profile.snap_window_s
+        at_s, kind = snap.snap(video, h.start_s, max(0.0, window))
+        confidence = max(0.0, 1 - h.distance / (threshold + RESCAN_LOOSER + 1))
+        if h.rescanned:
+            confidence /= 2
+        title = ""
+        if profile.ocr and ocr.available():
+            region = profile.ocr_region or refs[h.reference].region
+            try:
+                import cv2
+
+                jpeg = images.grab_frame(video, h.start_s + 0.5)
+                gray = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+                title = ocr.read_title(gray, region) if gray is not None else ""
+            except images.ImageError:
+                title = ""
+        cuts.append(Cut(at_s=at_s, title_hit_s=h.start_s, confidence=round(confidence, 3), snapped=kind,
+                        title=title, extra={"distance": h.distance, "rescanned": h.rescanned}))
+        if on_progress:
+            on_progress(0.8 + 0.2 * (n + 1) / len(hits))
+    if on_progress:
+        on_progress(1.0)
+    return cuts

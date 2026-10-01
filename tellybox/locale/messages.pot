@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 09:51+0200\n"
+"POT-Creation-Date: 2026-10-01 11:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -136,8 +136,8 @@ msgstr ""
 msgid "Add a cut, or leave out a part, before approving."
 msgstr ""
 
-#: tellybox/splitting.py:167 tellybox/web/admin/split_pages.py:126
-#: tellybox/web/admin/split_pages.py:131
+#: tellybox/splitting.py:167 tellybox/web/admin/split_pages.py:143
+#: tellybox/web/admin/split_pages.py:148
 msgid "The plan is malformed."
 msgstr ""
 
@@ -288,30 +288,30 @@ msgstr ""
 msgid "Tick at least one video to add."
 msgstr ""
 
-#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:77
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:92
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:78
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:93
 #: tellybox/web/admin/templates/history.html:40
 #, python-format
 msgid "%(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:80
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:95
 msgid "KB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:81
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:96
 msgid "MB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:82
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:97
 msgid "GB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:79
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:94
 #, python-format
 msgid "%(size)s B"
 msgstr ""
@@ -442,7 +442,7 @@ msgstr ""
 #: tellybox/web/admin/templates/_labels.html:12
 #: tellybox/web/admin/templates/_labels.html:24
 #: tellybox/web/admin/templates/_labels.html:29
-#: tellybox/web/admin/templates/split.html:27
+#: tellybox/web/admin/templates/split.html:37
 msgid "failed"
 msgstr ""
 
@@ -602,7 +602,7 @@ msgid "Remove cut"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:57
-#: tellybox/web/admin/templates/library.html:90
+#: tellybox/web/admin/templates/library.html:92
 msgid "Title"
 msgstr ""
 
@@ -644,11 +644,67 @@ msgstr ""
 msgid "Replace your cuts with the video's chapters?"
 msgstr ""
 
+#: tellybox/web/admin/js_strings.py:77
+msgid "sure"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:78
+msgid "check"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:79
+msgid "unsure"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:80
+msgid "black"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:81
+msgid "scene change"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:82
+msgid "at the title card"
+msgstr ""
+
 #: tellybox/web/admin/js_strings.py:83
-msgid "TB"
+msgid "Saving the title card…"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:84
+msgid "Saving the title card failed."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:85
+msgid "Title card saved."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:86
+msgid "Replace your cuts with the detected ones?"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:87
+msgid "Finding cuts…"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:88
+msgid "Finding cuts failed."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:89
+msgid "No title cards found in this video."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:90
+msgid "Finding cuts finished without a new result. The Jobs page may say why."
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:98
+msgid "TB"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:103
 #: tellybox/web/admin/templates/add.html:116
 #, python-format
 msgid "Add %(num)d video"
@@ -656,7 +712,7 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:89
+#: tellybox/web/admin/js_strings.py:104
 #: tellybox/web/admin/templates/dashboard.html:99
 #, python-format
 msgid "%(num)d failed job"
@@ -664,143 +720,171 @@ msgid_plural "%(num)d failed jobs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:90
+#: tellybox/web/admin/js_strings.py:105
 #, python-format
 msgid "Cutting takes up to about %(num)d minute"
 msgid_plural "Cutting takes up to about %(num)d minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/library_pages.py:95
-#: tellybox/web/admin/templates/add.html:73
-#: tellybox/web/admin/templates/library.html:119
-msgid "Playlist"
+#: tellybox/web/admin/js_strings.py:106
+#, python-format
+msgid "Found %(num)d cut. Check each one before approving."
+msgid_plural "Found %(num)d cuts. Check each one before approving."
+msgstr[0] ""
+msgstr[1] ""
+
+#: tellybox/web/admin/library_pages.py:81
+#: tellybox/web/admin/library_pages.py:82
+msgid "The match threshold must be a whole number from 0 to 32."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:160
-#: tellybox/web/admin/library_pages.py:210
-msgid "Show name must not be empty."
+#: tellybox/web/admin/library_pages.py:83
+#: tellybox/web/admin/library_pages.py:84
+msgid "The episode length must be between 0:30 and 4 hours, as minutes (11) or mm:ss (11:30)."
+msgstr ""
+
+#: tellybox/web/admin/library_pages.py:85
+#: tellybox/web/admin/library_pages.py:86
+msgid "The snap window must be from 0 to 120 seconds."
+msgstr ""
+
+#: tellybox/web/admin/library_pages.py:87
+msgid "The text region needs four percentages (left, top, width, height) that fit inside the frame."
 msgstr ""
 
 #: tellybox/web/admin/library_pages.py:162
+#: tellybox/web/admin/templates/add.html:73
+#: tellybox/web/admin/templates/library.html:121
+msgid "Playlist"
+msgstr ""
+
+#: tellybox/web/admin/library_pages.py:230
+#: tellybox/web/admin/library_pages.py:280
+msgid "Show name must not be empty."
+msgstr ""
+
+#: tellybox/web/admin/library_pages.py:232
 msgid "Show created."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:169
+#: tellybox/web/admin/library_pages.py:239
 msgid "Confirm the merge first."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:173
+#: tellybox/web/admin/library_pages.py:243
 msgid "Cannot merge a show into itself."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:176
+#: tellybox/web/admin/library_pages.py:246
 msgid "Shows merged."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:184
+#: tellybox/web/admin/library_pages.py:254
+#: tellybox/web/admin/split_pages.py:238
 msgid "Published to the kid app."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:195
+#: tellybox/web/admin/library_pages.py:265
 msgid "Nothing in that playlist is ready yet."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:196
+#: tellybox/web/admin/library_pages.py:266
 #, python-format
 msgid "Published %(num)d video to the kid app."
 msgid_plural "Published %(num)d videos to the kid app."
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/library_pages.py:214
-#: tellybox/web/admin/library_pages.py:307
+#: tellybox/web/admin/library_pages.py:284
+#: tellybox/web/admin/library_pages.py:396
 msgid "Renamed."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:222
-#: tellybox/web/admin/library_pages.py:240
+#: tellybox/web/admin/library_pages.py:292
+#: tellybox/web/admin/library_pages.py:310
+#: tellybox/web/admin/library_pages.py:329
 #: tellybox/web/admin/profiles_page.py:97
 msgid "Saved."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:248
-#: tellybox/web/admin/library_pages.py:313
+#: tellybox/web/admin/library_pages.py:337
+#: tellybox/web/admin/library_pages.py:402
 msgid "Hidden."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:248
-#: tellybox/web/admin/library_pages.py:313
+#: tellybox/web/admin/library_pages.py:337
+#: tellybox/web/admin/library_pages.py:402
 msgid "Unhidden."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:256
+#: tellybox/web/admin/library_pages.py:345
 msgid "Type the show's name exactly to delete it."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:259
+#: tellybox/web/admin/library_pages.py:348
 msgid "Show deleted."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:273
-#: tellybox/web/admin/library_pages.py:295
+#: tellybox/web/admin/library_pages.py:362
+#: tellybox/web/admin/library_pages.py:384
 msgid "Artwork updated."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:283
+#: tellybox/web/admin/library_pages.py:372
 msgid "Pick an episode of this show."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:287
+#: tellybox/web/admin/library_pages.py:376
 msgid "That episode's video file is missing."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:305
+#: tellybox/web/admin/library_pages.py:394
 msgid "Episode title must not be empty."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:321
+#: tellybox/web/admin/library_pages.py:410
 msgid "Unknown target show."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:323
+#: tellybox/web/admin/library_pages.py:412
 msgid "Episode moved."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:337
+#: tellybox/web/admin/library_pages.py:426
 msgid "Type \"delete\" to confirm."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:340
+#: tellybox/web/admin/library_pages.py:429
 msgid "Episode deleted."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:384
+#: tellybox/web/admin/library_pages.py:473
 msgid "This episode has no downloaded video to download again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:389
+#: tellybox/web/admin/library_pages.py:478
 msgid "This video is split into episodes, so it can't be downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:391
+#: tellybox/web/admin/library_pages.py:480
 msgid "This video is already being checked or downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:393
+#: tellybox/web/admin/library_pages.py:482
 msgid "This video can't be downloaded again right now."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:394
+#: tellybox/web/admin/library_pages.py:483
 msgid "Queued: the video will be downloaded again."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:421
-#: tellybox/web/admin/library_pages.py:436
+#: tellybox/web/admin/library_pages.py:510
+#: tellybox/web/admin/library_pages.py:525
 msgid "Thumbnail updated."
 msgstr ""
 
-#: tellybox/web/admin/library_pages.py:428
+#: tellybox/web/admin/library_pages.py:517
 msgid "This episode's video file is missing."
 msgstr ""
 
@@ -922,24 +1006,37 @@ msgstr ""
 msgid "Chromecast selected."
 msgstr ""
 
-#: tellybox/web/admin/split_pages.py:136 tellybox/web/admin/split_pages.py:161
-#: tellybox/web/admin/split_pages.py:176
+#: tellybox/web/admin/split_pages.py:153 tellybox/web/admin/split_pages.py:209
+#: tellybox/web/admin/split_pages.py:256 tellybox/web/admin/split_pages.py:271
 msgid "The video is being cut, so the plan can't change now."
 msgstr ""
 
-#: tellybox/web/admin/split_pages.py:139 tellybox/web/admin/split_pages.py:163
+#: tellybox/web/admin/split_pages.py:156 tellybox/web/admin/split_pages.py:186
+#: tellybox/web/admin/split_pages.py:204 tellybox/web/admin/split_pages.py:258
 msgid "The original video isn't available, so it can't be split."
 msgstr ""
 
-#: tellybox/web/admin/split_pages.py:157
+#: tellybox/web/admin/split_pages.py:179 tellybox/web/admin/split_pages.py:193
+msgid "That title card can't be used."
+msgstr ""
+
+#: tellybox/web/admin/split_pages.py:207
+msgid "Mark a title card first."
+msgstr ""
+
+#: tellybox/web/admin/split_pages.py:227
+msgid "Title card removed."
+msgstr ""
+
+#: tellybox/web/admin/split_pages.py:252
 msgid "Save a plan first."
 msgstr ""
 
-#: tellybox/web/admin/split_pages.py:166
+#: tellybox/web/admin/split_pages.py:261
 msgid "Splitting is queued. The parts appear when it's done."
 msgstr ""
 
-#: tellybox/web/admin/split_pages.py:179
+#: tellybox/web/admin/split_pages.py:274
 msgid "Split plan discarded."
 msgstr ""
 
@@ -1057,7 +1154,7 @@ msgid "showing the first %(shown)s of %(total)s videos"
 msgstr ""
 
 #: tellybox/web/admin/templates/add.html:78
-#: tellybox/web/admin/templates/library.html:126
+#: tellybox/web/admin/templates/library.html:128
 #, python-format
 msgid "%(num)d video"
 msgid_plural "%(num)d videos"
@@ -1192,9 +1289,9 @@ msgid "System"
 msgstr ""
 
 #: tellybox/web/admin/templates/episode.html:12
-#: tellybox/web/admin/templates/library.html:41
-#: tellybox/web/admin/templates/show.html:115
-#: tellybox/web/admin/templates/split.html:34
+#: tellybox/web/admin/templates/library.html:43
+#: tellybox/web/admin/templates/show.html:171
+#: tellybox/web/admin/templates/split.html:44
 msgid "Hidden"
 msgstr ""
 
@@ -1208,7 +1305,7 @@ msgid "Split again"
 msgstr ""
 
 #: tellybox/web/admin/templates/episode.html:23
-#: tellybox/web/admin/templates/split.html:15
+#: tellybox/web/admin/templates/split.html:25
 msgid "The original video was deleted after splitting, so it can't be split again."
 msgstr ""
 
@@ -1368,7 +1465,7 @@ msgstr ""
 
 #: tellybox/web/admin/templates/integrations.html:24
 #: tellybox/web/admin/templates/integrations.html:42
-#: tellybox/web/admin/templates/library.html:55
+#: tellybox/web/admin/templates/library.html:57
 #: tellybox/web/admin/templates/profiles.html:22
 #: tellybox/web/admin/templates/profiles.html:61
 msgid "Name"
@@ -1459,7 +1556,7 @@ msgid "Updated"
 msgstr ""
 
 #: tellybox/web/admin/templates/jobs.html:18
-#: tellybox/web/admin/templates/library.html:90
+#: tellybox/web/admin/templates/library.html:92
 msgid "Status"
 msgstr ""
 
@@ -1482,106 +1579,114 @@ msgid_plural "%(num)d parts"
 msgstr[0] ""
 msgstr[1] ""
 
+#: tellybox/web/admin/templates/library.html:17
+msgid "Detected"
+msgstr ""
+
 #: tellybox/web/admin/templates/library.html:18
+msgid "Hidden until approved"
+msgstr ""
+
+#: tellybox/web/admin/templates/library.html:20
 msgid "Open"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:27
+#: tellybox/web/admin/templates/library.html:29
 msgid "Shows"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:28
+#: tellybox/web/admin/templates/library.html:30
 #, python-format
 msgid "Total disk use: %(size)s"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:36
+#: tellybox/web/admin/templates/library.html:38
 #, python-format
 msgid "%(num)d episode"
 msgid_plural "%(num)d episodes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/templates/library.html:37
+#: tellybox/web/admin/templates/library.html:39
 #, python-format
 msgid "%(count)s hidden"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:42
+#: tellybox/web/admin/templates/library.html:44
 msgid "Autoplay"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:42
+#: tellybox/web/admin/templates/library.html:44
 msgid "No autoplay"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:48
+#: tellybox/web/admin/templates/library.html:50
 msgid "No shows yet. Add a video first."
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:53
+#: tellybox/web/admin/templates/library.html:55
 msgid "New show"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:56
+#: tellybox/web/admin/templates/library.html:58
 msgid "Show name"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:58
+#: tellybox/web/admin/templates/library.html:60
 msgid "Create"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:64
+#: tellybox/web/admin/templates/library.html:66
 msgid "Merge shows"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:65
+#: tellybox/web/admin/templates/library.html:67
 #, python-format
 msgid "Every episode and source video of \"%(source)s\" moves to the end of \"%(target)s\", and \"%(source)s\" is deleted. This cannot be undone."
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:65
-#: tellybox/web/admin/templates/library.html:68
+#: tellybox/web/admin/templates/library.html:67
+#: tellybox/web/admin/templates/library.html:70
 msgid "Into"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:65
-#: tellybox/web/admin/templates/library.html:73
-#: tellybox/web/admin/templates/library.html:81
+#: tellybox/web/admin/templates/library.html:67
+#: tellybox/web/admin/templates/library.html:75
+#: tellybox/web/admin/templates/library.html:83
 msgid "From"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:81
+#: tellybox/web/admin/templates/library.html:83
 #, python-format
 msgid "I understand \"%(source)s\" will be deleted after merging"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:83
+#: tellybox/web/admin/templates/library.html:85
 msgid "Merge"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:102
+#: tellybox/web/admin/templates/library.html:104
 msgid "Publish"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:112
+#: tellybox/web/admin/templates/library.html:114
 msgid "Held downloads"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:119
+#: tellybox/web/admin/templates/library.html:121
 #, python-format
 msgid "%(ready)s of %(total)s ready"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:122
+#: tellybox/web/admin/templates/library.html:124
 msgid "Publish all ready"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:133
+#: tellybox/web/admin/templates/library.html:135
 msgid "Single videos"
 msgstr ""
 
-#: tellybox/web/admin/templates/library.html:138
+#: tellybox/web/admin/templates/library.html:140
 msgid "Nothing held."
 msgstr ""
 
@@ -1623,6 +1728,7 @@ msgstr ""
 #: tellybox/web/admin/templates/profiles.html:26
 #: tellybox/web/admin/templates/settings.html:87
 #: tellybox/web/admin/templates/show.html:60
+#: tellybox/web/admin/templates/show.html:117
 msgid "Save"
 msgstr ""
 
@@ -1639,12 +1745,12 @@ msgid "Remove photo"
 msgstr ""
 
 #: tellybox/web/admin/templates/profiles.html:44
-#: tellybox/web/admin/templates/show.html:122
+#: tellybox/web/admin/templates/show.html:178
 msgid "Move up"
 msgstr ""
 
 #: tellybox/web/admin/templates/profiles.html:48
-#: tellybox/web/admin/templates/show.html:126
+#: tellybox/web/admin/templates/show.html:182
 msgid "Move down"
 msgstr ""
 
@@ -1737,7 +1843,7 @@ msgid "Search"
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:12
-#: tellybox/web/admin/templates/show.html:136
+#: tellybox/web/admin/templates/show.html:192
 msgid "Rename"
 msgstr ""
 
@@ -1791,170 +1897,294 @@ msgid "Applies to new downloads and to videos still inside their 7-day re-check.
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:66
-msgid "Artwork"
+msgid "Splitting"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:71
-msgid "Upload"
+#: tellybox/web/admin/templates/show.html:67
+msgid "Tellybox finds where each episode starts in a compilation by recognising the title card. Mark a title card on the split page of a long video."
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:76
-msgid "Frame from"
+#: tellybox/web/admin/templates/show.html:69
+msgid "No title cards marked yet. Open a long video of this show, go to its split page and choose “Mark as title card”."
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:83
-msgid "At"
+#: tellybox/web/admin/templates/show.html:79
+msgid "Remove"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:84
-#: tellybox/web/admin/templates/show.html:162
-msgid "mm:ss or seconds"
+#: tellybox/web/admin/templates/show.html:86
+msgid "Match threshold"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:87
-#: tellybox/web/admin/templates/show.html:165
-msgid "Preview frame"
+#: tellybox/web/admin/templates/show.html:89
+msgid "How different a frame may be from the title card and still count as a match. Lower is stricter."
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:92
-#: tellybox/web/admin/templates/show.html:170
-msgid "Frame preview"
+#: tellybox/web/admin/templates/show.html:90
+msgid "Episode length (optional)"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:91
+msgid "minutes, or mm:ss"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:93
+msgid "A typical episode. Matches that are much too close together are dropped, and the search looks again where a whole episode seems to be missing."
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:94
+msgid "Snap window (seconds)"
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:97
-#: tellybox/web/admin/templates/show.html:174
-msgid "Use this frame"
+msgid "A cut moves back to a black frame or scene change at most this many seconds before the title card."
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:105
-msgid "Episodes"
+#: tellybox/web/admin/templates/show.html:100
+msgid "Read the episode title from the title card"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:107
-msgid "No episodes in this show."
+#: tellybox/web/admin/templates/show.html:103
+msgid "Where the title is (optional)"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:104
+msgid "Left, top, width and height as a percentage of the frame. Leave empty to read the marked region."
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:106
+msgid "Left"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:106
+msgid "Top"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:106
+msgid "Width"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:106
+msgid "Height"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:115
+msgid "Find episodes in new long videos automatically; they stay hidden until you approve them"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:122
+msgid "Artwork"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:127
+msgid "Upload"
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:132
-msgid "Edit episode"
+msgid "Frame from"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:142
-msgid "Unhide"
+#: tellybox/web/admin/templates/show.html:139
+msgid "At"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:142
-msgid "Hide"
+#: tellybox/web/admin/templates/show.html:140
+#: tellybox/web/admin/templates/show.html:218
+msgid "mm:ss or seconds"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:149
-msgid "Move to show"
+#: tellybox/web/admin/templates/show.html:143
+#: tellybox/web/admin/templates/show.html:221
+msgid "Preview frame"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:156
-msgid "Upload thumbnail"
+#: tellybox/web/admin/templates/show.html:148
+#: tellybox/web/admin/templates/show.html:226
+msgid "Frame preview"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:153
+#: tellybox/web/admin/templates/show.html:230
+msgid "Use this frame"
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:161
+msgid "Episodes"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:163
+msgid "No episodes in this show."
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:188
+msgid "Edit episode"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:198
+msgid "Unhide"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:198
+msgid "Hide"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:205
+msgid "Move to show"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:212
+msgid "Upload thumbnail"
+msgstr ""
+
+#: tellybox/web/admin/templates/show.html:217
 msgid "Frame at"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:180
+#: tellybox/web/admin/templates/show.html:236
 #, python-format
 msgid "Type \"%(word)s\" to confirm"
 msgstr ""
 
-#: tellybox/web/admin/templates/show.html:181
+#: tellybox/web/admin/templates/show.html:237
 msgid "Delete episode and its files"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:12
+#: tellybox/web/admin/templates/split.html:14
+msgid "Hidden from the kids until you approve the split"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:15
+msgid "This long video was downloaded for splitting. Approve a split below, or publish it as one video."
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:17
+msgid "Publish as one video"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:22
 msgid "The split editor needs JavaScript."
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:20
+#: tellybox/web/admin/templates/split.html:30
 msgid "Cutting…"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:21
+#: tellybox/web/admin/templates/split.html:31
 msgid "The video is cut into parts in the background. You can leave this page."
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:26
+#: tellybox/web/admin/templates/split.html:36
 msgid "Splitting failed"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:28
+#: tellybox/web/admin/templates/split.html:38
 msgid "The existing episodes are unchanged. Check the plan and approve it again."
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:32
+#: tellybox/web/admin/templates/split.html:42
 #, python-format
 msgid "Split into %(num)d episode"
 msgid_plural "Split into %(num)d episodes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/templates/split.html:36
+#: tellybox/web/admin/templates/split.html:46
 msgid "Change the plan below to split it again."
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:45
+#: tellybox/web/admin/templates/split.html:58
 msgid "−10 s"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:46
+#: tellybox/web/admin/templates/split.html:59
 msgid "−1 s"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:47
+#: tellybox/web/admin/templates/split.html:60
 msgid "Previous frame"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:47
+#: tellybox/web/admin/templates/split.html:60
 msgid "◀ frame"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:49
+#: tellybox/web/admin/templates/split.html:62
 msgid "Next frame"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:49
+#: tellybox/web/admin/templates/split.html:62
 msgid "frame ▶"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:50
+#: tellybox/web/admin/templates/split.html:63
 msgid "+1 s"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:51
+#: tellybox/web/admin/templates/split.html:64
 msgid "+10 s"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:54
+#: tellybox/web/admin/templates/split.html:67
 msgid "Cut here"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:56
+#: tellybox/web/admin/templates/split.html:69
 msgid "Use chapters"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:62
-msgid "Parts"
+#: tellybox/web/admin/templates/split.html:71
+msgid "Mark as title card"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:74
+msgid "Drag over the part of the card that is the same in every episode, such as a logo, or use the whole frame."
 msgstr ""
 
 #: tellybox/web/admin/templates/split.html:76
+msgid "Whole frame"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:77
+msgid "Save title card"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:78
+msgid "Cancel"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:86
+msgid "Title cards"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:88
+msgid "No title cards marked yet. Pause on the title card of an episode and choose “Mark as title card”."
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:90
+msgid "Find cuts"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:91
+msgid "Splitting settings"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:99
+msgid "Parts"
+msgstr ""
+
+#: tellybox/web/admin/templates/split.html:113
 msgid "Delete the original video after cutting (it can't be split again)"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:79
+#: tellybox/web/admin/templates/split.html:116
 msgid "Approve and cut"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:83
+#: tellybox/web/admin/templates/split.html:120
 msgid "Throw away this split plan?"
 msgstr ""
 
-#: tellybox/web/admin/templates/split.html:84
+#: tellybox/web/admin/templates/split.html:121
 msgid "Discard plan"
 msgstr ""
 

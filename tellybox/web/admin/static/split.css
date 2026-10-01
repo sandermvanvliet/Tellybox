@@ -14,6 +14,24 @@
 #split-editor button[data-action="cut"] { background: var(--yolk); border-color: var(--yolk); flex-basis: 8rem; }
 #split-editor :has(> button[data-step]) { display: flex; flex-wrap: wrap; gap: .4rem; }
 
+/* Marking a title card (ES-3): the frozen frame is drawn on a canvas over the player. */
+.split-video-wrap { position: relative; line-height: 0; }
+.split-mark-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; border-radius: var(--radius); }
+.split-mark-canvas[hidden], .split-mark[hidden] { display: none; }
+.split-mark { display: grid; gap: .5rem; }
+.split-mark p { margin: 0; }
+#split-editor button[data-mark] { min-height: 48px; flex: 1 1 8rem; }
+#split-editor button[data-action="mark"], #split-editor button[data-action="detect"] { flex-basis: 8rem; }
+#split-editor .split-steps[inert] { opacity: .45; }
+#split-editor .split-cards .ref-list { margin-bottom: .75rem; }
+#split-editor .split-cards .ref-list li { width: 120px; }
+
+/* What detection found about a cut. */
+.seg-detect { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.seg-detect[hidden] { display: none; }
+.strip-card .card-detect { padding: 0 .25rem .3rem; display: grid; gap: .1rem; justify-items: center; }
+.strip-card .card-detect[hidden] { display: none; }
+
 /* The parts. */
 [data-split-segments] { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
 .seg {

@@ -9,6 +9,16 @@
 <h1>{{ _("Split into episodes") }}</h1>
 <p class="muted">{{ proposal.title }} · {{ proposal.duration_s | duration }}</p>
 
+{% if state.awaiting_split %}
+<div class="card" role="status" data-awaiting>
+  <h2>{{ _("Hidden from the kids until you approve the split") }}</h2>
+  <p class="muted">{{ _("This long video was downloaded for splitting. Approve a split below, or publish it as one video.") }}</p>
+  <form method="post" action="/admin/sources/{{ sid }}/publish-whole" class="inline">
+    <button class="btn" type="submit">{{ _("Publish as one video") }}</button>
+  </form>
+</div>
+{% endif %}
+
 <noscript><p class="flash error">{{ _("The split editor needs JavaScript.") }}</p></noscript>
 
 {% if not proposal.has_file %}
@@ -40,7 +50,10 @@
 {% if proposal.has_file %}
 <section id="split-editor" data-editable="{{ 'true' if proposal.editable else 'false' }}" data-api="/admin/api/splits/{{ sid }}">
   <div class="card split-player">
-    <video data-split-video src="{{ state.video_url }}" preload="metadata" playsinline controls></video>
+    <div class="split-video-wrap">
+      <video data-split-video src="{{ state.video_url }}" preload="metadata" playsinline controls></video>
+      <canvas class="split-mark-canvas" data-mark-canvas hidden></canvas>
+    </div>
     <div class="row split-steps">
       <button class="btn step-btn" type="button" data-step="-10">{{ _("−10 s") }}</button>
       <button class="btn step-btn" type="button" data-step="-1">{{ _("−1 s") }}</button>
@@ -55,8 +68,32 @@
       {% if proposal.chapters | length >= 2 %}
       <button class="btn" type="button" data-action="use-chapters">{{ _("Use chapters") }}</button>
       {% endif %}
+      {% if state.profile %}<button class="btn" type="button" data-action="mark">{{ _("Mark as title card") }}</button>{% endif %}
+    </div>
+    <div class="split-mark" data-mark-bar hidden>
+      <p class="muted">{{ _("Drag over the part of the card that is the same in every episode, such as a logo, or use the whole frame.") }}</p>
+      <div class="row">
+        <button class="btn" type="button" data-mark="whole">{{ _("Whole frame") }}</button>
+        <button class="btn primary" type="button" data-mark="save" disabled>{{ _("Save title card") }}</button>
+        <button class="btn" type="button" data-mark="cancel">{{ _("Cancel") }}</button>
+      </div>
+      <p data-mark-status role="status" aria-live="polite" class="muted"></p>
     </div>
   </div>
+
+  {% if state.profile %}
+  <div class="card split-cards">
+    <h2>{{ _("Title cards") }}</h2>
+    <ul class="ref-list" data-ref-list></ul>
+    <p class="muted" data-ref-empty hidden>{{ _("No title cards marked yet. Pause on the title card of an episode and choose “Mark as title card”.") }}</p>
+    <div class="row">
+      <button class="btn primary" type="button" data-action="detect" hidden>{{ _("Find cuts") }}</button>
+      <a class="btn small" href="/admin/shows/{{ state.show_id }}#splitting">{{ _("Splitting settings") }}</a>
+    </div>
+    <div class="progress" data-detect-progress hidden><span style="width: 0%"></span></div>
+    <p data-detect-status role="status" aria-live="polite" class="muted"></p>
+  </div>
+  {% endif %}
 
   <div class="card split-plan">
     <h2>{{ _("Parts") }}</h2>

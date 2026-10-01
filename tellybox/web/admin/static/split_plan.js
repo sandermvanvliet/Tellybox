@@ -103,3 +103,14 @@ export function problems(plan, duration) {
   else if (plan.length === 1) add("single");
   return found;
 }
+
+// ES-4: what detection said about the cut at time t (an entry of `detected`, {at_s, confidence, snapped, ...},
+// within 0.05 s), or null. Nudging a cut ends the match.
+export function detectedAt(detected, t) {
+  return (detected || []).find((d) => Math.abs(d.at_s - t) <= 0.05) || null;
+}
+
+// "sure", "check" or "unsure" for a confidence (0..1).
+export function confidenceLevel(confidence) {
+  return confidence >= 0.75 ? "sure" : confidence >= 0.4 ? "check" : "unsure";
+}

@@ -13,7 +13,9 @@
       {% for item in splits %}
       <tr>
         <td>{% if item.episode_id %}<img class="thumb small" src="/admin/img/episode/{{ item.episode_id }}.jpg" alt="">{% endif %}</td>
-        <td>{{ item.title }}<br><span class="muted">{{ ngettext("%(num)d part", "%(num)d parts", item.parts) }}</span></td>
+        <td>{{ item.title }}<br><span class="muted">{{ ngettext("%(num)d part", "%(num)d parts", item.parts) }}</span>
+          {% if item.origin == "detected" %}<span class="badge">{{ _("Detected") }}</span>{% endif %}
+          {% if item.awaiting_split %}<span class="badge warn">{{ _("Hidden until approved") }}</span>{% endif %}</td>
         <td>{{ labels.split_status(item.status) }}</td>
         <td><a class="btn small" href="/admin/sources/{{ item.source_video_id }}/split">{{ _("Open") }}</a></td>
       </tr>

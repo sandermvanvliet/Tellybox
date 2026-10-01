@@ -14,7 +14,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 
 from tellybox import ingest, jobs, library, sponsorblock
-from tellybox.i18n import _, ngettext
+from tellybox.i18n import N_, _, ngettext
 from tellybox.images import MAX_UPLOAD_BYTES, ImageError, clean_upload, grab_frame, save_episode_thumbnail, save_show_artwork
 from tellybox.jobs import JobType
 from tellybox.web.admin.common import AdminContext, render, see_other
@@ -53,6 +53,73 @@ def _parse_time(raw: str | None) -> float | None:
     except ValueError:
         return None
     return secs if secs >= 0 else None
+
+
+def _hint_text(seconds: float | None) -> str:
+    """The length hint as the form shows it: minutes, or mm:ss when it isn't a whole number of minutes."""
+    if seconds is None:
+        return ""
+    whole, secs = divmod(round(seconds), 60)
+    return str(whole) if secs == 0 else f"{whole}:{secs:02d}"
+
+
+def _num_text(value: float) -> str:
+    return f"{value:g}"
+
+
+def _profile_form(profile: library.SplitProfile) -> dict:
+    """The splitting form's fields as text: the saved profile, or what was submitted."""
+    region = profile.ocr_region or [None] * 4
+    return {
+        "threshold": str(profile.match_threshold), "length_hint": _hint_text(profile.length_hint_s),
+        "snap_window": _num_text(profile.snap_window_s), "ocr": profile.ocr, "auto_detect": profile.auto_detect,
+        "ocr_region": ["" if v is None else _num_text(round(v * 100, 2)) for v in region],
+    }
+
+
+PROFILE_FIELDS = {
+    "threshold": N_("The match threshold must be a whole number from 0 to 32."),
+    "match_threshold": N_("The match threshold must be a whole number from 0 to 32."),
+    "length_hint": N_("The episode length must be between 0:30 and 4 hours, as minutes (11) or mm:ss (11:30)."),
+    "length_hint_s": N_("The episode length must be between 0:30 and 4 hours, as minutes (11) or mm:ss (11:30)."),
+    "snap_window": N_("The snap window must be from 0 to 120 seconds."),
+    "snap_window_s": N_("The snap window must be from 0 to 120 seconds."),
+    "region": N_("The text region needs four percentages (left, top, width, height) that fit inside the frame."),
+}
+
+
+def _profile_error(error: ValueError) -> str:
+    key = "region" if str(error).startswith("region") else str(error)
+    return _(PROFILE_FIELDS.get(key, N_("Check the splitting settings.")))
+
+
+def _parse_profile_form(raw: dict) -> dict:
+    """Form text to save_split_profile arguments; ValueError carries the field name."""
+    try:
+        threshold = int(raw["threshold"])
+    except ValueError:
+        raise ValueError("threshold") from None
+    hint: float | None = None
+    if raw["length_hint"]:
+        text = raw["length_hint"]
+        hint = _parse_time(text)  # mm:ss
+        if hint is not None and ":" not in text:
+            hint *= 60  # a plain number is minutes
+        if hint is None:
+            raise ValueError("length_hint")
+    try:
+        snap = float(raw["snap_window"])
+    except ValueError:
+        raise ValueError("snap_window") from None
+    region_text = raw["ocr_region"]
+    region: list[float] | None = None
+    if any(region_text):
+        try:
+            region = [round(float(v) / 100, 4) for v in region_text]
+        except ValueError:
+            raise ValueError("region") from None
+    return {"match_threshold": threshold, "length_hint_s": hint, "snap_window_s": snap, "ocr": raw["ocr"],
+            "ocr_region": region, "auto_detect": raw["auto_detect"]}
 
 
 def _episode_image_candidates(conn, episode_id: int) -> list[str] | None:
@@ -126,6 +193,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
             "sb_mode": "default" if show.sponsorblock_categories is None else "choose" if own_sb else "off",
             "sb_global": global_sb, "sb_checked": own_sb or global_sb, **extra,
         }
+        profile = library.get_split_profile(conn, show_id)
+        context["split_profile"] = profile
+        context.setdefault("split_form", _profile_form(profile))
         q = request.query_params if request is not None else {}
         episode_ids = {e.id for e in episodes}
         art_secs, art_ep = _parse_time(q.get("art_t")), q.get("art_ep")
@@ -238,6 +308,25 @@ def create_router(ctx: AdminContext) -> APIRouter:
         except KeyError:
             raise HTTPException(404) from None
         return see_other(f"/admin/shows/{show_id}", flash=_("Saved."))
+
+    @router.post("/admin/shows/{show_id}/split-profile")
+    async def set_split_profile_route(request: Request, show_id: int) -> Response:  # ES-5, ES-6, ES-9, ES-10
+        form = await request.form()
+        raw = {
+            "threshold": str(form.get("threshold", "")).strip(), "length_hint": str(form.get("length_hint", "")).strip(),
+            "snap_window": str(form.get("snap_window", "")).strip(), "ocr": bool(form.get("ocr")),
+            "auto_detect": bool(form.get("auto_detect")),
+            "ocr_region": [str(form.get(f"ocr_{k}", "")).strip() for k in "xywh"],
+        }
+        try:
+            values = _parse_profile_form(raw)
+            library.save_split_profile(conn, show_id, now=ctx.clock.now(), **values)
+        except KeyError:
+            raise HTTPException(404) from None
+        except ValueError as e:
+            return render(request, "show.html", 422, error=_profile_error(e),
+                          **show_or_404(request, show_id, split_form=raw))
+        return see_other(f"/admin/shows/{show_id}#splitting", flash=_("Saved."))
 
     @router.post("/admin/shows/{show_id}/hidden")
     def set_show_hidden_route(show_id: int, hidden: bool = Form(...)) -> Response:

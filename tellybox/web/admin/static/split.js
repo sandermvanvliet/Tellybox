@@ -6,6 +6,7 @@
 // can't be used, since there is no plan to save.
 
 import { t, tn } from "./i18n.js";
+import * as M from "./split_mark.js";
 import * as P from "./split_plan.js";
 
 const SAVE_DELAY_MS = 800;
@@ -71,6 +72,16 @@ function init() {
   const estimate = document.querySelector("[data-split-estimate]");
   const cutButton = q('[data-action="cut"]');
   const chaptersButton = q('[data-action="use-chapters"]');
+  const markButton = q('[data-action="mark"]');
+  const detectButton = q('[data-action="detect"]');
+  const markBar = q("[data-mark-bar]");
+  const markStatus = q("[data-mark-status]");
+  const canvas = q("[data-mark-canvas]");
+  const stepsRow = q(".split-steps");
+  const refList = q("[data-ref-list]");
+  const refEmpty = q("[data-ref-empty]");
+  const detectBar = q("[data-detect-progress]");
+  const detectStatus = q("[data-detect-status]");
   const api = root.dataset.api || `/admin/api/splits/${state.source_id}`;
   if (!video || !listEl || !stripEl) {
     // No editor on this page (the original video is gone): only follow a running split job.
@@ -88,6 +99,9 @@ function init() {
   let chain = Promise.resolve();
   let saveError = null;
   let current = -1;
+  let detected = state.detected || []; // ES-4: what detection said about each cut, by time
+  let marking = null; // ES-3: {at, region, drag} while a title card is being marked
+  let detecting = false;
 
   // Frame numbers: a displayed frame k covers [k/fps, (k+1)/fps), and we seek a little inside it.
   const frameOf = (time) => Math.floor(time * fps + 1e-3);
@@ -165,6 +179,7 @@ function init() {
     if (plan.length > 1 && !confirm(t("Replace your cuts with the video's chapters?"))) return;
     plan = P.fromChapters(state.chapters, duration);
     origin = "chapters";
+    detected = [];
     dirty = true;
     render();
     scheduleSave();
@@ -247,6 +262,7 @@ function init() {
     renderList();
     renderStrip();
     renderApprove();
+    renderRefs();
     markCurrent();
   }
 
@@ -270,6 +286,7 @@ function init() {
       const cut = row.querySelector(".seg-cut");
       if (cut) {
         row.querySelector(".seg-cut-time").textContent = t("Cut at %(time)s", { time: fmtTime(s.start_s) });
+        fillDetect(row.querySelector(".seg-detect"), P.detectedAt(detected, s.start_s));
         cut.querySelectorAll("button[data-nudge], button[data-remove]").forEach((b) => (b.disabled = readOnly));
       }
     });
@@ -324,6 +341,7 @@ function init() {
           "span",
           { class: "seg-cut" },
           el("span", { class: "seg-cut-time muted" }),
+          el("span", { class: "seg-detect", hidden: "" }),
           nudgeButton(-1, "−1 s"),
           nudgeButton(-0.1, "−0.1 s"),
           nudgeButton(0.1, "+0.1 s"),
@@ -358,6 +376,7 @@ function init() {
       card.querySelector(".card-time").textContent = fmtTime(s.start_s);
       card.setAttribute("aria-label", t("Go to part %(n)d at %(time)s", { n: i + 1, time: fmtTime(s.start_s) }));
       card.querySelector(".card-n").textContent = String(i + 1);
+      fillDetect(card.querySelector(".card-detect"), i > 0 ? P.detectedAt(detected, s.start_s) : null);
       const img = card.querySelector("img");
       if (Number(card.dataset.t) !== s.start_s) {
         card.dataset.t = s.start_s;
@@ -375,6 +394,7 @@ function init() {
       img,
       el("span", { class: "card-n" }),
       el("span", { class: "card-time" }),
+      el("span", { class: "card-detect", hidden: "" }),
     );
     card.dataset.t = s.start_s;
     return card;
@@ -400,16 +420,264 @@ function init() {
     if (chaptersButton) chaptersButton.disabled = readOnly;
   }
 
+  // ---- detection results (ES-4) ----
+
+  const BADGE = { sure: "badge ok", check: "badge warn", unsure: "badge bad" };
+
+  // The confidence badge and how the cut was snapped, for a cut detection found (else hidden).
+  function fillDetect(node, d) {
+    node.replaceChildren();
+    node.hidden = !d;
+    if (!d) return;
+    const level = P.confidenceLevel(d.confidence);
+    const label = level === "sure" ? t("sure") : level === "check" ? t("check") : t("unsure");
+    const snapped = d.snapped === "black" ? t("black") : d.snapped === "scene" ? t("scene change") : t("at the title card");
+    node.append(el("span", { class: BADGE[level], text: label }), el("span", { class: "muted", text: snapped }));
+  }
+
+  // ---- title cards (ES-3) ----
+
+  function setMarkStatus(text, kind = "") {
+    if (!markStatus) return;
+    markStatus.textContent = text;
+    markStatus.className = `muted ${kind}`.trim();
+  }
+
+  function setDetectStatus(text, kind = "") {
+    if (!detectStatus) return;
+    detectStatus.textContent = text;
+    detectStatus.className = `muted ${kind}`.trim();
+  }
+
+  function renderRefs() {
+    const profile = state.profile;
+    if (!profile || !refList) return;
+    refList.replaceChildren(
+      ...profile.references.map((ref) => {
+        const thumb = el("div", { class: "ref-thumb" }, el("img", { src: ref.image_url, alt: "" }));
+        if (ref.region) {
+          const [x, y, w, h] = ref.region.map((v) => `${v * 100}%`);
+          thumb.append(el("span", { class: "ref-region", style: `left:${x};top:${y};width:${w};height:${h}` }));
+        }
+        return el("li", {}, thumb);
+      }),
+    );
+    if (refEmpty) refEmpty.hidden = profile.references.length > 0;
+    if (detectButton) {
+      detectButton.hidden = !profile.usable;
+      detectButton.disabled = readOnly || detecting;
+    }
+  }
+
+  const pointOf = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
+  function drawMark() {
+    if (!marking) return;
+    const w = video.clientWidth;
+    const h = video.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    const box = M.contentBox(w, h, video.videoWidth, video.videoHeight);
+    const ctx = canvas.getContext("2d");
+    if (!box || !ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(video, box.x, box.y, box.w, box.h);
+    let region = marking.region; // undefined: nothing chosen yet; null: the whole frame
+    if (marking.drag) region = M.dragRegion(box, marking.drag.from, marking.drag.to) ?? undefined;
+    if (region === undefined) return;
+    const r = M.regionRect(box, region);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.beginPath();
+    ctx.rect(box.x, box.y, box.w, box.h);
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.fill("evenodd");
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#F5C518";
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+  }
+
+  function markChanged() {
+    const save = markBar.querySelector('[data-mark="save"]');
+    if (save) save.disabled = !marking || marking.region === undefined;
+    drawMark();
+  }
+
+  async function startMark() {
+    if (marking || !video.videoWidth) return;
+    video.pause();
+    if (video.seeking) await new Promise((resolve) => video.addEventListener("seeked", resolve, { once: true }));
+    marking = { at: video.currentTime, region: undefined, drag: null };
+    canvas.hidden = false;
+    markBar.hidden = false;
+    if (stepsRow) stepsRow.inert = true;
+    markButton.disabled = true;
+    setMarkStatus("");
+    markChanged();
+  }
+
+  function endMark() {
+    marking = null;
+    canvas.hidden = true;
+    markBar.hidden = true;
+    if (stepsRow) stepsRow.inert = false;
+    markButton.disabled = false;
+  }
+
+  async function saveMark() {
+    if (!marking || marking.region === undefined) return;
+    setMarkStatus(t("Saving the title card…"));
+    try {
+      const res = await fetch(`${api}/reference`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ at_s: marking.at, region: marking.region }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMarkStatus(body.error || t("Saving the title card failed."), "error");
+        return;
+      }
+      state.profile = body;
+      endMark();
+      renderRefs();
+      setDetectStatus(t("Title card saved."), "ok");
+    } catch {
+      setMarkStatus(t("Saving the title card failed."), "error");
+    }
+  }
+
+  // ---- finding the cuts (ES-4) ----
+
+  async function findCuts() {
+    if (readOnly || detecting) return;
+    if (plan.length > 1 && origin !== "detected" && !confirm(t("Replace your cuts with the detected ones?"))) return;
+    await flush();
+    if (saveError) {
+      setStatus(saveError, "error");
+      return;
+    }
+    setDetectStatus("");
+    try {
+      const res = await fetch(`${api}/detect`, { method: "POST", headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        setDetectStatus((await res.json().catch(() => ({}))).error || t("Finding cuts failed."), "error");
+        return;
+      }
+    } catch {
+      setDetectStatus(t("Finding cuts failed."), "error");
+      return;
+    }
+    watchDetect(state.updated_at ?? null);
+  }
+
+  // Polls the state until the detect job is gone, then takes over the proposal it saved. `base` is the
+  // proposal's updated_at before the job: a detected proposal with another stamp is the job's result.
+  async function watchDetect(base) {
+    detecting = true;
+    renderRefs();
+    if (detectBar) detectBar.hidden = false;
+    setDetectStatus(t("Finding cuts…"));
+    for (;;) {
+      let next = null;
+      try {
+        const res = await fetch(api, { headers: { Accept: "application/json" } });
+        if (res.ok) next = await res.json();
+      } catch {
+        // the web service is restarting; try again
+      }
+      if (next && !next.detect_job) {
+        finishDetect(next, base);
+        return;
+      }
+      const bar = detectBar && detectBar.querySelector("span");
+      if (next && bar) bar.style.width = `${Math.round((next.detect_job.progress ?? 0) * 100)}%`;
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+    }
+  }
+
+  function finishDetect(next, base) {
+    detecting = false;
+    if (detectBar) detectBar.hidden = true;
+    if (next.origin === "detected" && next.updated_at !== base) {
+      state = next;
+      plan = next.segments.map((s) => ({ start_s: P.ms(s.start_s), end_s: P.ms(s.end_s), title: s.title || "", keep: s.keep !== false }));
+      origin = "detected";
+      detected = next.detected || [];
+      dirty = false;
+      clearTimeout(saveTimer);
+      render();
+      setStatus("");
+      const n = plan.length - 1;
+      setDetectStatus(
+        n > 0
+          ? tn("Found %(num)d cut. Check each one before approving.", "Found %(num)d cuts. Check each one before approving.", n)
+          : t("No title cards found in this video."),
+        "ok",
+      );
+    } else {
+      state.profile = next.profile;
+      renderRefs();
+      setDetectStatus(t("Finding cuts finished without a new result. The Jobs page may say why."), "error");
+    }
+  }
+
   // ---- wiring ----
 
   root.querySelectorAll("[data-step]").forEach((button) => button.addEventListener("click", () => step(button.dataset.step)));
   if (cutButton) cutButton.addEventListener("click", cutHere);
   if (chaptersButton) chaptersButton.addEventListener("click", useChapters);
+  if (markButton && markBar && canvas) {
+    markButton.addEventListener("click", startMark);
+    markBar.querySelector('[data-mark="whole"]').addEventListener("click", () => {
+      if (!marking) return;
+      marking.region = null;
+      markChanged();
+    });
+    markBar.querySelector('[data-mark="save"]').addEventListener("click", saveMark);
+    markBar.querySelector('[data-mark="cancel"]').addEventListener("click", endMark);
+    canvas.addEventListener("pointerdown", (event) => {
+      if (!marking) return;
+      canvas.setPointerCapture(event.pointerId);
+      const at = pointOf(event);
+      marking.drag = { from: at, to: at };
+      drawMark();
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (!marking?.drag) return;
+      marking.drag.to = pointOf(event);
+      drawMark();
+    });
+    canvas.addEventListener("pointerup", (event) => {
+      if (!marking?.drag) return;
+      marking.drag.to = pointOf(event);
+      const box = M.contentBox(video.clientWidth, video.clientHeight, video.videoWidth, video.videoHeight);
+      const region = M.dragRegion(box, marking.drag.from, marking.drag.to);
+      if (region) marking.region = region;
+      marking.drag = null;
+      markChanged();
+    });
+    canvas.addEventListener("pointercancel", () => {
+      if (marking) marking.drag = null;
+      drawMark();
+    });
+    window.addEventListener("resize", drawMark);
+  }
+  if (detectButton) detectButton.addEventListener("click", findCuts);
   for (const type of ["timeupdate", "seeking", "seeked", "loadedmetadata"]) video.addEventListener(type, showTime);
   video.addEventListener("play", () => requestAnimationFrame(tick));
 
   document.addEventListener("keydown", (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (marking) {
+      if (event.key === "Escape") endMark();
+      return;
+    }
     const target = event.target;
     if (target.closest?.("input, textarea, select, [contenteditable]")) return;
     const big = event.shiftKey ? 10 : 1;
@@ -469,6 +737,7 @@ function init() {
 
   render();
   showTime();
+  if (state.detect_job) watchDetect(state.updated_at ?? null);
   if (readOnly && ["approved", "cutting"].includes(state.status)) poll();
 }
 

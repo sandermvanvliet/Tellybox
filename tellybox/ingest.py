@@ -32,6 +32,8 @@ TMP_DIR = ".tmp"
 SHOWS_DIR = "shows"
 FILE_MODE = 0o644  # published files must be readable by the web service, whatever user it runs as
 DEFER_PLAYING = timedelta(minutes=20)  # a redownload waits this long while its episode is on the TV (SB-3)
+AUTO_DETECT_FACTOR = 1.5  # ES-10: a new video longer than this many episode lengths is a compilation
+AUTO_DETECT_NO_HINT_S = 20 * 60  # ES-10: without a length hint, longer than this
 
 
 class AlreadyAdded(Exception):
@@ -54,15 +56,17 @@ class SourceVideo:
     status: str
     show_id: int | None
     file_path: str | None
+    awaiting_split: bool = False  # ES-10, A-22
 
 
 def get_source_video(conn: sqlite3.Connection, source_id: int) -> SourceVideo | None:
     row = conn.execute(
-        """SELECT id, youtube_id, url, title, channel_id, channel_name, duration_s, publish, status, show_id, file_path
+        """SELECT id, youtube_id, url, title, channel_id, channel_name, duration_s, publish, status, show_id, file_path,
+                  awaiting_split
            FROM source_video WHERE id = ?""",
         (source_id,),
     ).fetchone()
-    return SourceVideo(**dict(row)) if row else None
+    return SourceVideo(**{**dict(row), "awaiting_split": bool(row["awaiting_split"])}) if row else None
 
 
 def _sb_columns(fetched: Fetched, now: datetime) -> tuple[str | None, str, float, str, str | None]:
@@ -275,6 +279,19 @@ class Fetched:
     sb_status: str  # cut | none | unreachable | off | admin_off
 
 
+def _usable_cuts(cuts: list, duration_s: float) -> list:
+    """Drop cuts that would leave a kept part shorter than MIN_KEPT_S; that part merges into the previous one."""
+    kept: list = []
+    prev = 0.0
+    for cut in cuts:
+        if cut.at_s - prev >= splitting.MIN_KEPT_S:
+            kept.append(cut)
+            prev = cut.at_s
+    while kept and duration_s - kept[-1].at_s < splitting.MIN_KEPT_S:
+        kept.pop()
+    return kept
+
+
 @dataclass
 class JobRunner:
     """Runs claimed jobs; used by the worker service.
@@ -313,7 +330,7 @@ class JobRunner:
         elif job.type == JobType.SPLIT:
             self._run_split(job)
         elif job.type == JobType.DETECT:
-            jobs.fail(self.conn, job.id, "title-card detection arrives in v6", now=self.clock.now(), retryable=False)
+            self._run_detect(job)
         elif job.type == JobType.UPDATE_YTDLP:
             self._run_update(job)
         else:  # pragma: no cover - guarded by the schema
@@ -413,6 +430,8 @@ class JobRunner:
                 self.conn, source.channel_name or info.channel_name or source.title, now=now,
                 youtube_channel_id=source.channel_id,
             )
+            # ES-10, A-22: a long video of a show set to auto-detect stays hidden until its split is decided.
+            awaiting = self._is_compilation(show_id, duration_s or source.duration_s)
             rel_dir = Path(SHOWS_DIR) / str(show_id)
             (self.media_dir / rel_dir).mkdir(parents=True, exist_ok=True)
             rel_video = rel_dir / f"{source.youtube_id}.mp4"
@@ -429,19 +448,19 @@ class JobRunner:
             episode_id = library.add_episode(
                 self.conn, show_id, source.title, str(rel_video), now=now,
                 duration_s=duration_s or source.duration_s, source_video_id=source.id,
-                thumbnail_path=str(rel_thumb) if rel_thumb else None, hidden=source.publish == "hold",
+                thumbnail_path=str(rel_thumb) if rel_thumb else None, hidden=source.publish == "hold" or awaiting,
             )
             self.conn.execute(
                 """UPDATE source_video SET file_path = ?, thumbnail_path = ?, show_id = ?, duration_s = COALESCE(?, duration_s),
                      channel_id = COALESCE(channel_id, ?), channel_name = COALESCE(channel_name, ?),
                      chapters_json = COALESCE(?, chapters_json),
                      sb_categories = ?, sb_segments_json = ?, sb_removed_s = ?, sb_status = ?, sb_checked_at = ?,
-                     sb_recheck_until = ?,
+                     sb_recheck_until = ?, awaiting_split = ?,
                      status = 'ready', error = NULL, updated_at = ? WHERE id = ?""",
                 (str(rel_video), str(rel_thumb) if rel_thumb else None, show_id, duration_s,
                  source.channel_id, source.channel_name or info.channel_name, chapters,
                  *_sb_columns(fetched, now),
-                 to_db(now + timedelta(days=sponsorblock.RECHECK_DAYS)), to_db(now), source.id),
+                 to_db(now + timedelta(days=sponsorblock.RECHECK_DAYS)), int(awaiting), to_db(now), source.id),
             )
             jobs.complete(self.conn, job.id, now=now)
             self.conn.execute("COMMIT")
@@ -451,7 +470,20 @@ class JobRunner:
                 path.unlink(missing_ok=True)
             raise
         log.info("job %d: published episode %d in show %d%s", job.id, episode_id, show_id,
-                 " (held)" if source.publish == "hold" else "")
+                 " (held)" if source.publish == "hold" else " (awaiting its split)" if awaiting else "")
+        if awaiting:
+            try:
+                library.request_detect(self.conn, source.id, now=self.clock.now())
+            except (LookupError, library.SplitLocked, library.SourceGone) as exc:
+                log.info("job %d: no detection queued for source video %d: %r", job.id, source.id, exc)
+
+    def _is_compilation(self, show_id: int, duration_s: float | None) -> bool:
+        """ES-10: the show wants auto-detection and the video is longer than 1.5 episodes (20 min without a hint)."""
+        profile = library.get_split_profile(self.conn, show_id)
+        if not (profile.usable and profile.auto_detect and duration_s):
+            return False
+        limit = AUTO_DETECT_FACTOR * profile.length_hint_s if profile.length_hint_s else AUTO_DETECT_NO_HINT_S
+        return duration_s > limit
 
     # ------------------------------------------------------------ SponsorBlock re-check and redownload (SB-3)
 
@@ -691,7 +723,8 @@ class JobRunner:
         titles = splitting.kept_titles(proposal.segments, source.title)
         delete_source = proposal.delete_source
         show_id = old[0].show_id if old else source.show_id
-        hidden = source.publish == "hold" or (bool(old) and all(e.hidden for e in old))
+        # A-22: the old episode of an awaiting compilation was hidden only for this review, so the parts show.
+        hidden = source.publish == "hold" or (bool(old) and all(e.hidden for e in old) and not source.awaiting_split)
         rel_dir = Path(SHOWS_DIR) / str(show_id)
         written: list[Path] = []
         self.conn.execute("BEGIN IMMEDIATE")
@@ -728,6 +761,8 @@ class JobRunner:
             if delete_source:
                 self.conn.execute("UPDATE source_video SET file_path = NULL, updated_at = ? WHERE id = ?",
                                   (to_db(now), source.id))
+            self.conn.execute("UPDATE source_video SET awaiting_split = 0, updated_at = ? WHERE id = ?",
+                              (to_db(now), source.id))
             library.mark_split(self.conn, source.id, "done", now=now)
             jobs.complete(self.conn, job.id, now=now)
             self.conn.execute("COMMIT")
@@ -742,6 +777,64 @@ class JobRunner:
         library._remove_unreferenced(self.conn, self.media_dir, candidates)
         log.info("job %d: split source video %d into %d episodes%s", job.id, source.id, len(kept),
                  " (hidden)" if hidden else "")
+
+    # ------------------------------------------------------------ title-card detection (ES-4..ES-9)
+
+    def _run_detect(self, job: Job) -> None:
+        """ES-4: find the show's title cards in the source and save the cuts as a proposal to review (ES-7).
+
+        It only reads the file, so it doesn't wait for playback, and it never cuts or approves anything.
+        """
+        from tellybox import detect  # OpenCV is only needed by the worker
+
+        now = self.clock.now()
+
+        def fail(error: str, *, retryable: bool = False) -> None:
+            jobs.fail(self.conn, job.id, error, now=self.clock.now(), retryable=retryable)
+            log.warning("job %d detect failed: %s", job.id, error)
+
+        source = get_source_video(self.conn, job.target_id) if job.target_id is not None else None
+        if source is None:
+            return fail("source video no longer exists")
+        path = self.media_dir / source.file_path if source.file_path else None
+        if source.status != "ready" or path is None or not path.is_file():
+            return fail("the source video file is gone")
+        show_id = library.split_show_id(self.conn, source.id)
+        stored = library.get_split_profile(self.conn, show_id) if show_id is not None else None
+        if stored is None or not stored.usable:
+            return fail("no title card marked for this show")
+        profile = detect.Profile(
+            references=[detect.Reference(r.card_hash, detect.Region(*r.region) if r.region else None)
+                        for r in stored.references],
+            match_threshold=stored.match_threshold, length_hint_s=stored.length_hint_s,
+            snap_window_s=stored.snap_window_s, ocr=stored.ocr,
+            ocr_region=detect.Region(*stored.ocr_region) if stored.ocr_region else None,
+        )
+        try:
+            cuts = detect.detect(path, profile, on_progress=self._progress(job.id))
+            proposal = library.get_split(self.conn, source.id)
+            if proposal is None or not proposal.has_file:
+                return fail("the source video file is gone")
+            kept = _usable_cuts(sorted(cuts, key=lambda c: c.at_s), proposal.duration_s)
+            segments = splitting.segments_from_cuts(
+                proposal.duration_s, [c.at_s for c in kept], ["", *(c.title for c in kept)])
+            detected = [{"at_s": c.at_s, "title_hit_s": c.title_hit_s, "confidence": c.confidence,
+                         "snapped": c.snapped, "title": c.title} for c in kept]
+            library.save_detected_split(self.conn, source.id, segments, detected, now=self.clock.now())
+            jobs.complete(self.conn, job.id, now=self.clock.now())
+            log.info("job %d: detected %d cuts in source video %d", job.id, len(kept), source.id)
+        except library.SplitLocked:  # approved meanwhile: the admin's plan wins
+            jobs.complete(self.conn, job.id, now=self.clock.now())
+            log.info("job %d: detection result dropped, source video %d is being split", job.id, source.id)
+        except library.SourceGone:
+            fail("the source video file is gone")
+        except splitting.SplitInvalid as exc:
+            fail(str(exc))
+        except MediaError as exc:
+            fail(f"media: {exc}", retryable=True)
+        except Exception as exc:
+            log.exception("job %d failed", job.id)
+            fail(f"{type(exc).__name__}: {exc}", retryable=True)
 
     # ------------------------------------------------------------ yt-dlp update (CI-5)
 

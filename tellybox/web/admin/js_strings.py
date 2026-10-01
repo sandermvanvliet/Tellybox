@@ -73,6 +73,21 @@ STRINGS: list[str] = [
     N_("Each part must be at least %(n)d seconds long."),
     N_("Keep at least one part."),
     N_("Add a cut, or leave out a part, before approving."),
+    # split.js: title cards and detected cuts (v6)
+    N_("sure"),
+    N_("check"),
+    N_("unsure"),
+    N_("black"),
+    N_("scene change"),
+    N_("at the title card"),
+    N_("Saving the title card…"),
+    N_("Saving the title card failed."),
+    N_("Title card saved."),
+    N_("Replace your cuts with the detected ones?"),
+    N_("Finding cuts…"),
+    N_("Finding cuts failed."),
+    N_("No title cards found in this video."),
+    N_("Finding cuts finished without a new result. The Jobs page may say why."),
     # formatting, the twins of the minutes and bytes filters (common.py)
     N_("%(hours)s h %(minutes)s min"),
     N_("%(minutes)s min"),
@@ -88,6 +103,7 @@ PLURALS: list[tuple[str, str]] = [
     Nn_("Add %(num)d video", "Add %(num)d videos"),  # add.js
     Nn_("%(num)d failed job", "%(num)d failed jobs"),  # dashboard.js
     Nn_("Cutting takes up to about %(num)d minute", "Cutting takes up to about %(num)d minutes"),  # split.js
+    Nn_("Found %(num)d cut. Check each one before approving.", "Found %(num)d cuts. Check each one before approving."),  # split.js
 ]
 
 

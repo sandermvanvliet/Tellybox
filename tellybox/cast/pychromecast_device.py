@@ -50,7 +50,13 @@ class CastCommandError(Exception):
 
 
 class ReceiverUnavailable(CastCommandError):
-    """The Tellybox receiver could not be launched; the caller falls back to the Default Media Receiver (CR-6)."""
+    """The Tellybox receiver could not be launched; the caller falls back to the Default Media Receiver (CR-6).
+    `refused` means the device rejected the app outright (an unregistered app id fails at once, spike S8),
+    so another attempt is pointless; a timeout or any other error is not a refusal."""
+
+    def __init__(self, message: str, *, refused: bool = False) -> None:
+        super().__init__(message)
+        self.refused = refused
 
 
 async def discover(timeout: float = 8.0, known_hosts: list[str] | None = None) -> list[DeviceInfo]:
@@ -270,10 +276,18 @@ class PyChromecastDevice:
             log.warning("cast command %s failed: %r", name, exc)
             raise CastCommandError(f"{name}: {exc!r}") from exc
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+    async def play(
+        self,
+        url: str,
+        *,
+        title: str | None = None,
+        start_s: float = 0.0,
+        app_id: str | None = None,
+        launch_timeout_s: float = RECEIVER_LAUNCH_TIMEOUT_S,
+    ) -> None:
         def run(c: Any) -> None:
             if app_id is not None:
-                self._launch_receiver(c, app_id)
+                self._launch_receiver(c, app_id, launch_timeout_s)
             elif c.app_id not in (None, DEFAULT_MEDIA_RECEIVER) and c.media_controller.is_active:
                 # The media controller loads into any running app that speaks the media namespace (e.g. the
                 # Tellybox receiver after its app id was cleared); our media belongs in the DMR (PB-2, WT-9).
@@ -285,12 +299,13 @@ class PyChromecastDevice:
 
         await self._run("play", run)
 
-    def _launch_receiver(self, cast: Any, app_id: str) -> None:  # worker thread
+    def _launch_receiver(self, cast: Any, app_id: str, timeout_s: float = RECEIVER_LAUNCH_TIMEOUT_S) -> None:  # worker thread
         """Start the Tellybox receiver unless it runs, and wait until it takes media (CR-1, CR-6).
         The media controller would launch the Default Media Receiver over a receiver that hasn't registered
         the media namespace yet, so 'running' means the app id matches *and* the namespace is there.
         On the 1st gen a cold launch takes ~3 s, and an unregistered app id fails at once with RequestFailed
-        (docs/spike-receiver.md, S1 and S8)."""
+        (docs/spike-receiver.md, S1 and S8). A launch error of CANCELLED (seen at rollout, until a reboot) and a
+        RequestFailed are refusals: the device won't take the app, and a retry can't help."""
 
         def ready() -> bool:
             return cast.app_id == app_id and cast.media_controller.is_active
@@ -300,20 +315,27 @@ class PyChromecastDevice:
         listener = self._listener
         assert listener is not None
         listener.launching, listener.launch_error = True, None
-        deadline = time.monotonic() + RECEIVER_LAUNCH_TIMEOUT_S
+        deadline = time.monotonic() + timeout_s
         try:
-            cast.start_app(app_id, timeout=RECEIVER_LAUNCH_TIMEOUT_S)
+            cast.start_app(app_id, timeout=timeout_s)
             while not ready():
                 if listener.launch_error:
-                    raise ReceiverUnavailable(f"launch failed: {listener.launch_error}")
+                    raise ReceiverUnavailable(
+                        f"launch failed: {listener.launch_error}", refused=listener.launch_error == "CANCELLED"
+                    )
                 if time.monotonic() >= deadline:
                     raise ReceiverUnavailable("launch timed out")
                 time.sleep(0.05)
         except NotConnected:
             raise
+        except ReceiverUnavailable:
+            raise
         except PyChromecastError as exc:
             reason = listener.launch_error
-            raise ReceiverUnavailable(f"launch failed: {reason}" if reason else f"launch failed: {exc!r}") from exc
+            raise ReceiverUnavailable(
+                f"launch failed: {reason}" if reason else f"launch failed: {exc!r}",
+                refused=isinstance(exc, RequestFailed) or reason == "CANCELLED",
+            ) from exc
         finally:
             listener.launching = False
 
@@ -335,6 +357,15 @@ class PyChromecastDevice:
 
     async def request_status(self) -> None:
         await self._run("request_status", lambda c: c.media_controller.update_status())
+
+    async def quit_app(self) -> None:
+        def run(c: Any) -> None:
+            try:
+                c.quit_app()
+            except RequestFailed as exc:  # nothing to quit
+                log.info("quit_app refused: %r", exc)
+
+        await self._run("quit_app", run)
 
     async def stop(self) -> None:
         def run(c: Any) -> None:

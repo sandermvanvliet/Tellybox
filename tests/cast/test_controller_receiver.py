@@ -28,10 +28,12 @@ from test_controller import (  # noqa: F401  (fixtures)
     pump,
     run_for,
     sessions,
+    used_s,
 )
 
 TB = "ABCD1234"
 BASE = "http://tv.test:8080"
+QUIET = {"failures_24h": 0, "launches_24h": 0, "last_failure": None, "refused": False}  # CR-6: nothing went wrong
 
 
 def enable(conn, app_id=TB):
@@ -57,7 +59,8 @@ async def test_without_app_id_nothing_changes(conn, clock, fake, episodes):  # C
     await pump(ctrl, fake)
     assert fake.play_app_ids == [None] and fake.sent_messages == []
     assert not any(c[0] in ("receiver_message", "stop_media") for c in fake.calls)
-    assert ctrl.state()["receiver"] == {"kind": "default", "configured": False, "fallback_until": None, "last_error": None}
+    assert ctrl.state()["receiver"] == {"kind": "default", "configured": False, "fallback_until": None, "last_error": None,
+                                        **QUIET}
 
 
 async def test_empty_app_id_is_not_configured(conn, clock, fake, episodes):
@@ -85,7 +88,8 @@ async def test_pick_plays_on_our_receiver_and_counts_time(conn, clock, fake, epi
     await play(ctrl, fake, episodes[0])
     assert fake.play_app_ids == [TB]
     assert ctrl.current.cast_session_id == "tellybox-1"
-    assert ctrl.state()["receiver"] == {"kind": "tellybox", "configured": True, "fallback_until": None, "last_error": None}
+    assert ctrl.state()["receiver"] == {"kind": "tellybox", "configured": True, "fallback_until": None, "last_error": None,
+                                        **QUIET, "launches_24h": 1}
     await run_for(ctrl, fake, clock, 60)
     ctrl.persist(clock.now())
     assert ctrl.current is not None and ctrl.state()["now_playing"]["state"] == "playing"
@@ -141,54 +145,311 @@ async def test_restart_reattaches_on_our_receiver(conn, clock, fake, episodes): 
 # --------------------------------------------------------------------------- fallback (CR-6)
 
 
+def events(conn, *kinds):
+    rows = conn.execute("SELECT * FROM receiver_event ORDER BY id").fetchall()
+    return [r for r in rows if not kinds or r["kind"] in kinds]
+
+
+def fallback_in(ctrl, clock):
+    return None if ctrl.fallback_until is None else (ctrl.fallback_until - clock.now()).total_seconds()
+
+
 async def test_launch_failure_plays_the_same_pick_on_the_default_receiver(conn, clock, fake, episodes):  # CR-6
     enable(conn)
     fake.fail_launch = True
     ctrl = await make_controller(conn, clock, fake)
     await play(ctrl, fake, episodes[0])
-    assert fake.play_app_ids == [TB, None]
-    assert len(play_calls(fake)) == 2 and play_calls(fake)[0][1] == play_calls(fake)[1][1]
+    assert fake.play_app_ids == [TB, TB, None]  # two attempts, then the Default Media Receiver
+    assert len(play_calls(fake)) == 3 and play_calls(fake)[0][1] == play_calls(fake)[2][1]
     assert ctrl.current is not None and ctrl.current.cast_session_id == "dmr-1"
     receiver = ctrl.state()["receiver"]
     assert receiver["kind"] == "default" and receiver["configured"] is True
-    assert receiver["fallback_until"] == "2026-09-28T14:30:00.000+00:00"
+    assert receiver["fallback_until"] is None  # the first failed pick: the next one tries again
     assert "launch timed out" in receiver["last_error"]
+    assert receiver["failures_24h"] == 2 and receiver["refused"] is False
+    assert receiver["last_failure"]["kind"] == "launch_failed" and "attempt 2" in receiver["last_failure"]["detail"]
+    assert [e["kind"] for e in events(conn)] == ["launch_failed", "launch_failed", "fallback"]
     await run_for(ctrl, fake, clock, 60)
     assert ctrl.current is not None and fake.sent_messages == []  # nothing is sent to the Default Media Receiver
 
 
-async def test_fallback_lasts_thirty_minutes_then_we_try_again(conn, clock, fake, episodes):  # CR-6
+async def test_slow_first_launch_is_retried_on_our_receiver(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    fake.launch_durations = [20.0]  # the first attempt (8 s) times out; the second (15 s) finds it fast
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    assert fake.play_app_ids == [TB, TB] and fake.launch_timeouts == [8.0, 15.0]
+    assert ("quit_app",) in fake.calls  # the half-started app was cleared first
+    await run_for(ctrl, fake, clock, 10)
+    assert ctrl.current is not None and ctrl.current.cast_session_id == "tellybox-2"  # no stale status took it over
+    assert ctrl.state()["receiver"]["kind"] == "tellybox" and fake.sent_messages
+    failed, ok = events(conn, "launch_failed", "launch_ok")
+    assert failed["kind"] == "launch_failed" and failed["duration_ms"] == 8000 and "attempt 1" in failed["detail"]
+    assert ok["kind"] == "launch_ok" and "attempt 2" in ok["detail"] and ok["episode_id"] == episodes[0]
+    assert not events(conn, "fallback") and ctrl.fallback_until is None and ctrl.receiver_failures == 0
+
+
+async def test_a_refusal_is_not_retried_and_falls_back_for_thirty_minutes(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    fake.refuse_launch = True
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    assert fake.play_app_ids == [TB, None]
+    assert fallback_in(ctrl, clock) == RECEIVER_FALLBACK_S
+    receiver = ctrl.state()["receiver"]
+    assert receiver["kind"] == "default" and receiver["refused"] is True
+    assert receiver["last_failure"]["kind"] == "refused" and receiver["failures_24h"] == 1
+    assert [e["kind"] for e in events(conn)] == ["refused", "fallback"]
+    clock.advance(RECEIVER_FALLBACK_S + 1)
+    assert ctrl.state()["receiver"]["refused"] is False  # the fallback is over
+
+
+async def test_fallback_backs_off_with_each_failed_pick(conn, clock, fake, episodes):  # CR-6
+    configure(conn, allowance_min=1000, max_session_min=1000)  # the clock jumps over hours
+    enable(conn)
+    fake.fail_launch = True
+    ctrl = await make_controller(conn, clock, fake)
+    expected = [None, 300.0, 900.0, 1800.0, 1800.0]  # the 1st failed pick: none; 2nd 5 min; 3rd 15; 4th and later 30
+    for i, delay in enumerate(expected):
+        fake.play_app_ids.clear()
+        await play(ctrl, fake, episodes[i % 3])
+        assert fake.play_app_ids == [TB, TB, None]
+        assert fallback_in(ctrl, clock) == delay and ctrl.receiver_failures == i + 1
+        if delay:
+            clock.advance(delay - 10)  # still inside the window: no attempt at all
+            fake.play_app_ids.clear()
+            await play(ctrl, fake, episodes[(i + 1) % 3])
+            assert fake.play_app_ids == [None]
+            clock.advance(11)
+    assert [e["kind"] for e in events(conn, "fallback")] == ["fallback"] * 5
+
+
+async def test_the_next_pick_after_one_failed_pick_tries_our_receiver_again(conn, clock, fake, episodes):  # CR-6
     enable(conn)
     fake.fail_launch = True
     ctrl = await make_controller(conn, clock, fake)
     await play(ctrl, fake, episodes[0])
-    await run_for(ctrl, fake, clock, 5)
-
-    clock.advance(RECEIVER_FALLBACK_S - 60)
+    fake.fail_launch = False
+    fake.play_app_ids.clear()
     await play(ctrl, fake, episodes[1])
-    assert fake.play_app_ids == [TB, None, None]  # inside the window: no new attempt
-    assert ctrl.state()["receiver"]["kind"] == "default"
+    assert fake.play_app_ids == [TB]  # no waiting period after a single failure
+    await run_for(ctrl, fake, clock, 10)  # DMR was running warm; moving to our app must not look like a take-over
+    assert ctrl.current is not None and ctrl.current.cast_session_id == "tellybox-1"
+    assert ctrl.state()["receiver"]["kind"] == "tellybox" and ctrl.receiver_failures == 0
 
-    clock.advance(61)
+
+async def test_a_success_resets_the_failure_count(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    fake.fail_launch = True
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await play(ctrl, fake, episodes[1])
+    assert ctrl.receiver_failures == 2 and fallback_in(ctrl, clock) == 300.0
+    clock.advance(301)
     fake.fail_launch = False
     await play(ctrl, fake, episodes[2])
-    assert fake.play_app_ids == [TB, None, None, TB]
-    receiver = ctrl.state()["receiver"]
-    assert receiver == {"kind": "tellybox", "configured": True, "fallback_until": None, "last_error": None}
-    await run_for(ctrl, fake, clock, 10)  # DMR was running warm; moving to our app must not look like a take-over
-    assert ctrl.current is not None and ctrl.current.episode.id == episodes[2]
-    assert ctrl.current.cast_session_id == "tellybox-1"
+    assert ctrl.receiver_failures == 0 and ctrl.fallback_until is None
+    fake.fail_launch = True
+    await ctrl.stop()  # the receiver is gone again
+    await pump(ctrl, fake)
+    await play(ctrl, fake, episodes[0])
+    assert ctrl.receiver_failures == 1 and ctrl.fallback_until is None  # back to the first rung of the ladder
+
+
+async def test_the_autoplay_boundary_after_a_one_off_fallback_goes_back_to_our_receiver(conn, clock, fake, episodes):  # CR-6, PB-3
+    enable(conn)
+    fake.fail_launch = True
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    assert fake.play_app_ids == [TB, TB, None]
+    fake.fail_launch = False
+    await run_for(ctrl, fake, clock, EPISODE_S)  # episode 1 ends on the DMR and episode 2 autoplays
+    assert ctrl.current is not None and ctrl.current.episode.id == episodes[1]
+    assert fake.play_app_ids[-1] == TB and ctrl.current.cast_session_id == "tellybox-1"
+    await run_for(ctrl, fake, clock, 10)
+    assert ctrl.current is not None and ctrl.state()["receiver"]["kind"] == "tellybox"
 
 
 async def test_failing_again_after_the_window_restarts_it(conn, clock, fake, episodes):  # CR-6
     enable(conn)
-    fake.fail_launch = True
+    fake.refuse_launch = True
     ctrl = await make_controller(conn, clock, fake)
     await play(ctrl, fake, episodes[0])
     clock.advance(RECEIVER_FALLBACK_S + 1)
     await play(ctrl, fake, episodes[1])
     assert fake.play_app_ids == [TB, None, TB, None]
-    assert ctrl.state()["receiver"]["fallback_until"] is not None
+    assert fallback_in(ctrl, clock) == RECEIVER_FALLBACK_S
+
+
+# --------------------------------------------------------------------------- mid-episode recovery (CR-6, WT-9)
+
+
+async def test_a_vanished_receiver_is_relaunched_at_the_position(conn, clock, fake, episodes):  # CR-6, WT-3
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 60)
+    watch_id = ctrl.current.watch_session_id
+    fake.vanish()  # stopped from a phone's Google Home: the Backdrop, not another app
+    await pump(ctrl, fake)
+    assert ctrl.current is not None  # not ended at once: it may be the step before another app
+    await run_for(ctrl, fake, clock, 5)
+    assert ctrl.current is not None and ctrl.current.watch_session_id == watch_id
+    assert len(play_calls(fake)) == 2 and play_calls(fake)[1][2] == pytest.approx(60, abs=1)
+    assert fake.play_app_ids == [TB, TB] and ctrl.current.cast_session_id == "tellybox-2"
+    assert ctrl.state()["now_playing"]["state"] == "playing"
+    assert [s["end_reason"] for s in sessions(conn)] == [None]  # one session throughout
+    await run_for(ctrl, fake, clock, 60)
+    assert ctrl.current is not None and 118 <= ctrl.state()["now_playing"]["position_s"] <= 128
+    ctrl.persist(clock.now())
+    assert 118 <= used_s(conn) <= 128  # the few seconds the TV showed nothing are not counted
+    lost, recovered = events(conn, "lost", "recovered")
+    assert lost["episode_id"] == episodes[0] and "at 60 s" in lost["detail"]
+    assert recovered["kind"] == "recovered"
+
+
+async def test_a_second_vanish_in_the_same_episode_ends_it(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 30)
+    fake.vanish()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 5)
+    assert len(play_calls(fake)) == 2 and ctrl.current is not None
+    await run_for(ctrl, fake, clock, 20)
+    fake.vanish()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 5)
+    assert ctrl.current is None and len(play_calls(fake)) == 2
+    assert sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    assert len(events(conn, "lost")) == 2 and len(events(conn, "recovered")) == 1
+
+
+async def test_another_app_is_still_a_takeover(conn, clock, fake, episodes):  # WT-9
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.takeover(YOUTUBE_APP)  # a null status, then the YouTube app
+    await pump(ctrl, fake)
+    assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    await run_for(ctrl, fake, clock, 10)
+    assert len(play_calls(fake)) == 1 and not events(conn, "lost", "recovered")
+
+
+async def test_another_app_right_after_the_backdrop_is_still_a_takeover(conn, clock, fake, episodes):  # WT-9
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.vanish()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 1)
+    fake.takeover(YOUTUBE_APP)  # inside the settle time
+    await pump(ctrl, fake)
+    assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    await run_for(ctrl, fake, clock, 10)
+    assert len(play_calls(fake)) == 1 and not events(conn, "lost", "recovered")
+
+
+async def test_no_recovery_when_time_is_up(conn, clock, fake, episodes):  # CR-6, WT-5
+    configure(conn, allowance_min=5)
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 310)  # the allowance is gone: the episode finishes, then stops
+    assert ctrl.current is not None and not ctrl.state()["timer"]["can_start"]
+    fake.vanish()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 5)
+    assert ctrl.current is None and len(play_calls(fake)) == 1
+    assert sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    assert not events(conn, "recovered")
+
+
+async def test_no_recovery_after_our_own_stop(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    await ctrl.stop()  # quits our app: the same Backdrop, but our doing
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 10)
+    assert ctrl.current is None and len(play_calls(fake)) == 1
+    assert sessions(conn)[0]["end_reason"] == EndReason.STOPPED and not events(conn, "lost")
+
+
+async def test_no_recovery_during_the_night_hold(conn, clock, fake, episodes):  # CR-3, CR-6
+    configure(conn, allowance_min=5)
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 310 + EPISODE_S)  # finished into the night screen
+    assert ctrl.current is None and fake.receiver_running
+    await run_for(ctrl, fake, clock, NIGHT_HOLD_S + 5)  # the hold ends and our app quits (the Backdrop)
+    assert ("stop",) in fake.calls and ctrl.current is None
+    assert len(play_calls(fake)) == 1 and not events(conn, "lost", "recovered")
+
+
+async def test_a_power_cycle_is_a_disconnect_not_a_vanish(conn, clock, fake, episodes):  # PB-5, CR-6
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.power_cycle()
+    await pump(ctrl, fake)
+    fake.reconnect()
+    await pump(ctrl, fake)
+    await run_for(ctrl, fake, clock, 10)
+    assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.DISCONNECTED
+    assert len(play_calls(fake)) == 1 and not events(conn, "lost", "recovered")
+
+
+async def test_a_failed_relaunch_ends_the_episode(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.vanish()
+    await pump(ctrl, fake)
+    fake.fail_next_command = True  # the device refuses the load itself
+    await run_for(ctrl, fake, clock, 5)
+    assert ctrl.current is None and sessions(conn)[0]["end_reason"] == EndReason.TAKEN_OVER
+    failed = events(conn, "recover_failed")
+    assert len(failed) == 1 and "injected failure" in failed[0]["detail"]
+
+
+async def test_a_pick_during_the_settle_time_wins(conn, clock, fake, episodes):  # CR-6, A-5
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    await run_for(ctrl, fake, clock, 20)
+    fake.vanish()
+    await pump(ctrl, fake)
+    await play(ctrl, fake, episodes[1])  # a kid picks before the settle time has passed
+    await run_for(ctrl, fake, clock, 10)
+    assert ctrl.current.episode.id == episodes[1] and len(play_calls(fake)) == 2
+    assert not events(conn, "recovered")
+
+
+# --------------------------------------------------------------------------- receiver page reports (CR-6, CR-7)
+
+
+async def test_hello_with_sdk_retries_is_recorded(conn, clock, fake, episodes):  # CR-6
+    enable(conn)
+    ctrl = await make_controller(conn, clock, fake)
+    await play(ctrl, fake, episodes[0])
+    fake.receiver_message({"type": "hello", "v": 1, "ua": "X", "sdk_attempts": 1, "load_ms": 900})
+    fake.receiver_message({"type": "hello", "v": 1, "ua": "X", "sdk_attempts": 3, "load_ms": 7400})
+    fake.receiver_message({"type": "hello", "v": 1, "ua": "old receiver"})  # the protocol without the new fields
+    fake.receiver_message({"type": "log", "v": 1, "level": "info", "msg": "image ok"})
+    fake.receiver_message({"type": "log", "v": 1, "level": "error", "msg": "JS error: boom"})
+    await pump(ctrl, fake)
+    first, second = events(conn, "page_error")
+    assert "3 attempts" in first["detail"] and "7400" in first["detail"]
+    assert second["detail"] == "JS error: boom"
+    assert ctrl.state()["receiver"]["last_failure"]["kind"] == "page_error"
 
 
 # --------------------------------------------------------------------------- state messages (CR-2, CR-7)

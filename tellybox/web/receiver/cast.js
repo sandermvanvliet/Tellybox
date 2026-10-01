@@ -7,6 +7,11 @@
   var NS = "urn:x-cast:tellybox";
   var SDK = "//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js";
   var STATS_EVERY_MS = 60000;
+  var SDK_RETRY_DELAYS = [2000, 4000]; // CR-6: up to 3 attempts to load the SDK
+
+  var pageStart = (window.performance && performance.timing && performance.timing.navigationStart) || Date.now();
+  var sdkAttempts = 1;
+  var loadMs = 0;
 
   var UI = window.TellyboxUI;
   UI.update(); // first paint: the idle sky, until a state arrives
@@ -70,7 +75,8 @@
       if (d && d.type === "state") UI.setState(d);
     });
     ctx.addEventListener(cast.framework.system.EventType.SENDER_CONNECTED, function () {
-      send({ type: "hello", v: 1, ua: navigator.userAgent });
+      // sdk_attempts and load_ms are additions to the protocol (CR-6); older cast services ignore them.
+      send({ type: "hello", v: 1, ua: navigator.userAgent, sdk_attempts: sdkAttempts, load_ms: loadMs });
     });
 
     pm.addEventListener(E.LOAD_START, function () { syncState(true); });
@@ -94,12 +100,14 @@
     opts.disableIdleTimeout = true; // the cast service decides when to quit (night hold)
     opts.customNamespaces = {};
     opts.customNamespaces[NS] = cast.framework.system.MessageType.JSON;
+    loadMs = Date.now() - pageStart;
     ctx.start(opts);
   }
 
-  var s = document.createElement("script");
-  s.src = SDK;
-  s.onload = start;
-  s.onerror = function () { /* no SDK (offline): the idle sky stays; the cast service falls back (CR-6) */ };
-  document.head.appendChild(s);
+  // Each attempt is a fresh <script> (sdkload.js). If all fail (offline) the idle sky stays and the
+  // cast service falls back (CR-6).
+  window.TellyboxSdkLoader.load(document, SDK, { delays: SDK_RETRY_DELAYS }, function (attempts) {
+    sdkAttempts = attempts;
+    start();
+  }, function () { /* no SDK */ });
 })();

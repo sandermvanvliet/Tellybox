@@ -369,6 +369,20 @@ Plan: the step 14 part of `docs/plans/step12-14-splitting.md`. Briefs: `docs/pla
   - a failed detect job leaves an auto-held compilation hidden until "Publish as one video" (by design);
   - no dashboard count for proposals to review (optional, skipped).
 
+### Receiver resilience (CR-6 hardening), built; device checks open
+Plan: `docs/plans/receiver-resilience.md` (approved 2026-10-01). Branch `receiver/resilience`. It follows the 2026-10-01 incident, where the TV sat on the Default Media Receiver from the start of a pick and the reason was lost with the container logs.
+- **Event log:** migration 011 (`receiver_event`), written by the cast service through `store.record_receiver_event` and purged by the worker after 21 days. Kinds: `launch_ok`, `launch_failed`, `refused`, `fallback`, `lost`, `recovered`, `recover_failed`, `page_error`. The cast state's `receiver` block gains `failures_24h`, `launches_24h`, `last_failure` and `refused` (`docs/cast-api.md`).
+- **Retry:** a failed launch quits the half-started app, waits 1 s and tries again with 15 s instead of 8 s. A refusal (an immediate `RequestFailed`, or the launch error `CANCELLED`) isn't retried.
+- **Fallback with backoff:** none after the first failed pick, then 5, 15 and 30 min; a refusal is 30 min at once; any successful launch resets it. The autoplay boundary after a one-off fallback goes back to our receiver.
+- **Mid-episode recovery:** our app vanishing (no app or Backdrop, with no other app within 3 s) relaunches the episode once, at the estimated position, in the same watch session. Another app is still a take-over (WT-9). No recovery when time is up, after our own stop, in the night hold, after a reconnect, or a second time.
+- **Receiver page:** `sdkload.js` retries the Cast SDK up to 3 times (2 s, 4 s); `hello` gains `sdk_attempts` and `load_ms` (additive, `docs/receiver-protocol.md`). The page change goes live with the next Pages publish.
+- **Dashboard:** the TV receiver line shows the last problem with its time, and a hint to restart the Chromecast after a refusal. nl and de.
+- **Tests:** The fake device gained slow and refused launches, a half-started app, `quit_app` and `vanish()`; `CastController` takes an injectable `sleep`.
+- **Device checks (owner):**
+  1. A normal pick still starts on the Tellybox receiver, cold and warm.
+  2. Forced fallback: set a wrong receiver app ID in Settings, pick (Default Media Receiver; the dashboard shows the problem), restore the ID, pick again (back on the Tellybox receiver, no 30-minute wait).
+  3. Mid-episode: stop the receiver app from another phone's Google Home, or reboot it, during an episode. The episode comes back at the same spot.
+
 ### 13. Tellybox receiver (v7), done
 Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09-29; it keeps number 13. Plan: `docs/plans/step13-receiver.md` (all of CR-1..CR-8; the spike tries GitHub Pages hosting first, then the home server under a public DNS name). Subagent briefs: `docs/plans/step13-handoff.md`.
 - Contract: migration 006 (`settings.receiver_app_id`), `docs/receiver-protocol.md`, device protocol stubs, the cast state's `receiver` block, the Pages workflow, and the spike pages and script (`tellybox/web/receiver/spike*.html`, `scripts/receiver_spike.py`).

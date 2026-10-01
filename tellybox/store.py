@@ -7,15 +7,18 @@ the web app reads them.
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from tellybox import sponsorblock
 from tellybox.cast.device import DeviceInfo
 from tellybox.db import from_db, to_db
 from tellybox.timer import CountingMode, DayUsage, ProfilePolicy, TimerSettings
+
+log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- settings
 
@@ -283,3 +286,48 @@ def select_device(conn: sqlite3.Connection, uuid: str) -> None:
     conn.execute("UPDATE cast_device SET selected = 0")
     conn.execute("UPDATE cast_device SET selected = 1 WHERE uuid = ?", (uuid,))
     conn.execute("COMMIT")
+
+
+# --------------------------------------------------------------------------- receiver events (CR-6)
+
+RECEIVER_FAILURE_KINDS = ("launch_failed", "refused", "lost", "recover_failed", "page_error")
+
+
+def record_receiver_event(
+    conn: sqlite3.Connection,
+    now: datetime,
+    kind: str,
+    detail: str | None = None,
+    *,
+    duration_ms: int | None = None,
+    episode_id: int | None = None,
+) -> None:
+    """Log a receiver event. Never raises: a failed write must not break playback."""
+    try:
+        conn.execute(
+            "INSERT INTO receiver_event (at, kind, detail, duration_ms, episode_id) VALUES (?, ?, ?, ?, ?)",
+            (to_db(now), kind, detail, duration_ms, episode_id),
+        )
+    except sqlite3.Error:
+        log.warning("could not record receiver event %s", kind, exc_info=True)
+
+
+def receiver_summary(conn: sqlite3.Connection, now: datetime) -> dict:
+    """The last receiver failure, and the failures and launches of the last 24 h (for the cast state)."""
+    since = to_db(now - timedelta(hours=24))
+    marks = ",".join("?" * len(RECEIVER_FAILURE_KINDS))
+    last = conn.execute(
+        f"SELECT kind, detail, at FROM receiver_event WHERE kind IN ({marks}) ORDER BY at DESC, id DESC LIMIT 1",
+        RECEIVER_FAILURE_KINDS,
+    ).fetchone()
+    failures = conn.execute(
+        f"SELECT COUNT(*) FROM receiver_event WHERE at >= ? AND kind IN ({marks})", (since, *RECEIVER_FAILURE_KINDS)
+    ).fetchone()[0]
+    launches = conn.execute(
+        "SELECT COUNT(*) FROM receiver_event WHERE at >= ? AND kind = 'launch_ok'", (since,)
+    ).fetchone()[0]
+    return {
+        "last_failure": {"kind": last["kind"], "detail": last["detail"], "at": last["at"]} if last else None,
+        "failures_24h": failures,
+        "launches_24h": launches,
+    }

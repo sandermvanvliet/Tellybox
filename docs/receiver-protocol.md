@@ -11,15 +11,21 @@ The receiver makes no network calls of its own apart from loading media and the 
 ## Receiver → cast service
 
 ```jsonc
-{"type": "hello", "v": 1, "ua": "<navigator.userAgent>"}
+{"type": "hello", "v": 1, "ua": "<navigator.userAgent>", "sdk_attempts": 1, "load_ms": 3100}
 // On every sender connect (SENDER_CONNECTED). The cast service answers with a full "state".
+// sdk_attempts and load_ms were added with the receiver resilience work (CR-6) and are optional: a receiver
+// without them is still valid, and a cast service that doesn't know them ignores them.
+//   sdk_attempts: how many tries the page needed to load the Cast SDK (1 to 3, 2 s and 4 s apart).
+//   load_ms: milliseconds from the page's start to ctx.start().
+// The cast service logs both, and records a more-than-one sdk_attempts as a "page_error" event.
 
 {"type": "stats", "v": 1, "dropped": 12, "total": 43200, "state": "PLAYING"}
 // Every 60 s while media is loaded: dropped and total video frames since the page started (CR-8).
 // The cast service logs it.
 
 {"type": "log", "v": 1, "level": "info" | "error", "msg": "..."}
-// Optional diagnostics (image failed, player error). The cast service logs it.
+// Optional diagnostics (image failed, player error). The cast service logs it, and records level "error"
+// as a "page_error" event (CR-6).
 ```
 
 ## Cast service → receiver

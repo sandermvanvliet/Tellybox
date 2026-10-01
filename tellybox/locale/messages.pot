@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 12:56+0200\n"
+"POT-Creation-Date: 2026-10-01 15:50+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,7 +41,7 @@ msgstr ""
 msgid "time was up"
 msgstr ""
 
-#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:69
+#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:76
 msgid "blocked"
 msgstr ""
 
@@ -96,43 +96,43 @@ msgstr ""
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr ""
 
-#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:67
+#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:73
 msgid "The plan has no parts."
 msgstr ""
 
-#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:68
+#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:74
 #, python-format
 msgid "A video can be split into at most %(n)d parts."
 msgstr ""
 
-#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:69
+#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:75
 msgid "The first part must start at the beginning of the video."
 msgstr ""
 
-#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:70
+#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:76
 msgid "The last part must end at the end of the video."
 msgstr ""
 
 #: tellybox/splitting.py:119 tellybox/splitting.py:122
-#: tellybox/web/admin/js_strings.py:71
+#: tellybox/web/admin/js_strings.py:77
 msgid "Parts must follow each other without gaps."
 msgstr ""
 
-#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:72
+#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:78
 #, python-format
 msgid "Titles can be at most %(n)d characters."
 msgstr ""
 
-#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:73
+#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:79
 #, python-format
 msgid "Each part must be at least %(n)d seconds long."
 msgstr ""
 
-#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:74
+#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:80
 msgid "Keep at least one part."
 msgstr ""
 
-#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:75
+#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:81
 msgid "Add a cut, or leave out a part, before approving."
 msgstr ""
 
@@ -288,30 +288,30 @@ msgstr ""
 msgid "Tick at least one video to add."
 msgstr ""
 
-#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:92
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:98
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:93
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:99
 #: tellybox/web/admin/templates/history.html:40
 #, python-format
 msgid "%(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:95
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:101
 msgid "KB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:96
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:102
 msgid "MB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:97
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:103
 msgid "GB"
 msgstr ""
 
-#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:94
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:100
 #, python-format
 msgid "%(size)s B"
 msgstr ""
@@ -324,19 +324,19 @@ msgstr ""
 msgid "extra_minutes is at most 240"
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:153
+#: tellybox/web/admin/dashboard.py:159
 msgid "Cast service unreachable; nothing was stopped."
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:154
+#: tellybox/web/admin/dashboard.py:160
 msgid "Stopped."
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:168
+#: tellybox/web/admin/dashboard.py:174
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr ""
 
-#: tellybox/web/admin/dashboard.py:169
+#: tellybox/web/admin/dashboard.py:175
 msgid "Done."
 msgstr ""
 
@@ -345,8 +345,8 @@ msgid "Added time"
 msgstr ""
 
 #: tellybox/web/admin/history.py:15
-#: tellybox/web/admin/templates/dashboard.html:74
-#: tellybox/web/admin/templates/dashboard.html:87
+#: tellybox/web/admin/templates/dashboard.html:81
+#: tellybox/web/admin/templates/dashboard.html:94
 msgid "Unlimited today"
 msgstr ""
 
@@ -355,8 +355,8 @@ msgid "Block"
 msgstr ""
 
 #: tellybox/web/admin/history.py:17
-#: tellybox/web/admin/templates/dashboard.html:76
-#: tellybox/web/admin/templates/dashboard.html:91
+#: tellybox/web/admin/templates/dashboard.html:83
+#: tellybox/web/admin/templates/dashboard.html:98
 msgid "Stop now"
 msgstr ""
 
@@ -387,17 +387,17 @@ msgstr ""
 msgid "Update yt-dlp"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:44 tellybox/web/admin/js_strings.py:40
+#: tellybox/web/admin/jobs_page.py:44 tellybox/web/admin/js_strings.py:46
 #: tellybox/web/admin/templates/_labels.html:17
 msgid "Check SponsorBlock"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:41
+#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:47
 #: tellybox/web/admin/templates/_labels.html:17
 msgid "Download again"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:42
+#: tellybox/web/admin/jobs_page.py:45 tellybox/web/admin/js_strings.py:48
 #: tellybox/web/admin/templates/_labels.html:18
 #: tellybox/web/admin/templates/episode.html:21
 #: tellybox/web/admin/templates/split.html:2
@@ -405,7 +405,7 @@ msgstr ""
 msgid "Split into episodes"
 msgstr ""
 
-#: tellybox/web/admin/jobs_page.py:46 tellybox/web/admin/js_strings.py:43
+#: tellybox/web/admin/jobs_page.py:46 tellybox/web/admin/js_strings.py:49
 #: tellybox/web/admin/templates/_labels.html:18
 msgid "Find title cards"
 msgstr ""
@@ -478,53 +478,53 @@ msgstr ""
 
 #: tellybox/web/admin/js_strings.py:26
 #: tellybox/web/admin/templates/dashboard.html:14
-#: tellybox/web/admin/templates/dashboard.html:114
+#: tellybox/web/admin/templates/dashboard.html:121
 msgid "unknown"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:27
-#: tellybox/web/admin/templates/dashboard.html:41
+#: tellybox/web/admin/templates/dashboard.html:48
 msgid "Nothing is playing."
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:28
-#: tellybox/web/admin/templates/dashboard.html:39
+#: tellybox/web/admin/templates/dashboard.html:46
 msgid "Stop"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:29
-#: tellybox/web/admin/templates/dashboard.html:36
+#: tellybox/web/admin/templates/dashboard.html:43
 #, python-format
 msgid "Watching: %(names)s"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:30
-#: tellybox/web/admin/templates/dashboard.html:65
+#: tellybox/web/admin/templates/dashboard.html:72
 #: tellybox/web/admin/templates/profiles.html:15
 #, python-format
 msgid "%(time)s used"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:31
-#: tellybox/web/admin/templates/dashboard.html:65
+#: tellybox/web/admin/templates/dashboard.html:72
 #, python-format
 msgid "%(time)s left"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:32
-#: tellybox/web/admin/templates/dashboard.html:116
+#: tellybox/web/admin/templates/dashboard.html:123
 #, python-format
 msgid "Media on disk: %(size)s"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:33
-#: tellybox/web/admin/templates/dashboard.html:116
+#: tellybox/web/admin/templates/dashboard.html:123
 #, python-format
 msgid "Free space: %(size)s"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:34
-#: tellybox/web/admin/templates/dashboard.html:105
+#: tellybox/web/admin/templates/dashboard.html:112
 msgid "Nothing downloading."
 msgstr ""
 
@@ -549,162 +549,193 @@ msgstr ""
 msgid "Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)"
 msgstr ""
 
+#: tellybox/web/admin/js_strings.py:40
+#: tellybox/web/admin/templates/dashboard.html:20
+#, python-format
+msgid "Last problem: %(problem)s at %(time)s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:41
+#: tellybox/web/admin/templates/dashboard.html:21
+msgid "The Tellybox receiver did not start"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:42
+#: tellybox/web/admin/templates/dashboard.html:22
+msgid "The Chromecast refused the Tellybox receiver"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:43
+#: tellybox/web/admin/templates/dashboard.html:23
+msgid "The Tellybox receiver disappeared during an episode"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:44
+#: tellybox/web/admin/templates/dashboard.html:24
+msgid "The Tellybox receiver could not be restarted during an episode"
+msgstr ""
+
 #: tellybox/web/admin/js_strings.py:45
+#: tellybox/web/admin/templates/dashboard.html:25
+msgid "The Tellybox receiver page reported a problem"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:51
 #: tellybox/web/admin/templates/_labels.html:11
 #: tellybox/web/admin/templates/_labels.html:23
 msgid "queued"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:46
+#: tellybox/web/admin/js_strings.py:52
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "downloading"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:47
+#: tellybox/web/admin/js_strings.py:53
 #: tellybox/web/admin/templates/_labels.html:11
 msgid "processing"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:48
+#: tellybox/web/admin/js_strings.py:54
 #: tellybox/web/admin/templates/_labels.html:12
 msgid "ready"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:50
+#: tellybox/web/admin/js_strings.py:56
 #, python-format
 msgid "Part %(n)d"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:51
+#: tellybox/web/admin/js_strings.py:57
 msgid "Keep"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:52
-msgid "Left out"
-msgstr ""
-
-#: tellybox/web/admin/js_strings.py:53
-#, python-format
-msgid "Cut at %(time)s"
-msgstr ""
-
-#: tellybox/web/admin/js_strings.py:54
-msgid "Go to"
-msgstr ""
-
-#: tellybox/web/admin/js_strings.py:55
-#, python-format
-msgid "Go to part %(n)d at %(time)s"
-msgstr ""
-
-#: tellybox/web/admin/js_strings.py:56
-msgid "Remove cut"
-msgstr ""
-
-#: tellybox/web/admin/js_strings.py:57
-#: tellybox/web/admin/templates/library.html:92
-msgid "Title"
-msgstr ""
-
 #: tellybox/web/admin/js_strings.py:58
-msgid "Title (optional)"
+msgid "Left out"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:59
 #, python-format
-msgid "Move the cut back by %(amount)s s"
+msgid "Cut at %(time)s"
 msgstr ""
 
 #: tellybox/web/admin/js_strings.py:60
+msgid "Go to"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:61
+#, python-format
+msgid "Go to part %(n)d at %(time)s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:62
+msgid "Remove cut"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:63
+#: tellybox/web/admin/templates/library.html:92
+msgid "Title"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:64
+msgid "Title (optional)"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:65
+#, python-format
+msgid "Move the cut back by %(amount)s s"
+msgstr ""
+
+#: tellybox/web/admin/js_strings.py:66
 #, python-format
 msgid "Move the cut forward by %(amount)s s"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:61
+#: tellybox/web/admin/js_strings.py:67
 msgid "Saving…"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:62
+#: tellybox/web/admin/js_strings.py:68
 msgid "Saved"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:63
+#: tellybox/web/admin/js_strings.py:69
 msgid "Saving failed. Your changes are not saved yet."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:64
+#: tellybox/web/admin/js_strings.py:70
 msgid "This plan can't be changed any more."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:65
+#: tellybox/web/admin/js_strings.py:71
 msgid "A cut needs at least half a second on both sides."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:66
+#: tellybox/web/admin/js_strings.py:72
 msgid "Replace your cuts with the video's chapters?"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:77
+#: tellybox/web/admin/js_strings.py:83
 msgid "sure"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:78
+#: tellybox/web/admin/js_strings.py:84
 msgid "check"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:79
+#: tellybox/web/admin/js_strings.py:85
 msgid "unsure"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:80
+#: tellybox/web/admin/js_strings.py:86
 msgid "black"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:81
+#: tellybox/web/admin/js_strings.py:87
 msgid "scene change"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:82
+#: tellybox/web/admin/js_strings.py:88
 msgid "at the title card"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:83
+#: tellybox/web/admin/js_strings.py:89
 msgid "Saving the title card…"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:84
+#: tellybox/web/admin/js_strings.py:90
 msgid "Saving the title card failed."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:85
+#: tellybox/web/admin/js_strings.py:91
 msgid "Title card saved."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:86
+#: tellybox/web/admin/js_strings.py:92
 msgid "Replace your cuts with the detected ones?"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:87
+#: tellybox/web/admin/js_strings.py:93
 msgid "Finding cuts…"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:88
+#: tellybox/web/admin/js_strings.py:94
 msgid "Finding cuts failed."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:89
+#: tellybox/web/admin/js_strings.py:95
 msgid "No title cards found in this video."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:90
+#: tellybox/web/admin/js_strings.py:96
 msgid "Finding cuts finished without a new result. The Jobs page may say why."
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:98
+#: tellybox/web/admin/js_strings.py:104
 msgid "TB"
 msgstr ""
 
-#: tellybox/web/admin/js_strings.py:103
+#: tellybox/web/admin/js_strings.py:109
 #: tellybox/web/admin/templates/add.html:116
 #, python-format
 msgid "Add %(num)d video"
@@ -712,22 +743,22 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:104
-#: tellybox/web/admin/templates/dashboard.html:99
+#: tellybox/web/admin/js_strings.py:110
+#: tellybox/web/admin/templates/dashboard.html:106
 #, python-format
 msgid "%(num)d failed job"
 msgid_plural "%(num)d failed jobs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:105
+#: tellybox/web/admin/js_strings.py:111
 #, python-format
 msgid "Cutting takes up to about %(num)d minute"
 msgid_plural "Cutting takes up to about %(num)d minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: tellybox/web/admin/js_strings.py:106
+#: tellybox/web/admin/js_strings.py:112
 #, python-format
 msgid "Found %(num)d cut. Check each one before approving."
 msgid_plural "Found %(num)d cuts. Check each one before approving."
@@ -1226,65 +1257,69 @@ msgstr ""
 msgid "TV receiver"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:21
+#: tellybox/web/admin/templates/dashboard.html:27
+msgid "The Chromecast refuses the Tellybox receiver; restarting the Chromecast usually fixes it."
+msgstr ""
+
+#: tellybox/web/admin/templates/dashboard.html:28
 msgid "Cast service unreachable"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:23
+#: tellybox/web/admin/templates/dashboard.html:30
 msgid "Time's up — finishing this episode"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:25
+#: tellybox/web/admin/templates/dashboard.html:32
 msgid "Time's up"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:62
+#: tellybox/web/admin/templates/dashboard.html:69
 #: tellybox/web/admin/templates/profiles.html:16
 msgid "watching"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:68
+#: tellybox/web/admin/templates/dashboard.html:75
 msgid "unlimited today"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:72
-#: tellybox/web/admin/templates/dashboard.html:73
-#: tellybox/web/admin/templates/dashboard.html:85
-#: tellybox/web/admin/templates/dashboard.html:86
+#: tellybox/web/admin/templates/dashboard.html:79
+#: tellybox/web/admin/templates/dashboard.html:80
+#: tellybox/web/admin/templates/dashboard.html:92
+#: tellybox/web/admin/templates/dashboard.html:93
 #: tellybox/web/admin/templates/history.html:55
 #, python-format
 msgid "+%(minutes)s min"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:74
-#: tellybox/web/admin/templates/dashboard.html:88
+#: tellybox/web/admin/templates/dashboard.html:81
+#: tellybox/web/admin/templates/dashboard.html:95
 msgid "Turn off unlimited"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:75
-#: tellybox/web/admin/templates/dashboard.html:89
+#: tellybox/web/admin/templates/dashboard.html:82
+#: tellybox/web/admin/templates/dashboard.html:96
 msgid "Block today"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:75
-#: tellybox/web/admin/templates/dashboard.html:90
+#: tellybox/web/admin/templates/dashboard.html:82
+#: tellybox/web/admin/templates/dashboard.html:97
 msgid "Unblock"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:83
+#: tellybox/web/admin/templates/dashboard.html:90
 #: tellybox/web/admin/templates/history.html:12
 msgid "Everyone"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:97
+#: tellybox/web/admin/templates/dashboard.html:104
 msgid "Downloads & jobs"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:108
+#: tellybox/web/admin/templates/dashboard.html:115
 msgid "See all jobs"
 msgstr ""
 
-#: tellybox/web/admin/templates/dashboard.html:112
+#: tellybox/web/admin/templates/dashboard.html:119
 msgid "System"
 msgstr ""
 

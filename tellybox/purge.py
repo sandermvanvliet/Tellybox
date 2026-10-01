@@ -1,7 +1,7 @@
 """History and job purge (AD-5): deletes only closed rows well in the past.
 
-Run from the worker's daily slot (tellybox.worker). This only ever deletes
-watch_session rows that already ended, and daily_usage/override_log rows for
+Run from the worker's daily slot (tellybox.worker). The receiver event log (CR-6) goes with the
+history. This only ever deletes watch_session rows that already ended, and daily_usage/override_log rows for
 days long gone; an open session (ended_at IS NULL) and today's rows are never
 touched. Those three tables are otherwise owned by the cast service (CLAUDE.md:
 "only the cast service writes timer, history and position tables"), so this
@@ -45,6 +45,7 @@ def purge(conn: sqlite3.Connection, now: datetime, tz: ZoneInfo, reset_time: tim
             "DELETE FROM job WHERE finished_at IS NOT NULL AND status IN ('ready', 'failed') AND finished_at < ?",
             (job_cutoff,),
         ).rowcount,
+        "receiver_event": conn.execute("DELETE FROM receiver_event WHERE at < ?", (watch_cutoff,)).rowcount,
         "admin_session": auth.purge_expired_sessions(conn, now),
         "login_throttle": conn.execute(
             "DELETE FROM login_throttle WHERE updated_at < ?", (throttle_cutoff,)

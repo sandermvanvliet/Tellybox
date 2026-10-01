@@ -96,12 +96,18 @@ def _receiver_context(ctx: AdminContext, state: dict | None) -> dict | None:
     receiver = (state or {}).get("receiver")
     if not receiver:
         return None
-    result = {"kind": receiver.get("kind"), "until": None, "reason": receiver.get("last_error") or ""}
+    result = {"kind": receiver.get("kind"), "until": None, "reason": receiver.get("last_error") or "",
+              "problem": None, "refused": False}
     until = receiver.get("fallback_until")
     if until:
         deadline = datetime.fromisoformat(until)
         if deadline > ctx.clock.now():  # an expired fallback is only stale state
             result["until"] = deadline.astimezone(ctx.config.tz).strftime("%H:%M")
+            result["refused"] = bool(receiver.get("refused"))
+    last = receiver.get("last_failure")
+    if last and receiver.get("failures_24h"):  # an old problem is no news, and the time shown has no date
+        at = datetime.fromisoformat(last["at"]).astimezone(ctx.config.tz).strftime("%H:%M")
+        result["problem"] = {"kind": last["kind"], "detail": last.get("detail") or "", "time": at}
     return result
 
 

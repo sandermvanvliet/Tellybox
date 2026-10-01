@@ -16,7 +16,7 @@ import asyncio
 import contextlib
 import logging
 import sqlite3
-from collections.abc import Collection
+from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -25,6 +25,8 @@ from zoneinfo import ZoneInfo
 from tellybox import library, media_urls, store
 from tellybox.cast.device import (
     DEFAULT_MEDIA_RECEIVER,
+    RECEIVER_LAUNCH_TIMEOUT_S,
+    RECEIVER_RETRY_LAUNCH_TIMEOUT_S,
     CastDevice,
     ConnectionState,
     ConnectionStatus,
@@ -49,7 +51,11 @@ STATUS_POLL_EVERY_S = 30.0   # drift check; the device sends nothing while playi
 RECOVERY_WAIT_S = 10.0       # NF-7: how long to wait for our media to show up after a restart
 RECONNECT_WAIT_S = 300.0     # PB-5: how long a lost connection may last before the session is ended
 RESUME_TAIL_S = 10.0         # don't resume within the last seconds of an episode
-RECEIVER_FALLBACK_S = 30 * 60.0  # CR-6: after a failed launch, stay on the Default Media Receiver this long
+RECEIVER_FALLBACK_S = 30 * 60.0  # CR-6: the longest stay on the Default Media Receiver (4th failed pick in a row, or a refusal)
+RECEIVER_BACKOFF_S = (None, 5 * 60.0, 15 * 60.0, RECEIVER_FALLBACK_S)  # CR-6: fallback after the 1st, 2nd, 3rd, 4th+ failed pick
+RECEIVER_RETRY_WAIT_S = 1.0  # CR-6: pause before the second launch attempt
+RECEIVER_VANISH_SETTLE_S = 3.0  # CR-6: a receiver that shows no app may be the step before another app (WT-9); wait this long
+BACKDROP_APP = "E8C28D3C"    # the Chromecast's idle screen
 NIGHT_HOLD_S = 600.0         # CR-3: how long the night screen stays on the TV before the app quits
 RECEIVER_PUSH_EVERY_S = 30.0  # CR-7: at least one state message this often while our receiver runs
 FRACTION_STEP = 0.01         # CR-2: send a new state when the sky moves this much
@@ -101,6 +107,11 @@ class Current:
     # IDLE status can arrive carrying our URL (pychromecast keeps the last contentId it saw).
     media_session_id: int | None = None
     replaced_media_session_id: int | None = None
+    # Receiver resilience (CR-6): when our receiver app vanished (no app or Backdrop) and we wait to see
+    # whether it was a takeover; a vanished receiver is relaunched once per episode.
+    vanished_at: datetime | None = None
+    recovered: bool = False
+    on_fallback: bool = False  # this episode plays on the Default Media Receiver because ours failed
 
     def position(self, now: datetime) -> float:
         pos = self.position_s
@@ -121,8 +132,10 @@ class CastController:
         media_base_url: str,
         secret: bytes,
         device: CastDevice | None = None,
+        sleep: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         self.conn = conn
+        self._sleep = sleep or asyncio.sleep  # tests pass one that advances their fake clock
         self.clock = clock
         self.tz = tz
         self.media_base_url = media_base_url
@@ -145,6 +158,11 @@ class CastController:
         self.receiver_app_id = store.receiver_app_id(conn)
         self.fallback_until: datetime | None = None  # CR-6
         self.receiver_error: str | None = None
+        self.receiver_failures = 0  # CR-6: consecutive failed picks; any successful launch resets it
+        self._receiver_refused = False  # the last failure was the device refusing our app
+        self._load_lock = asyncio.Lock()  # one load at a time: a pick and a mid-episode relaunch don't interleave
+        self._launching = False  # a load is in flight: receiver status events are ours to reconcile afterwards
+        self._receiver_summary_cache: tuple[datetime, dict] | None = None
         self._rx_loading: dict | None = None  # CR-4: set from the pick until the episode plays
         self._rx_sent: dict | None = None
         self._rx_sent_at: datetime | None = None
@@ -322,6 +340,7 @@ class CastController:
         self._apply_position_shifts(now)
         self._refresh_profiles(now)
         self._decision = self.timer.tick(now)
+        await self._check_vanished(now)
         await self._apply_decision(self._decision)
         if (
             self.current
@@ -414,15 +433,31 @@ class CastController:
     def _on_receiver(self, event: ReceiverStatus, now: datetime) -> None:
         reconnected, self._reconnected = self._reconnected, False
         c = self.current
-        if c is None or c.stopping:
-            return
+        if c is None or c.stopping or self._launching:
+            return  # while a load is in flight, _load adopts the session it ended up with
         if c.cast_session_id is None:
             if self._is_ours(event.app_id) and event.session_id:
                 self._adopt_cast_session(c, event.session_id)
             return
-        if event.session_id != c.cast_session_id:
-            # Our receiver session is gone: someone cast something else, or the device rebooted (PB-5, WT-9).
-            self._end_current(EndReason.DISCONNECTED if reconnected else EndReason.TAKEN_OVER)
+        if event.session_id == c.cast_session_id:
+            c.vanished_at = None  # our receiver is (back) on screen
+            return
+        latest = self.device.receiver if self.device else None
+        if latest is not None and latest.session_id == c.cast_session_id:
+            return  # a stale status: our session is the receiver's current one
+        # Our receiver session is gone: someone cast something else, or the device rebooted (PB-5, WT-9).
+        if reconnected:
+            self._end_current(EndReason.DISCONNECTED)
+        elif event.app_id in (None, BACKDROP_APP):
+            # No app or the Backdrop: our receiver vanished, or it is the step before another app takes over.
+            if latest is not None and latest.app_id not in (None, BACKDROP_APP):
+                return  # the other app's status follows and decides
+            if c.vanished_at is None:
+                c.vanished_at = now
+                c.position_s, c.position_at, c.player_state = c.position(now), now, PlayerState.UNKNOWN
+                self._decision = self.timer.set_activity(now, Activity.STOPPED)  # nothing plays until it is back
+        else:
+            self._end_current(EndReason.TAKEN_OVER)
 
     async def _on_media(self, event: MediaStatus, now: datetime) -> None:
         if self._recovering:
@@ -466,6 +501,8 @@ class CastController:
             if event.idle_reason == "FINISHED":
                 await self._on_finished(now)
             elif event.idle_reason in ("CANCELLED", "INTERRUPTED"):
+                if self._launching or c.vanished_at is not None:
+                    return  # the receiver going away, or the media a relaunch replaces (CR-6)
                 self._end_current(EndReason.STOPPED)  # stopped from another controller, e.g. a phone
             elif event.idle_reason == "ERROR":
                 self._end_current(EndReason.LOAD_FAILED)
@@ -529,28 +566,143 @@ class CastController:
             duration_s=episode.duration_s,
         )
         self._night_until = None  # a new load ends the night hold (CR-3)
-        app_id = self.receiver_app_id if self.receiver_app_id and not self._fallback_active(now) else None
-        self._rx_loading = self._loading(episode) if app_id else None
-        await self._push_receiver()  # CR-4: the loading screen goes up before the load
         log.info("playing episode %s from %.0f s", episode.id, start_s)
         try:
-            try:
-                self._adopt_warm(self.current, app_id or DEFAULT_MEDIA_RECEIVER)
-                await self.device.play(url, title=episode.title, start_s=start_s, app_id=app_id)
-                if app_id:
-                    self.receiver_error = None
-            except ReceiverUnavailable as exc:  # CR-6: same pick on the Default Media Receiver, at once
-                self.receiver_error = str(exc)
-                self.fallback_until = self.clock.now() + timedelta(seconds=RECEIVER_FALLBACK_S)
-                self._rx_loading = None
-                log.warning("Tellybox receiver unavailable (%s); using the Default Media Receiver until %s",
-                            exc, self.fallback_until)
-                self._adopt_warm(self.current, DEFAULT_MEDIA_RECEIVER)
-                await self.device.play(url, title=episode.title, start_s=start_s, app_id=None)
+            async with self._load_lock:
+                await self._load(self.current, start_s)
         except CastCommandError:
             self._end_current(EndReason.LOAD_FAILED)
             raise
         self._broadcast()
+
+    async def _load(self, c: Current, start_s: float) -> None:
+        """Put `c.url` on the TV from `start_s`: on our receiver when it is configured and not backed off
+        (two attempts, CR-6), else, or when both fail, on the Default Media Receiver."""
+        assert self.device is not None
+        now = self.clock.now()
+        episode = c.episode
+        app_id = self.receiver_app_id if self.receiver_app_id and not self._fallback_active(now) else None
+        self._rx_loading = self._loading(episode) if app_id else None
+        await self._push_receiver()  # CR-4: the loading screen goes up before the load
+        c.on_fallback = False
+        self._launching = True
+        try:
+            if app_id and not await self._launch_ours(c, app_id, start_s):
+                app_id = None
+                c.on_fallback = True
+            if app_id is None:
+                self._adopt_warm(c, DEFAULT_MEDIA_RECEIVER)
+                await self.device.play(c.url, title=episode.title, start_s=start_s, app_id=None)
+        finally:
+            self._launching = False
+        receiver = self.device.receiver  # the statuses that arrived meanwhile were skipped
+        if c.cast_session_id is None and receiver and receiver.session_id and self._is_ours(receiver.app_id):
+            self._adopt_cast_session(c, receiver.session_id)
+
+    async def _launch_ours(self, c: Current, app_id: str, start_s: float) -> bool:
+        """CR-6: load into the Tellybox receiver; one retry (after quitting a half-started app) unless the
+        device refused it. False means both attempts failed and the pick falls back, with the next
+        try after the backoff."""
+        assert self.device is not None
+        warm = self._receiver_running()
+        failure: ReceiverUnavailable | None = None
+        for attempt, timeout_s in enumerate((RECEIVER_LAUNCH_TIMEOUT_S, RECEIVER_RETRY_LAUNCH_TIMEOUT_S), 1):
+            self._adopt_warm(c, app_id)
+            started = self.clock.now()
+            try:
+                await self.device.play(c.url, title=c.episode.title, start_s=start_s, app_id=app_id,
+                                       launch_timeout_s=timeout_s)
+            except ReceiverUnavailable as exc:
+                failure = exc
+                self._record("refused" if exc.refused else "launch_failed", f"attempt {attempt}: {exc}",
+                             duration_ms=self._ms_since(started), episode_id=c.episode.id)
+                if exc.refused or attempt == 2:
+                    break
+                log.warning("Tellybox receiver did not start (%s); trying once more", exc)
+                await self._quit_half_started(app_id)
+                await self._sleep(RECEIVER_RETRY_WAIT_S)
+                continue
+            self._record("launch_ok", f"attempt {attempt}" + (", warm" if warm else ""),
+                         duration_ms=self._ms_since(started), episode_id=c.episode.id)
+            self.receiver_error, self.receiver_failures, self._receiver_refused = None, 0, False
+            self.fallback_until = None
+            return True
+        assert failure is not None
+        now = self.clock.now()
+        self.receiver_error = str(failure)
+        self.receiver_failures += 1
+        self._receiver_refused = failure.refused
+        delay = RECEIVER_FALLBACK_S if failure.refused else RECEIVER_BACKOFF_S[min(self.receiver_failures, 4) - 1]
+        self.fallback_until = now + timedelta(seconds=delay) if delay else None
+        self._rx_loading = None
+        self._record("fallback", f"until {to_db(self.fallback_until)}" if self.fallback_until else "this episode",
+                     episode_id=c.episode.id)
+        log.warning("Tellybox receiver unavailable (%s); using the Default Media Receiver %s", failure,
+                    f"until {self.fallback_until}" if self.fallback_until else "for this episode")
+        return False
+
+    async def _quit_half_started(self, app_id: str) -> None:
+        """A launch that timed out may have left our app half-started; clear it before the second attempt."""
+        assert self.device is not None
+        receiver = self.device.receiver
+        if receiver is not None and receiver.app_id == app_id:
+            with contextlib.suppress(CastCommandError):
+                await self.device.quit_app()
+
+    def _ms_since(self, started: datetime) -> int:
+        return round((self.clock.now() - started).total_seconds() * 1000)
+
+    def _record(self, kind: str, detail: str | None = None, *, duration_ms: int | None = None,
+                episode_id: int | None = None) -> None:
+        """Log a receiver event (CR-6). The summary behind the cast state is recomputed."""
+        store.record_receiver_event(self.conn, self.clock.now(), kind, detail, duration_ms=duration_ms,
+                                    episode_id=episode_id)
+        self._receiver_summary_cache = None
+
+    async def _check_vanished(self, now: datetime) -> None:
+        """CR-6: our receiver app vanished mid-episode (no app or the Backdrop, and no other app followed within
+        the settle time). Relaunch once per episode at the estimated position, keeping the watch session,
+        while the timer allows playback. Anything else ends the episode as a take-over, as before (WT-9)."""
+        c = self.current
+        if c is None or c.vanished_at is None or c.stopping or self.device is None:
+            return
+        if (now - c.vanished_at).total_seconds() < RECEIVER_VANISH_SETTLE_S:
+            return
+        receiver = self.device.receiver
+        if receiver is not None and receiver.session_id == c.cast_session_id:
+            c.vanished_at = None
+            return
+        if receiver is not None and receiver.app_id not in (None, BACKDROP_APP):
+            return  # another app: its status event ends the episode (WT-9)
+        pos = c.position_s
+        self._record("lost", f"{receiver.app_id if receiver and receiver.app_id else 'no app'} at {pos:.0f} s",
+                     episode_id=c.episode.id)
+        near_end = bool(c.duration_s) and pos >= c.duration_s - RESUME_TAIL_S
+        if (
+            c.recovered
+            or near_end
+            or not self._decision.can_start
+            or self.connection != ConnectionState.CONNECTED
+            or self._lost_at is not None
+        ):
+            self._end_current(EndReason.TAKEN_OVER)
+            return
+        c.recovered, c.vanished_at = True, None
+        c.cast_session_id, c.media_session_id, c.replaced_media_session_id = None, None, None
+        c.position_at = now
+        log.info("our receiver vanished; relaunching episode %s at %.0f s", c.episode.id, pos)
+        try:
+            async with self._load_lock:
+                if self.current is not c or c.stopping:
+                    return  # a pick or a stop came first
+                await self._load(c, pos)
+        except CastCommandError as exc:
+            self._record("recover_failed", str(exc), episode_id=c.episode.id)
+            if self.current is c:
+                self._end_current(EndReason.TAKEN_OVER)
+            return
+        self._record("recovered", f"at {pos:.0f} s on {'the Default Media Receiver' if c.on_fallback else 'our receiver'}",
+                     episode_id=c.episode.id)
 
     def _adopt_warm(self, c: Current, app_id: str) -> None:
         """A receiver that already runs `app_id` sends no new session event when we load into it."""
@@ -711,11 +863,17 @@ class CastController:
 
     def _receiver_state(self, now: datetime) -> dict:
         fallback = self._fallback_active(now)
+        on_default = fallback or (self.current is not None and self.current.on_fallback)
+        cached = self._receiver_summary_cache
+        if cached is None or (now - cached[0]).total_seconds() >= 60:  # the 24 h window moves on
+            cached = self._receiver_summary_cache = (now, store.receiver_summary(self.conn, now))
         return {
-            "kind": "tellybox" if self.receiver_app_id and not fallback else "default",
+            "kind": "tellybox" if self.receiver_app_id and not on_default else "default",
             "configured": self.receiver_app_id is not None,
             "fallback_until": to_db(self.fallback_until) if fallback else None,
             "last_error": self.receiver_error,
+            **cached[1],
+            "refused": self._receiver_refused and fallback,
         }
 
     # ------------------------------------------------------------------ Tellybox receiver messages (CR-2..CR-8)
@@ -723,7 +881,11 @@ class CastController:
     async def _on_receiver_message(self, payload: dict) -> None:
         match payload.get("type"):
             case "hello":
-                log.info("receiver connected: %s", payload.get("ua"))
+                log.info("receiver connected: %s (sdk attempts %s, loaded in %s ms)",
+                         payload.get("ua"), payload.get("sdk_attempts"), payload.get("load_ms"))
+                attempts = payload.get("sdk_attempts")
+                if isinstance(attempts, int) and attempts > 1:  # the page needed retries to load the Cast SDK
+                    self._record("page_error", f"Cast SDK loaded after {attempts} attempts ({payload.get('load_ms')} ms)")
                 await self._push_receiver(force=True)  # a receiver that just (re)started needs the whole state
             case "stats":  # CR-8
                 log.info("receiver stats: dropped=%s total=%s state=%s",
@@ -731,6 +893,8 @@ class CastController:
             case "log":
                 level = logging.ERROR if payload.get("level") == "error" else logging.INFO
                 log.log(level, "receiver: %s", payload.get("msg"))
+                if level == logging.ERROR:
+                    self._record("page_error", str(payload.get("msg"))[:300])
             case other:
                 log.debug("unknown receiver message %r", other)
 

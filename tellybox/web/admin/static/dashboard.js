@@ -92,23 +92,49 @@ function watcherNames(np) {
   return profilesMeta().filter((m) => ids.has(m.id)).map((m) => m.name);
 }
 
-// The TV receiver line (CR-6); the same three messages as dashboard.html. A fallback that has
+// What went wrong last (tellybox.store.RECEIVER_FAILURE_KINDS), worded as in dashboard.html.
+const RECEIVER_PROBLEMS = {
+  launch_failed: t("The Tellybox receiver did not start"),
+  refused: t("The Chromecast refused the Tellybox receiver"),
+  lost: t("The Tellybox receiver disappeared during an episode"),
+  recover_failed: t("The Tellybox receiver could not be restarted during an episode"),
+  page_error: t("The Tellybox receiver page reported a problem"),
+};
+
+const localTime = (date) => date.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+
+// The TV receiver line (CR-6); the same messages as dashboard.html. A fallback that has
 // ended is stale state, so it is ignored, and the time is shown in the admin's own locale.
 function updateReceiver(state) {
   const row = document.getElementById("receiver-row");
   const el = document.getElementById("receiver");
+  const problemEl = document.getElementById("receiver-problem");
+  const hint = document.getElementById("receiver-hint");
   if (!row || !el) return;
   const rc = state && state.receiver;
   row.hidden = !rc;
-  if (!rc) return;
+  if (!rc) {
+    if (hint) hint.hidden = true;
+    return;
+  }
   const until = rc.fallback_until ? new Date(rc.fallback_until) : null;
-  if (until && until > new Date()) {
-    const time = until.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+  const fallback = !!until && until > new Date();
+  if (fallback) {
     el.textContent = t("Default Media Receiver (Tellybox receiver unavailable until %(time)s: %(reason)s)",
-      { time, reason: rc.last_error || "" });
+      { time: localTime(until), reason: rc.last_error || "" });
   } else {
     el.textContent = rc.kind === "tellybox" ? t("Tellybox receiver") : t("Default Media Receiver");
   }
+  const last = rc.last_failure;
+  if (problemEl) {
+    problemEl.textContent = "";
+    if (last && rc.failures_24h) {  // an old problem is no news, and the time shown has no date
+      const what = (RECEIVER_PROBLEMS[last.kind] || RECEIVER_PROBLEMS.page_error) + (last.detail ? ": " + last.detail : "");
+      problemEl.textContent = "· " + t("Last problem: %(problem)s at %(time)s",
+        { problem: what, time: localTime(new Date(last.at)) });
+    }
+  }
+  if (hint) hint.hidden = !(fallback && rc.refused);
 }
 
 function updateNowPlaying(state) {

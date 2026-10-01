@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from tellybox.cast.device import (
     DEFAULT_MEDIA_RECEIVER,
+    RECEIVER_LAUNCH_TIMEOUT_S,
     ConnectionState,
     ConnectionStatus,
     DeviceEvent,
@@ -54,9 +55,15 @@ class FakeCastDevice:
         self.connected = False
         self.fail_next_command = False
         # Tellybox receiver (v7): launch failure injection, the app id we launched, what the cast service sent.
-        self.fail_launch = False
+        self.fail_launch = False  # every launch of our app fails at once, as a timeout
+        self.refuse_launch = False  # the device rejects our app outright (ReceiverUnavailable.refused)
+        # Slow launches (CR-6): the seconds each coming cold launch takes. One that exceeds the launch
+        # timeout times out, advancing the clock by the timeout and leaving the app half-started.
+        self.launch_durations: list[float] = []
+        self.launch_timeouts: list[float] = []  # the timeout of every launch attempt of our app
         self.play_app_ids: list[str | None] = []
         self.sent_messages: list[dict] = []
+        self.half_started = False  # our app is up on the device but hasn't registered the media namespace
         self._tellybox_app_id: str | None = None
         self._queue: asyncio.Queue[DeviceEvent] | None = None
         self._receiver: ReceiverStatus | None = None
@@ -159,13 +166,34 @@ class FakeCastDevice:
         while True:
             yield await self.queue.get()
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+    async def play(
+        self,
+        url: str,
+        *,
+        title: str | None = None,
+        start_s: float = 0.0,
+        app_id: str | None = None,
+        launch_timeout_s: float = RECEIVER_LAUNCH_TIMEOUT_S,
+    ) -> None:
         self._command("play", url, start_s)
         self.play_app_ids.append(app_id)
         if app_id is not None:
-            if self._app.app_id != app_id:
+            if self._app.app_id != app_id or self.half_started:
+                self.launch_timeouts.append(launch_timeout_s)
+                if self.refuse_launch:
+                    raise ReceiverUnavailable("launch failed: CANCELLED", refused=True)
                 if self.fail_launch:
                     raise ReceiverUnavailable("launch timed out")
+                took = self.launch_durations.pop(0) if self.launch_durations else 0.0
+                if took > launch_timeout_s:
+                    self.clock.advance(launch_timeout_s)
+                    if not self.half_started:  # the app is up on the device, but never reports in
+                        self._set_app("tellybox", app_id, "Tellybox")
+                        self._emit(self._app)
+                        self.half_started = True
+                    raise ReceiverUnavailable("launch timed out")
+                self.clock.advance(took)
+                self.half_started = False
                 self._tellybox_app_id = app_id
                 self._set_app("tellybox", app_id, "Tellybox")
                 self._emit(self._app)
@@ -204,6 +232,14 @@ class FakeCastDevice:
     @property
     def receiver_running(self) -> bool:
         return self._tellybox_app_id is not None and self._app.app_id == self._tellybox_app_id
+
+    async def quit_app(self) -> None:
+        self._command("quit_app")
+        self.half_started = False
+        if self._app.app_id != BACKDROP_APP:
+            self._m = None
+            self._backdrop()
+            self._emit(self._app)
 
     async def stop_media(self) -> None:
         self._command("stop_media")
@@ -250,6 +286,13 @@ class FakeCastDevice:
         self._emit(self._app)
         self._m = _Media(content_id, PlayerState.PLAYING, 0.0, self._t(), 300.0)
         self._emit_media()
+
+    def vanish(self) -> None:
+        """Our receiver app disappears mid-episode (stopped from another phone, a crash): the device goes to
+        the Backdrop and the media is gone, with no media status. Not a take-over by another app (CR-6)."""
+        self._m = None
+        self._backdrop()
+        self._emit(self._app)
 
     def end_foreign(self) -> None:
         self._m = None

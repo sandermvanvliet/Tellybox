@@ -50,7 +50,11 @@ def configure(conn, *, allowance_min=60, mode="ignore_pauses", max_session_min=9
 
 
 async def make_controller(conn, clock, fake) -> CastController:
-    ctrl = CastController(conn, clock=clock, tz=TZ, media_base_url="http://tv.test:8080", secret=b"test-secret", device=fake)
+    async def sleep(seconds: float) -> None:  # the controller's pauses move the fake clock
+        clock.advance(seconds)
+
+    ctrl = CastController(conn, clock=clock, tz=TZ, media_base_url="http://tv.test:8080", secret=b"test-secret",
+                          device=fake, sleep=sleep)
     await ctrl.start(run_loops=False)
     await pump(ctrl, fake)
     return ctrl

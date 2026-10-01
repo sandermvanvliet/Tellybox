@@ -24,6 +24,7 @@ DEFAULT_MEDIA_RECEIVER = "CC1AD845"
 # messages on this namespace are in docs/receiver-protocol.md.
 RECEIVER_NAMESPACE = "urn:x-cast:tellybox"
 RECEIVER_LAUNCH_TIMEOUT_S = 8.0  # launch + first status; a cold launch takes ~3 s on the 1st gen (spike S1)
+RECEIVER_RETRY_LAUNCH_TIMEOUT_S = 15.0  # CR-6: the second attempt waits longer; a slow device may just need time
 
 
 class PlayerState(StrEnum):
@@ -115,10 +116,24 @@ class CastDevice(Protocol):
         """Last known media status (may belong to another app)."""
         ...
 
-    async def play(self, url: str, *, title: str | None = None, start_s: float = 0.0, app_id: str | None = None) -> None:
+    async def play(
+        self,
+        url: str,
+        *,
+        title: str | None = None,
+        start_s: float = 0.0,
+        app_id: str | None = None,
+        launch_timeout_s: float = RECEIVER_LAUNCH_TIMEOUT_S,
+    ) -> None:
         """Load `url` as BUFFERED video/mp4. With `app_id` (the Tellybox receiver), launch that app first
-        if it isn't running and raise ReceiverUnavailable if it can't launch within
-        RECEIVER_LAUNCH_TIMEOUT_S (CR-6). Without, launch the Default Media Receiver if needed."""
+        if it isn't running and raise ReceiverUnavailable if it can't launch within `launch_timeout_s`
+        (CR-6); `refused` is set when the device rejects the app outright. Without, launch the Default
+        Media Receiver if needed."""
+        ...
+
+    async def quit_app(self) -> None:
+        """Quit the running receiver app (best effort; nothing to quit is not an error). Used to clear a
+        half-started Tellybox receiver before a second launch attempt (CR-6)."""
         ...
 
     async def send_receiver_message(self, payload: dict) -> None:

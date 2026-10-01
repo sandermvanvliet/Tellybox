@@ -368,14 +368,53 @@ async def test_launch_request_timeout_raises_receiver_unavailable(cast):  # CR-6
     assert not cast.media_controller.calls
 
 
-async def test_app_that_never_shows_up_times_out(cast, monkeypatch):  # CR-6, S8
-    monkeypatch.setattr(mod, "RECEIVER_LAUNCH_TIMEOUT_S", 0.2)
+async def test_app_that_never_shows_up_times_out(cast):  # CR-6, S8
     dev = PyChromecastDevice(INFO)
     await dev.connect()
     cast.launch = "never_ready"
-    with pytest.raises(ReceiverUnavailable, match="timed out"):
-        await dev.play("http://x/a.mp4", app_id=TB)
+    with pytest.raises(ReceiverUnavailable, match="timed out") as err:
+        await dev.play("http://x/a.mp4", app_id=TB, launch_timeout_s=0.2)
+    assert err.value.refused is False  # a timeout is worth another try
+    assert cast.calls[-1] == ("start_app", TB, 0.2)
     assert not cast.media_controller.calls
+
+
+async def test_a_rejected_app_is_a_refusal(cast):  # CR-6, S8
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "error"  # RequestFailed at once, as for an unregistered app id
+    with pytest.raises(ReceiverUnavailable) as err:
+        await dev.play("http://x/a.mp4", app_id=TB)
+    assert err.value.refused is True
+
+
+async def test_a_cancelled_launch_is_a_refusal(cast):  # CR-6
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "never_ready"
+    threading.Timer(0.1, lambda: cast.launch_listeners[0].new_launch_error(
+        SimpleNamespace(reason="CANCELLED", app_id=TB, request_id=1))).start()
+    with pytest.raises(ReceiverUnavailable, match="CANCELLED") as err:
+        await dev.play("http://x/a.mp4", app_id=TB, launch_timeout_s=2.0)
+    assert err.value.refused is True
+
+
+async def test_a_request_timeout_is_not_a_refusal(cast):  # CR-6
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    cast.launch = "timeout"
+    with pytest.raises(ReceiverUnavailable) as err:
+        await dev.play("http://x/a.mp4", app_id=TB)
+    assert err.value.refused is False
+
+
+async def test_quit_app_tolerates_nothing_to_quit(cast):  # CR-6
+    dev = PyChromecastDevice(INFO)
+    await dev.connect()
+    await dev.quit_app()
+    cast.quit_error = RequestFailed("quit app")
+    await dev.quit_app()
+    assert [c for c in cast.calls if c[0] == "quit_app"] == [("quit_app",)] * 2
 
 
 async def test_waits_for_the_media_namespace_before_loading(cast):

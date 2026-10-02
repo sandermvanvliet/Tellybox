@@ -16,8 +16,8 @@ MIN = 60.0
 
 def policy(
     profile_id: int = 1,
-    allowance_min: float = 60,
+    allowance_min: float | None = 60,
     mode: CountingMode = CountingMode.IGNORE_PAUSES,
-    max_session_min: float = 90,
+    max_session_min: float | None = 90,
 ) -> ProfilePolicy:
-    return ProfilePolicy(profile_id, allowance_min * MIN, mode, max_session_min * MIN)
+    return ProfilePolicy(profile_id, allowance_min * MIN if allowance_min is not None else None, mode, max_session_min * MIN if max_session_min is not None else None)

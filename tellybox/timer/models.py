@@ -42,9 +42,9 @@ class TimerSettings:
 @dataclass(frozen=True)
 class ProfilePolicy:
     profile_id: int
-    allowance_s: float
+    allowance_s: float | None
     mode: CountingMode
-    max_session_s: float
+    max_session_s: float | None
 
 
 @dataclass
@@ -56,8 +56,8 @@ class DayUsage:
     unlimited: bool = False
     blocked: bool = False
 
-    def remaining_s(self, allowance_s: float) -> float | None:
-        if self.unlimited:
+    def remaining_s(self, allowance_s: float | None) -> float | None:
+        if self.unlimited or allowance_s is None:
             return None
         return max(0.0, allowance_s + self.extra_s - self.used_s)
 

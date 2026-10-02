@@ -405,7 +405,7 @@ class WatchTimer:
     def _max_session_s(self, pid: int) -> float | None:
         """WT-3: applies to ignore_pauses profiles that are not unlimited today."""
         p = self._policies[pid]
-        if p.mode == CountingMode.IGNORE_PAUSES and not self._usages[pid].unlimited:
+        if p.mode == CountingMode.IGNORE_PAUSES and not self._usages[pid].unlimited and p.max_session_s is not None:
             return p.max_session_s
         return None
 

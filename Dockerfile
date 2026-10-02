@@ -30,5 +30,6 @@ ENTRYPOINT ["python", "-m", "tellybox.entrypoint"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-m", "tellybox.healthcheck"]
 
-# One image, several services (web, cast, worker); compose picks the command.
-CMD ["python", "-m", "tellybox.web"]
+# One container runs all three services under a small supervisor (tellybox/__main__.py, DP-5).
+# Compose can still run them separately with `command: ["python", "-m", "tellybox.web"]` etc.
+CMD ["python", "-m", "tellybox"]

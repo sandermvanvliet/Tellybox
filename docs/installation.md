@@ -3,17 +3,17 @@
 This guide takes you from an empty server to kids picking videos on the TV. Setup takes 15 to 30 minutes. Then it covers HTTPS, remote access, backups, updates and troubleshooting.
 
 - [What you need](#what-you-need)
-- [1. Get the image](#1-get-the-image)
-- [2. Prepare the folders](#2-prepare-the-folders)
-- [3. Write the compose file](#3-write-the-compose-file)
-- [4. Start it](#4-start-it)
-- [5. First-run setup](#5-first-run-setup)
+- [1. Download the two files](#1-download-the-two-files)
+- [2. Edit the settings](#2-edit-the-settings)
+- [3. Start it](#3-start-it)
+- [4. First-run setup](#4-first-run-setup)
 - [Configuration reference](#configuration-reference)
 - [Tellybox receiver (optional)](#tellybox-receiver-optional)
 - [HTTPS with a reverse proxy](#https-with-a-reverse-proxy)
 - [Remote access with Tailscale](#remote-access-with-tailscale)
 - [Backups and restoring](#backups-and-restoring)
 - [Updating](#updating)
+- [Advanced: separate services](#advanced-separate-services)
 - [Troubleshooting](#troubleshooting)
 - [Command-line tools](#command-line-tools)
 
@@ -30,109 +30,44 @@ This guide takes you from an empty server to kids picking videos on the TV. Setu
 
 > **Docker Desktop on macOS or Windows doesn't work.** Tellybox needs `network_mode: host` for mDNS discovery, and Docker Desktop runs containers in a VM, where host networking can't reach your LAN. Use a Linux host.
 
-## 1. Get the image
+## 1. Download the two files
 
-Tellybox is one image that runs three services (`web`, `cast` and `worker`). It's published on the GitHub Container Registry, for amd64 (and arm64 from the first release):
-
-```sh
-docker pull ghcr.io/sandermvanvliet/tellybox:edge
-```
-
-`edge` follows the main branch. Versioned releases (`0.1`, `0.1.0`, and `latest` for the newest) start with the first release; switch to `latest` or a version then.
-
-To build it yourself instead, clone the repository and run `docker build -t tellybox:latest --build-arg APP_VERSION=$(git describe --always) .`. `APP_VERSION` is shown on the admin dashboard and at `/healthz`.
-
-## 2. Prepare the folders
-
-Pick a home for Tellybox; this guide uses `/opt/tellybox`. The containers run as **uid/gid 1500** by default (set `PUID` and `PGID` to pick another owner). They start as root only to take ownership of `data/`, `media/` and `backups/`, then drop privileges, so you don't need to `chown` those folders yourself:
+Pick a home for Tellybox; this guide uses `/opt/tellybox`. You need two files from the latest release: the compose file and a settings file.
 
 ```sh
-sudo mkdir -p /opt/tellybox/{data,media,backups,secrets}
+sudo mkdir -p /opt/tellybox && cd /opt/tellybox
+sudo curl -fsSLO https://github.com/sandermvanvliet/Tellybox/releases/latest/download/docker-compose.yml
+sudo curl -fsSL https://github.com/sandermvanvliet/Tellybox/releases/latest/download/env.example -o .env
 ```
+
+Tellybox is one image on the GitHub Container Registry, for amd64 and arm64. It runs the three services (web app, Chromecast control and background jobs) in **one container**.
+
+## 2. Edit the settings
+
+Open `.env` and set your time zone in `TZ`. The daily reset and the history use it. If port 8080 or 8081 is already taken on the server, change `TELLYBOX_WEB_PORT` or `TELLYBOX_CAST_API_PORT` too (UniFi uses both, for example). Everything else can stay as it is.
+
+The folders are created for you. The container runs as **uid/gid 1500** by default (set `PUID` and `PGID` in `.env` to pick another owner). It starts as root only to take ownership of `data/`, `media/` and `backups/`, then drops privileges, so you don't need to `mkdir` or `chown` anything:
 
 | Folder | Contents |
 | --- | --- |
 | `data/` | The SQLite database, the media-link signing key and the self-updating yt-dlp install |
 | `media/` | Episodes, thumbnails and show artwork |
 | `backups/` | Database backups (see [Backups](#backups-and-restoring)) |
-| `secrets/` | The admin password file (optional, see below) |
 
-**The admin password is optional here.** Without one, Tellybox asks you to choose it in the browser on first run, using a setup code from the logs (see [First-run setup](#5-first-run-setup)). If you prefer to set it from the host instead, for example to manage it with your own secrets tooling, store it as a file so it doesn't end up in the compose file or your shell history:
+**The admin password is optional here.** Without one, Tellybox asks you to choose it in the browser on first run, using a setup code from the logs (see [First-run setup](#4-first-run-setup)). If you prefer to set it from the host, for example to manage it with your own secrets tooling, uncomment `TELLYBOX_ADMIN_PASSWORD` in `.env` (or use `TELLYBOX_ADMIN_PASSWORD_FILE`, see the [configuration reference](#configuration-reference)).
 
-```sh
-sudo sh -c 'read -r -s -p "Admin password: " p && printf %s "$p" > /opt/tellybox/secrets/admin-password'
-sudo chown 1500:1500 /opt/tellybox/secrets/admin-password
-sudo chmod 400 /opt/tellybox/secrets/admin-password
-```
-
-## 3. Write the compose file
-
-Save this as `/opt/tellybox/docker-compose.yml`. Replace `192.168.1.10` with the server's LAN address and set your time zone.
-
-```yaml
-x-tellybox: &tellybox
-  image: ghcr.io/sandermvanvliet/tellybox:edge
-  network_mode: host          # required: mDNS discovery, and the Chromecast fetches media from the host
-  restart: unless-stopped
-  logging:
-    driver: json-file
-    options: { max-size: "10m", max-file: "3" }
-
-x-env: &env
-  TELLYBOX_WEB_PORT: "8080"
-  TELLYBOX_CAST_API_PORT: "8081"
-  TELLYBOX_MEDIA_BASE_URL: "http://192.168.1.10:8080"   # how the Chromecast reaches the server
-  TELLYBOX_DATA_DIR: /data
-  TELLYBOX_MEDIA_DIR: /media
-  TZ: Europe/Amsterdam                                   # the daily reset and history use local time
-
-services:
-  web:
-    <<: *tellybox
-    container_name: tellybox-web
-    command: ["python", "-m", "tellybox.web"]
-    volumes:
-      - ./data:/data
-      - ./media:/media
-      # Optional: a fixed admin password. Without it, you choose one in the browser on first run.
-      # - ./secrets/admin-password:/run/secrets/admin-password:ro
-    environment:
-      <<: *env
-      # TELLYBOX_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
-
-  cast:
-    <<: *tellybox
-    container_name: tellybox-cast
-    command: ["python", "-m", "tellybox.cast"]
-    volumes:
-      - ./data:/data
-      - ./media:/media
-    environment: *env
-
-  worker:
-    <<: *tellybox
-    container_name: tellybox-worker
-    command: ["python", "-m", "tellybox.worker"]
-    volumes:
-      - ./data:/data
-      - ./media:/media
-      - ./backups:/backups
-    environment: *env
-```
-
-Some notes on this file:
-- **All three services need the same environment.** The web app talks to the cast service on `127.0.0.1:<TELLYBOX_CAST_API_PORT>`, and all three share the database and media folder.
-- **Pick free ports.** 8080 and 8081 are popular (UniFi uses both, for example). Change `TELLYBOX_WEB_PORT` and `TELLYBOX_MEDIA_BASE_URL` together. The image has its own healthcheck, which follows the port variables.
-- **On Fedora or RHEL with SELinux**, add `:z` to each bind mount (`./data:/data:z`).
+Some notes:
+- **On Fedora or RHEL with SELinux**, add `:z` to each bind mount in the compose file (`./data:/data:z`).
 - **Run only one Tellybox per Chromecast.** Two cast services will fight over the same TV.
+- The compose file uses `network_mode: host`. That's required: Tellybox finds the Chromecast with mDNS, and the Chromecast downloads the video straight from the server.
 
-## 4. Start it
+## 3. Start it
 
 ```sh
 cd /opt/tellybox
 docker compose up -d
-docker compose ps                      # web should become "healthy" within a minute
-docker compose logs -f cast            # watch it find your Chromecast
+docker compose ps                      # should become "healthy" within a minute
+docker compose logs -f tellybox        # watch it find your Chromecast
 ```
 
 The database is created and migrated on first start. The worker installs its own updatable copy of yt-dlp into `data/tools/`, which takes a few seconds.
@@ -149,15 +84,15 @@ The cast API (8081) listens on `127.0.0.1` only, so it needs no rule. mDNS disco
 
 **Don't forward any port from your router.** Tellybox has no internet-facing features, and the kid app has no login by design. Anyone who can reach it can play approved videos.
 
-## 5. First-run setup
+## 4. First-run setup
 
-1. **Choose the admin password:** open `http://<server>:8080/admin`. If you didn't configure a password, you land on the setup page. Tellybox writes a one-time setup code to the log of the `web` service each time it starts without a password; find it with:
+1. **Choose the admin password:** find the one-time setup code in the log, then open `http://<server>:8080/admin/setup`:
 
    ```sh
-   docker compose logs web | grep "setup code"
+   docker compose logs tellybox | grep "setup code"
    ```
 
-   (In Home Assistant, it's in the add-on's Log tab.) Enter the code, then choose a password of at least 8 characters, and you're signed in. The code stops working once used, and a restart makes a new one. If you configured a password in the compose file instead, just sign in with it.
+   (In Home Assistant, it's in the add-on's Log tab.) Enter the code, then choose a password of at least 8 characters, and you're signed in. The code stops working once used, and a restart makes a new one. If you configured a password in `.env` instead, just sign in at `http://<server>:8080/admin`.
 2. **Choose the TV:** in **Settings**, pick your Chromecast. With only one on the network, it's chosen automatically. Tellybox remembers it and reconnects on its own after restarts or power cuts.
 3. **Set the limits:** also in **Settings**:
    - the daily allowance (default 60 minutes);
@@ -178,11 +113,12 @@ All settings are environment variables. What you can change in the admin pages (
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PUID`, `PGID` | `1500`, `1500` | The uid/gid the services run as. The container starts as root, takes ownership of `/data`, `/media` and `/backups` (top-level check only, so a large library isn't scanned on every start), then drops to this user. `0` means run as root and must be set explicitly. Ignored when you start the container with `user:` or `--user`. |
+| `TELLYBOX_TAG` | `latest` | Which image version the release compose file runs: `latest` (the newest release), a version such as `0.1` or `0.1.0`, or `edge` (the main branch). Read by Compose, not by Tellybox. See [Updating](#updating). |
 | `TELLYBOX_ADMIN_PASSWORD_FILE` | none | A file containing the admin password (preferred over the variable below). Overrides a password chosen in the browser. |
 | `TELLYBOX_ADMIN_PASSWORD` | none | The admin password itself. Overrides a password chosen in the browser. If neither is set, you choose the password in the browser on first run. Changing the password signs out every session. |
 | `TELLYBOX_WEB_PORT` | `8080` | Port for the kid app, the admin pages and the media files. |
 | `TELLYBOX_WEB_HOST` | `0.0.0.0` | Address the web app listens on. |
-| `TELLYBOX_MEDIA_BASE_URL` | `http://<LAN IP>:<web port>` | The URL the Chromecast uses to fetch videos. It's detected automatically. Set it explicitly if the server has several interfaces (Docker bridges, VPNs) or the detection picks the wrong one. Use plain `http://` and an IP address: a Chromecast can't resolve local-only DNS names. |
+| `TELLYBOX_MEDIA_BASE_URL` | `http://<LAN IP>:<web port>` | Optional override. The URL the Chromecast uses to fetch videos is detected automatically. Set it explicitly if the server has several interfaces (Docker bridges, VPNs) or the detection picks the wrong one. Use plain `http://` and an IP address: a Chromecast can't resolve local-only DNS names. |
 | `TELLYBOX_CAST_API_PORT` | `8081` | Internal API of the cast service. |
 | `TELLYBOX_CAST_API_HOST` | `127.0.0.1` | Keep this on localhost. |
 | `TELLYBOX_DATA_DIR` | `/data` (in the image) | Database, signing key and yt-dlp install. |
@@ -213,7 +149,7 @@ Tellybox falls back on its own: if the Tellybox receiver can't be launched (page
 - The Chromecast can't reach the media URLs: check `TELLYBOX_MEDIA_BASE_URL`.
 - With your own receiver app: its settings were changed in the console, and the Chromecast hasn't been rebooted since. The reason then reads `launch failed: CANCELLED`.
 
-Once you've fixed the cause, the fallback ends by itself after 30 minutes, or restart the `cast` service to retry right away.
+Once you've fixed the cause, the fallback ends by itself after 30 minutes, or restart the container (`docker compose restart tellybox`) to retry right away.
 
 ### Your own receiver app
 
@@ -280,7 +216,7 @@ Nothing needs to be exposed to the internet.
 All state is in one SQLite file. `tellybox backup` makes a consistent, integrity-checked copy while everything keeps running, and keeps the newest N. Schedule it with cron on the host, for example nightly at 02:30:
 
 ```cron
-30 2 * * *  cd /opt/tellybox && docker compose exec -T worker tellybox backup /backups --keep 14
+30 2 * * *  cd /opt/tellybox && docker compose exec -T tellybox tellybox backup /backups --keep 14
 ```
 
 Media files aren't in the backup; episodes can be downloaded again. Copy `backups/` somewhere off the machine if you care about history and settings.
@@ -307,6 +243,7 @@ docker compose pull
 docker compose up -d
 ```
 
+- **Versions:** the compose file runs `latest`, the newest release. To stay on one version, set `TELLYBOX_TAG=0.1` in `.env` (a minor version gets patch fixes, `0.1.0` never changes). `edge` follows the main branch and may change between releases.
 - **Migrations:** database migrations run automatically on start. They only move forward, so take a backup before upgrading if you might want to roll back.
 - **yt-dlp** doesn't need an image rebuild. The worker updates it every night at 03:00, and the **Jobs** page has an "Update yt-dlp" button for when YouTube breaks downloads during the day.
 - **Housekeeping** also runs at 03:00: viewing history, timer days and the override log are kept for 21 days, and finished jobs for 30.
@@ -318,31 +255,78 @@ The repository contains a GitHub Actions workflow (`.github/workflows/docker-pub
 2. Create a deploy user on the server with an SSH key.
 3. Set the `DEPLOY_HOST`, `DEPLOY_PORT` (the SSH port, usually 22), `DEPLOY_USER`, `DEPLOY_PATH` and `DEPLOY_SSH_KEY` secrets.
 
+## Advanced: separate services
+
+By default, one container runs the web app, the cast service and the worker, and restarts as a whole if one of them stops. If you'd rather run them as three containers, for example to restart one service on its own or to keep separate logs, use this compose file instead. It needs the same `.env` as above (Compose reads `PUID`, `PGID`, `TZ` and the ports from it).
+
+```yaml
+x-tellybox: &tellybox
+  image: ghcr.io/sandermvanvliet/tellybox:latest
+  network_mode: host          # required: mDNS discovery, and the Chromecast fetches media from the host
+  restart: unless-stopped
+  env_file: .env
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  web:
+    <<: *tellybox
+    container_name: tellybox-web
+    command: ["python", "-m", "tellybox.web"]
+    volumes:
+      - ./data:/data
+      - ./media:/media
+
+  cast:
+    <<: *tellybox
+    container_name: tellybox-cast
+    command: ["python", "-m", "tellybox.cast"]
+    volumes:
+      - ./data:/data
+      - ./media:/media
+
+  worker:
+    <<: *tellybox
+    container_name: tellybox-worker
+    command: ["python", "-m", "tellybox.worker"]
+    volumes:
+      - ./data:/data
+      - ./media:/media
+      - ./backups:/backups
+```
+
+Some notes:
+- **All three services need the same environment.** The web app talks to the cast service on `127.0.0.1:<TELLYBOX_CAST_API_PORT>`, and all three share the database and media folder.
+- **The commands in this guide change:** use `docker compose logs web`, `docker compose logs cast` and so on, and run `docker compose exec worker tellybox …` (the `backups/` folder is only mounted in `worker`) and `docker compose exec web tellybox reset-password`.
+- **Never start both setups on the same folders.** Run `docker compose down` on one before you switch.
+
 ## Troubleshooting
 
 | Symptom | What to check |
 | --- | --- |
-| **No Chromecast found** | The containers use `network_mode: host`, and the server and Chromecast are on the same subnet (not a guest network with client isolation). Multicast/mDNS isn't blocked between them. `docker compose logs cast` shows discovery. |
+| **No Chromecast found** | The containers use `network_mode: host`, and the server and Chromecast are on the same subnet (not a guest network with client isolation). Multicast/mDNS isn't blocked between them. `docker compose logs tellybox` shows discovery (look for lines from `tellybox.cast`). |
 | **The TV shows the Cast icon but no video, or times out** | The Chromecast can't reach `TELLYBOX_MEDIA_BASE_URL`. Set it to `http://<server LAN IP>:<web port>` and allow that port from the LAN in the firewall. |
-| **Forgot the admin password** | If you chose it in the browser: run `docker compose exec web tellybox reset-password`. It clears the password, signs everyone out and prints a new setup code; open `/admin/setup` and choose a new password. (Restarting `web` instead logs a new code, which also works.) If the password comes from `TELLYBOX_ADMIN_PASSWORD` or `_FILE`, change it there and recreate the `web` service. |
+| **Forgot the admin password** | If you chose it in the browser: run `docker compose exec tellybox tellybox reset-password`. It clears the password, signs everyone out and prints a new setup code; open `/admin/setup` and choose a new password. (Restarting `web` instead logs a new code, which also works.) If the password comes from `TELLYBOX_ADMIN_PASSWORD` or `_FILE`, change it there and recreate the container (`docker compose up -d --force-recreate`). |
 | **Permission denied in the logs** | The container fixes the ownership of `data`, `media` and `backups` at start, so this usually means the folder is read-only or on a filesystem that refuses `chown` (some NFS exports). Set `PUID`/`PGID` to the folder's owner instead. If you run with `user:` in compose, the container can't chown anything and the folders must already belong to that user. |
 | **Downloads fail with a YouTube error** | Press "Update yt-dlp" on the **Jobs** page, then retry the job on the **Jobs** page. Private, members-only and age-restricted videos can't be downloaded. |
 | **A page hangs while loading, with many Tellybox tabs open** | Your proxy serves HTTP/1.1, and every tab's live stream holds one of the browser's 6 connections. Enable HTTP/2 on the proxy (see [HTTPS](#https-with-a-reverse-proxy)) or close some tabs. |
 | **A video still has a sponsor segment** | SponsorBlock's data comes from its users and often arrives after a video is published. Tellybox checks each new video again every night for 7 days and replaces the file when segments are added. The episode's page (**Library** → the show → the episode) shows what was cut, or that SponsorBlock was unreachable or off for it. Videos added before SponsorBlock was available are only cut after **Download again with SponsorBlock** on that page. |
 | **Time isn't counted for something playing** | Only playback started from Tellybox is timed. Casting from the YouTube app on a phone is deliberately ignored. |
 | **The pages are in the wrong language** | Tellybox follows each browser's language preference (English, Dutch or German; anything else gets English). Change the order of preferred languages in the browser or phone settings. There's no language setting in Tellybox itself. |
-| **Port already in use** | Another service owns 8080 or 8081. Change `TELLYBOX_WEB_PORT` and `TELLYBOX_CAST_API_PORT` (and the media URL). |
+| **Port already in use** | Another service owns 8080 or 8081. Change `TELLYBOX_WEB_PORT` and `TELLYBOX_CAST_API_PORT` in `.env`, and `TELLYBOX_MEDIA_BASE_URL` if you set it. |
+| **The container keeps restarting** | If one of its three services stops, the container stops and Docker restarts it. `docker compose logs tellybox` names the one that exited (`supervisor: ... exited on its own`). A port already in use is the usual cause. |
 
 ## Command-line tools
 
-Everything the admin pages do for content is also available on the command line, inside any of the containers:
+Everything the admin pages do for content is also available on the command line, inside the container:
 
 ```sh
-docker compose exec worker tellybox add "https://www.youtube.com/watch?v=…"   # preview and queue (add --hold to keep it hidden)
-docker compose exec worker tellybox jobs                                       # list jobs
-docker compose exec worker tellybox retry <job id>                             # retry a failed job
-docker compose exec worker tellybox ytdlp-update                               # queue a yt-dlp update
-docker compose exec worker tellybox backup /backups --keep 14                  # consistent database backup
-docker compose exec web tellybox reset-password                                 # forget a browser-chosen admin password, print a setup code
-docker compose exec worker tellybox migrate                                    # apply migrations (also done on start)
+docker compose exec tellybox tellybox add "https://www.youtube.com/watch?v=…"   # preview and queue (add --hold to keep it hidden)
+docker compose exec tellybox tellybox jobs                                       # list jobs
+docker compose exec tellybox tellybox retry <job id>                             # retry a failed job
+docker compose exec tellybox tellybox ytdlp-update                               # queue a yt-dlp update
+docker compose exec tellybox tellybox backup /backups --keep 14                  # consistent database backup
+docker compose exec tellybox tellybox reset-password                             # forget a browser-chosen admin password, print a setup code
+docker compose exec tellybox tellybox migrate                                    # apply migrations (also done on start)
 ```

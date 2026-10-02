@@ -288,6 +288,23 @@ docker compose up -d
 - **yt-dlp** doesn't need an image rebuild. The worker updates it every night at 03:00, and the **Jobs** page has an "Update yt-dlp" button for when YouTube breaks downloads during the day.
 - **Housekeeping** also runs at 03:00: viewing history, timer days and the override log are kept for 21 days, and finished jobs for 30.
 
+### Following releases
+
+Each release is announced on the [releases page](https://github.com/sandermvanvliet/Tellybox/releases). On GitHub, **Watch**, then **Custom**, then **Releases** emails you when a new one comes out.
+
+To get a pull request for each new version, pin the image in your compose file (for example `ghcr.io/sandermvanvliet/tellybox:0.1.0`) and let Dependabot watch it. Dependabot's `docker` ecosystem reads compose files, so add this to `.github/dependabot.yml` in the repository that holds your compose file:
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+```
+
+Renovate does the same with its default settings. How releases are made is in [RELEASING.md](RELEASING.md).
+
 ### Automatic deploys
 
 The repository contains a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that tests every push to `main`, builds the image to GHCR and deploys it over SSH (`docker compose pull && docker compose up -d`). To use it for your own fork:

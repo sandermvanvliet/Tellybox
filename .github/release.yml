@@ -11,6 +11,7 @@ changelog:
       labels:
         - enhancement
         - feature
+        - feature request
     - title: Fixes
       labels:
         - bug

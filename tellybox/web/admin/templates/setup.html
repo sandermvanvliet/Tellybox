@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set signed_in = false %}
+{% block title %}{{ _("Set up the admin password") }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _("Set up Tellybox") }}</h1>
+  <p>{{ _("Choose the password for this admin area. You need the setup code that Tellybox wrote to its log when it started:") }}</p>
+  <ul>
+    <li>{{ _("On a server: run %(command)s and look for the line with the setup code.", command="docker compose logs web | grep 'setup code'") }}</li>
+    <li>{{ _("In Home Assistant: open the add-on's Log tab.") }}</li>
+  </ul>
+  <form method="post" action="/admin/setup" class="stack">
+    <label>{{ _("Setup code") }}
+      <input type="text" name="code" placeholder="ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false" required autofocus>
+    </label>
+    <label>{{ _("New password") }}
+      <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+    </label>
+    <label>{{ _("Repeat the password") }}
+      <input type="password" name="password2" autocomplete="new-password" minlength="8" required>
+    </label>
+    <button class="btn primary">{{ _("Set password and sign in") }}</button>
+  </form>
+</section>
+{% endblock %}

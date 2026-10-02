@@ -5,6 +5,7 @@
     tellybox jobs                          job status (CI-3)
     tellybox retry JOB_ID
     tellybox ytdlp-update                  queue a yt-dlp update (CI-5)
+    tellybox reset-password                forget the admin password chosen in the browser (DP-4)
     tellybox backup DEST [--keep N]        consistent database backup (default: keep 14)
     tellybox dev make-clips N [--seconds S] [--out DIR]
     tellybox dev seed DIR [--show NAME] [--no-autoplay]
@@ -20,7 +21,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tellybox import backup, db, ingest, jobs, library
+from tellybox import auth, backup, db, ingest, jobs, library, privileges
 from tellybox.config import Config
 from tellybox.ytdlp import YtDlp, YtDlpError
 
@@ -187,6 +188,29 @@ def cmd_backup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reset_password(args: argparse.Namespace) -> int:
+    """Forget a browser-chosen admin password and print a fresh setup code.
+
+    The code lives in the database, so the setup page accepts it at once; no web restart is needed
+    (a restart would log a different code and retire this one).
+    """
+    config = Config.from_env()
+    if config.admin_password is not None:
+        print("The admin password comes from TELLYBOX_ADMIN_PASSWORD(_FILE); change it there and recreate "
+              "the web service. Nothing was changed.")
+        return 1
+    conn = db.open_db(config.db_path)
+    if not auth.reset_ui_password(conn) and not auth.is_locked(conn):
+        print("error: the stored admin password is not one set in the browser; nothing was changed.",
+              file=sys.stderr)
+        return 1
+    code = auth.new_setup_code(conn, datetime.now(UTC))
+    print("Admin password cleared; all sessions ended.")
+    print(f"Setup code: {code}")
+    print("Open /admin/setup in the browser to choose a new password.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tellybox")
     sub = parser.add_subparsers(dest="command")
@@ -211,6 +235,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("ytdlp-update", help="queue a yt-dlp update")
     p.set_defaults(func=cmd_ytdlp_update)
 
+    p = sub.add_parser("reset-password", help="forget the admin password chosen in the browser")
+    p.set_defaults(func=cmd_reset_password)
+
     p = sub.add_parser("backup", help="write a consistent database backup")
     p.add_argument("dest", metavar="DEST")
     p.add_argument("--keep", type=int, default=14, help="how many backups to keep (default: 14)")
@@ -234,6 +261,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # `docker compose exec` starts as root: write files as the service user (DP-3).
+    if os.geteuid() == 0:
+        try:
+            privileges.drop_root(*privileges.target_ids())
+        except ValueError as e:
+            print(f"tellybox: {e}", file=sys.stderr)
+            return 2
     logging.basicConfig(level=logging.INFO, format="%(asctime)s level=%(levelname)s logger=%(name)s %(message)s")
     parser = build_parser()
     args = parser.parse_args(argv)

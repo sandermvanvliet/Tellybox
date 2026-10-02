@@ -197,7 +197,7 @@ You need:
 - about 0.5 to 1 GB of disk per hour of video.
 
 The **[installation and deployment guide](docs/installation.md)** walks through the setup:
-- the compose file, the admin password and the folder permissions;
+- the compose file, the settings and the first-run admin password;
 - first-run setup and HTTPS behind a reverse proxy;
 - remote access over Tailscale;
 - backups, updates and troubleshooting.
@@ -205,11 +205,14 @@ The **[installation and deployment guide](docs/installation.md)** walks through 
 The short version:
 
 ```sh
-git clone https://github.com/sandermvanvliet/Tellybox.git && cd Tellybox
-sudo install -d -o 1500 -g 1500 data media        # the containers run as uid/gid 1500
-echo "TELLYBOX_ADMIN_PASSWORD=choose-a-good-one" > .env
-docker compose up -d --build
-# open http://<server-ip>:8080/admin to set things up, and http://<server-ip>:8080 for the kids
+mkdir -p /opt/tellybox && cd /opt/tellybox
+curl -fsSLO https://github.com/sandermvanvliet/Tellybox/releases/latest/download/docker-compose.yml
+curl -fsSL https://github.com/sandermvanvliet/Tellybox/releases/latest/download/env.example -o .env
+nano .env                                          # set TZ to your time zone
+docker compose up -d
+docker compose logs tellybox | grep "setup code"
+# open http://<server-ip>:8080/admin/setup with that code to choose a password,
+# and http://<server-ip>:8080 for the kids
 ```
 
 ## Roadmap

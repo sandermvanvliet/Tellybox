@@ -1,0 +1,21 @@
+# Tellybox: one container runs everything (web, cast and worker).
+# Settings live in the .env file next to this one. See docs/installation.md.
+services:
+  tellybox:
+    image: ghcr.io/sandermvanvliet/tellybox:${TELLYBOX_TAG:-latest}
+    container_name: tellybox
+    # Required: the server finds the Chromecast with mDNS, and the Chromecast
+    # downloads videos straight from the host.
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    # Created automatically and owned by PUID/PGID. On Fedora or RHEL with SELinux,
+    # add :z to each mount (./data:/data:z).
+    volumes:
+      - ./data:/data
+      - ./media:/media
+      - ./backups:/backups
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # Run only one Tellybox per Chromecast: two will fight over the same TV.

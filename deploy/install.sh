@@ -10,7 +10,10 @@ YES=0
 for arg in "$@"; do
     case "$arg" in
         -y | --yes) YES=1 ;;
-        -h | --help) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help)
+            echo "Usage: install.sh [-y|--yes]"
+            echo "Variables: TELLYBOX_DIR, TZ, TELLYBOX_WEB_PORT, TELLYBOX_VERSION (a release tag such as v0.1.0)."
+            exit 0 ;;
         *) echo "Unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -178,7 +181,10 @@ main() {
 
     healthy=1
     wait_healthy "$port" || healthy=0
-    code=$(docker compose logs tellybox 2>/dev/null | sed -n 's/.*admin setup code: \([A-Z0-9-]*\).*/\1/p' | tail -n 1 || true)
+    code=""
+    if [ "$existing" -eq 0 ]; then # an upgrade's logs may hold a code that's long been used
+        code=$(docker compose logs tellybox 2>/dev/null | sed -n 's/.*admin setup code: \([A-Z0-9-]*\).*/\1/p' | tail -n 1 || true)
+    fi
     ip=$(lan_ip)
 
     say ""

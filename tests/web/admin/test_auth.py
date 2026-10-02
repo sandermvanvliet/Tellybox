@@ -99,14 +99,13 @@ def test_changing_the_password_ends_all_sessions(admin_env):
 # --------------------------------------------------------------------------- locked state
 
 
-def test_locked_state_blocks_admin_login_and_pages(config, lib, fake_cast, clock, ytdlp, admin_static):
+def test_locked_state_redirects_admin_login_and_pages_to_setup(config, lib, fake_cast, clock, ytdlp, admin_static):
     conn, _ = lib
     app = create_app(config, conn=conn, cast=fake_cast, clock=clock, static_dir=admin_static, ytdlp=ytdlp)
     client = TestClient(app, headers={"Origin": ORIGIN})
     for path in ("/admin", "/admin/login", "/admin/jobs"):
-        r = client.get(path)
-        assert r.status_code == 503, f"{path} -> {r.status_code}"
-        assert "Admin is locked: set TELLYBOX_ADMIN_PASSWORD" in r.text
+        r = client.get(path, headers={"Accept": "text/html"}, follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/admin/setup", f"{path} -> {r.status_code}"
 
 
 # --------------------------------------------------------------------------- Origin check

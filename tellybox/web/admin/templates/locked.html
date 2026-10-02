@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% set signed_in = false %}
-{% block title %}{{ _("Locked") }}{% endblock %}
-{% block content %}
-<section class="card narrow">
-  <h1>{{ _("Admin is locked") }}</h1>
-  <p>{{ _("Admin is locked: set %(variable)s", variable="TELLYBOX_ADMIN_PASSWORD") }}</p>
-</section>
-{% endblock %}

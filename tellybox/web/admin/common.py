@@ -116,7 +116,7 @@ def same_origin(request: Request) -> bool:
 
 
 class AdminLocked(Exception):
-    """No admin password is configured; every admin page shows the locked notice."""
+    """No admin password is configured; every admin page sends the browser to the setup page (DP-4)."""
 
 
 class AdminGuard:

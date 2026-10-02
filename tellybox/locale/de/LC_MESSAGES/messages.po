@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 15:50+0200\n"
+"POT-Creation-Date: 2026-10-02 11:20+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -177,16 +177,33 @@ msgstr "Füllmaterial oder Abschweifung"
 msgid "Non-music section"
 msgstr "Abschnitt ohne Musik"
 
-#: tellybox/web/admin/__init__.py:76
-msgid "This sign-in form must be sent from this page."
-msgstr "Dieses Anmeldeformular muss von dieser Seite gesendet werden."
+#: tellybox/web/admin/__init__.py:87
+msgid "This form must be sent from this page."
+msgstr "Dieses Formular muss von dieser Seite aus gesendet werden."
 
-#: tellybox/web/admin/__init__.py:82
+#: tellybox/web/admin/__init__.py:93 tellybox/web/admin/__init__.py:130
 #, python-format
 msgid "Too many attempts. Try again in %(seconds)d s."
 msgstr "Zu viele Versuche. Versuch es in %(seconds)d s erneut."
 
-#: tellybox/web/admin/__init__.py:86
+#: tellybox/web/admin/__init__.py:96
+msgid "Wrong setup code."
+msgstr "Falscher Einrichtungscode."
+
+#: tellybox/web/admin/__init__.py:98
+#, python-format
+msgid "The password must be at least %(n)d characters."
+msgstr "Das Passwort muss mindestens %(n)d Zeichen lang sein."
+
+#: tellybox/web/admin/__init__.py:101
+msgid "The two passwords are not the same."
+msgstr "Die beiden Passwörter stimmen nicht überein."
+
+#: tellybox/web/admin/__init__.py:124
+msgid "This sign-in form must be sent from this page."
+msgstr "Dieses Anmeldeformular muss von dieser Seite gesendet werden."
+
+#: tellybox/web/admin/__init__.py:134
 msgid "Wrong password."
 msgstr "Falsches Passwort."
 
@@ -1725,19 +1742,6 @@ msgstr "Einzelne Videos"
 msgid "Nothing held."
 msgstr "Nichts wartet auf Freigabe."
 
-#: tellybox/web/admin/templates/locked.html:3
-msgid "Locked"
-msgstr "Gesperrt"
-
-#: tellybox/web/admin/templates/locked.html:6
-msgid "Admin is locked"
-msgstr "Verwaltung ist gesperrt"
-
-#: tellybox/web/admin/templates/locked.html:7
-#, python-format
-msgid "Admin is locked: set %(variable)s"
-msgstr "Verwaltung ist gesperrt: setze %(variable)s"
-
 #: tellybox/web/admin/templates/login.html:3
 #: tellybox/web/admin/templates/login.html:12
 msgid "Sign in"
@@ -1876,6 +1880,43 @@ msgstr "Noch keine Chromecasts bekannt."
 #: tellybox/web/admin/templates/settings.html:117
 msgid "Search"
 msgstr "Suchen"
+
+#: tellybox/web/admin/templates/setup.html:3
+msgid "Set up the admin password"
+msgstr "Admin-Passwort einrichten"
+
+#: tellybox/web/admin/templates/setup.html:6
+msgid "Set up Tellybox"
+msgstr "Tellybox einrichten"
+
+#: tellybox/web/admin/templates/setup.html:7
+msgid "Choose the password for this admin area. You need the setup code that Tellybox wrote to its log when it started:"
+msgstr "Wähle das Passwort für diesen Admin-Bereich. Du brauchst den Einrichtungscode, den Tellybox beim Start in sein Protokoll geschrieben hat:"
+
+#: tellybox/web/admin/templates/setup.html:9
+#, python-format
+msgid "On a server: run %(command)s and look for the line with the setup code."
+msgstr "Auf einem Server: Führe %(command)s aus und suche die Zeile mit dem Einrichtungscode."
+
+#: tellybox/web/admin/templates/setup.html:10
+msgid "In Home Assistant: open the add-on's Log tab."
+msgstr "In Home Assistant: Öffne den Reiter „Protokoll“ des Add-ons."
+
+#: tellybox/web/admin/templates/setup.html:13
+msgid "Setup code"
+msgstr "Einrichtungscode"
+
+#: tellybox/web/admin/templates/setup.html:16
+msgid "New password"
+msgstr "Neues Passwort"
+
+#: tellybox/web/admin/templates/setup.html:19
+msgid "Repeat the password"
+msgstr "Passwort wiederholen"
+
+#: tellybox/web/admin/templates/setup.html:22
+msgid "Set password and sign in"
+msgstr "Passwort festlegen und anmelden"
 
 #: tellybox/web/admin/templates/show.html:12
 #: tellybox/web/admin/templates/show.html:192
@@ -2234,4 +2275,13 @@ msgstr "Plan verwerfen"
 
 #~ msgid "idle"
 #~ msgstr "inaktiv"
+
+#~ msgid "Locked"
+#~ msgstr "Gesperrt"
+
+#~ msgid "Admin is locked"
+#~ msgstr "Verwaltung ist gesperrt"
+
+#~ msgid "Admin is locked: set %(variable)s"
+#~ msgstr "Verwaltung ist gesperrt: setze %(variable)s"
 

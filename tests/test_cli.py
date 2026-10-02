@@ -163,3 +163,26 @@ def test_backup_failed_integrity_check_exits_nonzero_and_prunes_nothing(env, tmp
 
 def test_no_command_prints_help(capsys):
     assert cli.main([]) != 0
+
+
+def test_reset_password_clears_a_ui_password_and_prints_a_code(env, capsys):  # DP-4
+    from datetime import UTC, datetime
+
+    from tellybox import auth
+    data, _ = env
+    conn = db.open_db(data / "tellybox.db")
+    code = auth.new_setup_code(conn, datetime.now(UTC))
+    assert auth.set_ui_password(conn, "chosen in the browser")
+    auth.create_session(conn, datetime.now(UTC))
+    assert cli.main(["reset-password"]) == 0
+    out = capsys.readouterr().out
+    assert auth.is_locked(conn)
+    assert conn.execute("SELECT count(*) FROM admin_session").fetchone()[0] == 0
+    printed = out.split("Setup code: ")[1].split()[0]
+    assert printed != code and auth.check_setup_code(conn, printed)
+
+
+def test_reset_password_leaves_an_env_password_alone(env, monkeypatch, capsys):
+    monkeypatch.setenv("TELLYBOX_ADMIN_PASSWORD", "from env")
+    assert cli.main(["reset-password"]) == 1
+    assert "TELLYBOX_ADMIN_PASSWORD" in capsys.readouterr().out

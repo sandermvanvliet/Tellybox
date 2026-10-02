@@ -1,0 +1,28 @@
+# Categories for the notes that `gh release create --generate-notes` writes (see docs/RELEASING.md).
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+      - dependabot[bot]
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+        - feature
+    - title: Fixes
+      labels:
+        - bug
+        - fix
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Maintenance
+      labels:
+        - dependencies
+        - chore
+        - maintenance
+    - title: Other changes
+      labels:
+        - "*"

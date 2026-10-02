@@ -3,6 +3,7 @@ name: Test, build and deploy
 # main: test, build amd64 as `edge` and deploy to the owner's server.
 # v* tags (releases, DP-1): test, build amd64 + arm64 as `X.Y.Z`, `X.Y` and `latest`, and attach
 # the release compose files (DP-2). Releases are never deployed by this workflow.
+# How to cut a release: docs/RELEASING.md.
 on:
   push:
     branches:
@@ -28,6 +29,16 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+
+      - name: Check the tag matches pyproject.toml
+        if: github.ref_type == 'tag'
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          file_version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [ "$tag_version" != "$file_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $file_version in pyproject.toml. Bump the version in a PR, merge it, and tag the merge commit (see docs/RELEASING.md)."
+            exit 1
+          fi
 
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr tesseract-ocr-eng

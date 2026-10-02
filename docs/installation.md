@@ -164,6 +164,7 @@ All settings are environment variables. What you can change in the admin pages (
 | `TELLYBOX_MEDIA_DIR` | `/media` (in the image) | Video files and images. |
 | `TELLYBOX_DB` | `<data>/tellybox.db` | Database path. |
 | `TELLYBOX_SECRET_FILE` | `<data>/secret.key` | Key for signing media links. It's created on first start. Media links stay valid across restarts for 24 hours. |
+| `TELLYBOX_OPTIONS_FILE` | none | A JSON file with `web_port`, `cast_api_port`, `media_base_url` and `admin_password`, read at start-up. Used by the Home Assistant add-on (`/data/options.json`). Variables you set yourself win over the file. When the container starts as root, the data and media folders are also created if missing. |
 | `TZ` or `TELLYBOX_TZ` | the host's zone, else UTC | Local time zone for the daily reset, schedules and history. |
 
 ## Tellybox receiver (optional)

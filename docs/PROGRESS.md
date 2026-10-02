@@ -155,6 +155,13 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 
 On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. On 2026-10-02 the owner added step 15, easier installation (DP-1..DP-8), and put it before 11. Step 15 is built and released as v0.1.0; its device checks are open. **The next step to build is 11, channel subscriptions (v4).**
 
+### Release process (issue #30, branch `release-process`)
+Releases already existed (v* tags, DP-1); this adds the process around them.
+- `docs/RELEASING.md`: versioning, steps, what CI does, checks, fixing a bad release, how others follow releases.
+- Tag guard in `docker-publish.yml`: a `v*` tag must equal `version` in `pyproject.toml`, or the test job fails before anything is built.
+- `.github/release.yml` groups the generated notes by label; `docs/installation.md` has "Following releases" (Watch, Dependabot example).
+- `CLAUDE.md`: no tag or release without the owner's go-ahead.
+
 ### 15. Easier installation, built; release and device checks open
 Plan `docs/plans/step15-installation.md`, approved 2026-10-02. One PR per part, each built by a Sonnet subagent in a worktree and reviewed by the controller. All merged on 2026-10-02.
 - **A. Versioned, multi-arch image (DP-1), #20:**

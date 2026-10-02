@@ -591,7 +591,8 @@ async def test_dusk_and_unlimited_are_sent_when_they_change(conn, clock, fake, e
 async def test_sky_follows_the_watchers(conn, clock, fake, episodes):  # PR-4, CR-2
     conn.execute("INSERT INTO profile (name, daily_allowance_min, created_at) VALUES ('B', 20, '2026-09-28T00:00:00Z')")
     configure(conn, allowance_min=60)
-    conn.execute("UPDATE profile SET daily_allowance_min = 20 WHERE id = 2")
+    # A-23: set allowance_mode='custom' to use the custom daily_allowance_min value
+    conn.execute("UPDATE profile SET allowance_mode = 'custom', daily_allowance_min = 20 WHERE id = 2")
     enable(conn)
     ctrl = await make_controller(conn, clock, fake)
     await ctrl.play(episodes[0], [2])

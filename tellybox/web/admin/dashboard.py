@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingRes
 from tellybox.jobs import Job, JobStatus, list_jobs
 from tellybox.i18n import N_, _
 from tellybox.library import disk_usage
+from tellybox.store import effective_allowance_s
 from tellybox.web.admin.common import AdminContext, render, see_other
 from tellybox.web.cast_client import CastUnavailable
 from tellybox.web.overrides import apply_override
@@ -41,23 +42,30 @@ def _now_playing_context(conn: sqlite3.Connection, now_playing: dict | None) -> 
 
 
 def _profiles_context(conn: sqlite3.Connection, state: dict | None) -> list[dict]:
+    """Dashboard profile context, resolving per-profile allowance limits (A-23).
+
+    unlimited=True when either today's override or policy says unlimited.
+    """
     rows = conn.execute(
-        "SELECT id, name, avatar, picture_path, daily_allowance_min FROM profile ORDER BY sort_order, id"
+        "SELECT id, name, avatar, picture_path FROM profile ORDER BY sort_order, id"
     ).fetchall()
     watchers = set(((state or {}).get("now_playing") or {}).get("profile_ids") or [])
     timers = {p["profile_id"]: p for p in ((state or {}).get("timer") or {}).get("profiles", [])}
     result = []
     for r in rows:
         t = timers.get(r["id"])
-        allowance_s = r["daily_allowance_min"] * 60.0
+        # Resolve allowance per profile (A-23)
+        allowance_s = effective_allowance_s(conn, r["id"])
         used_s = t["used_s"] if t else 0.0
         extra_s = t["extra_s"] if t else 0.0
-        unlimited = bool(t["unlimited"]) if t else False
+        policy_unlimited = allowance_s is None
+        today_unlimited = bool(t["unlimited"]) if t else False
+        unlimited = policy_unlimited or today_unlimited
         blocked = bool(t["blocked"]) if t else False
-        remaining_s = None if unlimited else max(0.0, allowance_s + extra_s - used_s)
+        remaining_s = None if unlimited else (max(0.0, allowance_s + extra_s - used_s) if allowance_s is not None else None)
         result.append({
             "id": r["id"], "name": r["name"], "avatar": r["avatar"], "picture_path": r["picture_path"],
-            "watching": r["id"] in watchers, "allowance_min": r["daily_allowance_min"],
+            "watching": r["id"] in watchers, "allowance_min": None if policy_unlimited else (int(allowance_s / 60.0) if allowance_s else 0),
             "used_s": used_s, "remaining_s": remaining_s, "unlimited": unlimited, "blocked": blocked,
         })
     return result

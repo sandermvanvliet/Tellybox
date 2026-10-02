@@ -920,13 +920,11 @@ class CastController:
         remaining = self._decision.remaining_s
         if remaining is None:
             return {"fraction_left": None, "last_five": False, "unlimited": True}
-        allowance = {
-            r["id"]: r["daily_allowance_min"] * 60.0
-            for r in self.conn.execute("SELECT id, daily_allowance_min FROM profile ORDER BY id")
-        }
+        allowance = {pid: store.effective_allowance_s(self.conn, pid) for pid in self._known_profiles}  # A-23
+
         entries = [self._profile_state(now, p) for p in self._known_profiles if p in allowance]
         watchers = [p for p in entries if p["watching"]]
-        limited = [p for p in (watchers or entries) if not p["unlimited"]]
+        limited = [p for p in (watchers or entries) if not p["unlimited"] and allowance[p["profile_id"]] is not None]
 
         def fraction(left: float, total: float) -> float:
             return min(max(left / total, 0.0), 1.0) if total > 0 else 0.0
@@ -936,7 +934,8 @@ class CastController:
         elif limited:
             left = fraction(remaining, allowance[limited[0]["profile_id"]] + limited[0]["extra_s"])
         else:
-            left = fraction(remaining, allowance.get(self._known_profiles[0], 0.0) if self._known_profiles else 0.0)
+            first_allow = allowance.get(self._known_profiles[0], 0.0) if self._known_profiles else 0.0
+            left = fraction(remaining, first_allow) if first_allow is not None else 0.0
         return {"fraction_left": round(left, 3), "last_five": remaining <= LAST_FIVE_S, "unlimited": False}
 
     def _receiver_message(self, now: datetime) -> dict:

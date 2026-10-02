@@ -86,16 +86,18 @@ def _group(cast_state: dict | None) -> dict:
 
 
 def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
+    """Profiles with resolved limits (A-23); *_source says whether each is inherit, custom or unlimited."""
     timers = {p["profile_id"]: p for p in ((cast_state or {}).get("timer") or {}).get("profiles", [])}
     policies = {p.profile_id: p for p in profile_policies(conn)}
     playing = ((cast_state or {}).get("now_playing") or {}).get("profile_ids") or []
     result = []
-    for r in conn.execute("SELECT id, name, avatar FROM profile ORDER BY sort_order, id"):
+    for r in conn.execute("SELECT id, name, avatar, allowance_mode, max_session_mode FROM profile ORDER BY sort_order, id"):
         pol, t = policies[r["id"]], timers.get(r["id"])
         remaining_s = t.get("remaining_s") if t else None
         result.append({
             "id": r["id"], "name": r["name"], "avatar": r["avatar"],
-            "allowance_s": round(pol.allowance_s),
+            "allowance_s": None if pol.allowance_s is None else round(pol.allowance_s),
+            "allowance_source": r["allowance_mode"],  # A-23: inherit|custom|unlimited
             "extra_s": t["extra_s"] if t else None,
             "used_s": t["used_s"] if t else None,
             "remaining_s": remaining_s,
@@ -103,6 +105,7 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
             "blocked": bool(t["blocked"]) if t else False,
             "mode": pol.mode.value,
             "max_session_s": None if pol.max_session_s is None else round(pol.max_session_s),
+            "max_session_source": r["max_session_mode"],  # A-23: inherit|custom|unlimited
             "session_elapsed_s": t.get("session_elapsed_s") if t else None,
             "can_start": t.get("can_start") if t else None,
             "reason": t.get("reason") if t else None,

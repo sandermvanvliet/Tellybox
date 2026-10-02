@@ -170,7 +170,8 @@ function updateProfiles(state) {
     const extraS = tm ? tm.extra_s : 0;
     const unlimited = tm ? !!tm.unlimited : false;
     const blocked = tm ? !!tm.blocked : false;
-    const remaining = unlimited ? null : Math.max(0, m.allowance_min * 60 + extraS - usedS);
+    // A-23: allowance_min can be null for unlimited-by-policy
+    const remaining = unlimited || m.allowance_min === null ? null : Math.max(0, m.allowance_min * 60 + extraS - usedS);
 
     const usedEl = row.querySelector(".used");
     if (usedEl) {

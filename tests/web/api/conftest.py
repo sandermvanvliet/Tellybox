@@ -31,8 +31,8 @@ def api(config, lib, fake_cast, clock, static_dir):
     conn, ids = lib
     conn.execute("UPDATE profile SET name = 'Mila', avatar = 'fox', sort_order = 0 WHERE id = 1")
     conn.execute(
-        "INSERT INTO profile (id, name, daily_allowance_min, counting_mode, max_session_min, sort_order, created_at)"
-        " VALUES (2, 'Noor', 30, 'wall_clock', 45, 1, ?)", (NOW.isoformat(),)
+        "INSERT INTO profile (id, name, daily_allowance_min, allowance_mode, counting_mode, max_session_min, max_session_mode, sort_order, created_at)"
+        " VALUES (2, 'Noor', 30, 'custom', 'wall_clock', 45, 'custom', 1, ?)", (NOW.isoformat(),)
     )
     app = create_app(config, conn=conn, cast=fake_cast, clock=clock, static_dir=static_dir, ytdlp=SimpleNamespace())
     _, read = api_tokens.create_token(conn, "Tablet", ["read"], NOW)

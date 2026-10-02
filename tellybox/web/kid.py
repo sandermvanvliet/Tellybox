@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from tellybox import library
+from tellybox import library, store
 from tellybox.config import Config
 from tellybox.web.cast_client import CastNotFound, CastUnavailable, TimeUp
 from tellybox.web.hub import KidHub, sse_stream, unreachable
@@ -39,9 +39,12 @@ _VISIBLE = "e.hidden = 0 AND s.hidden = 0"
 
 
 def profile_order(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    """Every profile in the admin's order."""
+    """Every profile in the admin's order.
+
+    Note: does not include allowance info; use store.effective_allowance_s() for resolved allowances (A-23).
+    """
     return conn.execute(
-        "SELECT id, name, picture_path, avatar, daily_allowance_min FROM profile ORDER BY sort_order, id"
+        "SELECT id, name, picture_path, avatar FROM profile ORDER BY sort_order, id"
     ).fetchall()
 
 
@@ -245,18 +248,26 @@ def _clamp_fraction(left: float, total: float) -> float:
     return min(max(left / total, 0.0), 1.0) if total > 0 else 0.0
 
 
-def _profile_left_s(entry: dict, allowance_s: float) -> float | None:
-    """Seconds left for one profile in the cast state; None = unlimited."""
-    if entry.get("unlimited"):
+def _profile_left_s(entry: dict, allowance_s: float | None) -> float | None:
+    """Seconds left for one profile in the cast state; None = unlimited.
+
+    A-23: per-profile limits; allowance_s can be None for unlimited.
+    """
+    if allowance_s is None or entry.get("unlimited"):
         return None
     if entry.get("remaining_s") is not None:
         return entry["remaining_s"]
     return max(0.0, allowance_s + entry.get("extra_s", 0) - entry.get("used_s", 0))
 
 
-def _profile_state(entry: dict | None, allowance_s: float) -> dict:
-    """One profile's slice of the KidState: how much of its day is left (KA-8, KA-9)."""
+def _profile_state(entry: dict | None, allowance_s: float | None) -> dict:
+    """One profile's slice of the KidState: how much of its day is left (KA-8, KA-9).
+
+    A-23: per-profile limits; allowance_s can be None for unlimited.
+    """
     if entry is None:  # no timer data (yet): a full day
+        if allowance_s is None:
+            return {"fraction_left": None, "last_five": False, "unlimited": True, "time_up": False}
         return {"fraction_left": 1.0, "last_five": False, "unlimited": False, "time_up": False}
     left = _profile_left_s(entry, allowance_s)
     time_up = not entry.get("can_start", True)
@@ -267,17 +278,20 @@ def _profile_state(entry: dict | None, allowance_s: float) -> dict:
 
 
 def _fraction_left(conn: sqlite3.Connection, timer: dict, remaining_s: float) -> float:
-    allowance = {r["id"]: r["daily_allowance_min"] * 60.0 for r in profile_order(conn)}
+    allowance = {r["id"]: store.effective_allowance_s(conn, r["id"]) for r in profile_order(conn)}  # A-23
+
     entries = [p for p in timer.get("profiles") or [] if p.get("profile_id") in allowance]
     watchers = [p for p in entries if p.get("watching")]
-    limited = [p for p in (watchers or entries) if not p.get("unlimited")]
+    limited = [p for p in (watchers or entries) if not p.get("unlimited") and allowance[p["profile_id"]] is not None]
 
     if len(limited) > 1:  # several profiles watching; the one with the least left decides
         return min(_clamp_fraction(_profile_left_s(p, allowance[p["profile_id"]]), allowance[p["profile_id"]] + p["extra_s"])
                    for p in limited)
     if limited:
         return _clamp_fraction(remaining_s, allowance[limited[0]["profile_id"]] + limited[0]["extra_s"])
-    return _clamp_fraction(remaining_s, allowance.get(first_profile_id(conn), 0.0))
+    first_id = first_profile_id(conn)
+    first_allow = allowance.get(first_id, 0.0)
+    return _clamp_fraction(remaining_s, first_allow) if first_allow is not None else 0.0
 
 
 def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
@@ -297,14 +311,16 @@ def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
                        "state": np.get("state") if np.get("state") in PLAYER_STATES else "loading"}
     entries = {p["profile_id"]: p for p in timer.get("profiles") or []}
     days = [p["day"] for p in entries.values() if p.get("day")]
+    profiles_row = profile_order(conn)
+    allowances = {r["id"]: store.effective_allowance_s(conn, r["id"]) for r in profiles_row}
     return {
         "tv": "ok" if cast.get("connection") == "CONNECTED" else "unreachable",
         "now_playing": now_playing,
         "sky": sky,
         "time_up": bool(cast.get("time_up")),
         "watching": sorted(np.get("profile_ids") or []) if np else [],
-        "profiles": {str(r["id"]): _profile_state(entries.get(r["id"]), r["daily_allowance_min"] * 60.0)
-                     for r in profile_order(conn)},
+        "profiles": {str(r["id"]): _profile_state(entries.get(r["id"]), allowances[r["id"]])
+                     for r in profiles_row},
         "day": days[0] if days else None,
     }
 

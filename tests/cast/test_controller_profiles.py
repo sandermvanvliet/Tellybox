@@ -108,7 +108,8 @@ async def test_a_refusal_carries_the_groups_reason(conn, clock, fake, episodes, 
 
 async def test_one_member_out_of_time_refuses_the_group(conn, clock, fake, episodes, kids):  # PR-4
     configure(conn, allowance_min=60)
-    conn.execute("UPDATE profile SET daily_allowance_min = 1 WHERE id = 3")
+    # A-23: set allowance_mode='custom' to use the custom daily_allowance_min value
+    conn.execute("UPDATE profile SET allowance_mode = 'custom', daily_allowance_min = 1 WHERE id = 3")
     ctrl = await make_controller(conn, clock, fake)
     await play_for(ctrl, fake, episodes[0], [3])
     await run_for(ctrl, fake, clock, 70)
@@ -126,7 +127,8 @@ async def test_one_member_out_of_time_refuses_the_group(conn, clock, fake, episo
 
 async def test_group_finishes_the_episode_then_stops_and_the_other_can_start(conn, clock, fake, episodes, kids):
     configure(conn, allowance_min=60)
-    conn.execute("UPDATE profile SET daily_allowance_min = 1 WHERE id = 2")
+    # A-23: set allowance_mode='custom' to use the custom daily_allowance_min value
+    conn.execute("UPDATE profile SET allowance_mode = 'custom', daily_allowance_min = 1 WHERE id = 2")
     ctrl = await make_controller(conn, clock, fake)
     await play_for(ctrl, fake, episodes[0], [1, 2])
     await run_for(ctrl, fake, clock, 65)
@@ -226,3 +228,42 @@ async def test_no_profile_list_means_everyone(conn, clock, fake, episodes, kids)
     ctrl = await make_controller(conn, clock, fake)
     await ctrl.play(episodes[0])
     assert ctrl.current.profile_ids == [1, 2, 3]
+
+
+async def test_unlimited_by_policy_never_exhausts(conn, clock, fake, episodes, kids):
+    """A profile with allowance_mode='unlimited' can play indefinitely (A-23)."""
+    configure(conn, allowance_min=60)
+    # Set profile 2 to have an unlimited allowance policy
+    conn.execute("UPDATE profile SET allowance_mode = 'unlimited' WHERE id = 2")
+    ctrl = await make_controller(conn, clock, fake)
+    await play_for(ctrl, fake, episodes[0], [2])
+    # Play for longer than the default allowance (60 min)
+    await run_for(ctrl, fake, clock, 120)
+    # Should still be playing, not exhausted
+    assert ctrl.current is not None
+    state = ctrl.state()
+    assert state["timer"]["action"] == "continue"
+    assert not state["time_up"]
+    by_id = {p["profile_id"]: p for p in state["timer"]["profiles"]}
+    assert by_id[2]["remaining_s"] is None  # unlimited
+    assert by_id[2]["can_start"] is True
+
+
+async def test_unlimited_max_session_by_policy_allows_long_viewing(conn, clock, fake, episodes, kids):
+    """A profile with max_session_mode='unlimited' can watch multiple episodes indefinitely (A-23)."""
+    configure(conn, max_session_min=90)
+    # Profile 1: unlimited max_session policy
+    conn.execute("UPDATE profile SET max_session_mode = 'unlimited' WHERE id = 1")
+    ctrl = await make_controller(conn, clock, fake)
+    await play_for(ctrl, fake, episodes[0], [1])
+    # Play first episode to completion (EPISODE_S = 600 seconds)
+    await run_for(ctrl, fake, clock, EPISODE_S + 5)
+    # Autoplay should continue to next episode
+    assert ctrl.current.episode.id == episodes[1]
+    # Play until the second episode is nearly done
+    await run_for(ctrl, fake, clock, EPISODE_S + 5)
+    # Autoplay should continue to third episode
+    assert ctrl.current.episode.id == episodes[2]
+    # Should not be time_up (max_session is unlimited)
+    state = ctrl.state()
+    assert not state["time_up"]

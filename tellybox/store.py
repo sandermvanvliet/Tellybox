@@ -43,16 +43,86 @@ def profile_ids(conn: sqlite3.Connection) -> list[int]:
     return [r[0] for r in conn.execute("SELECT id FROM profile ORDER BY id")]
 
 
+def _resolve_allowance_s(
+    conn: sqlite3.Connection, allowance_mode: str, profile_allowance_min: int | None
+) -> float | None:
+    """Resolve the effective allowance for one profile.
+
+    inherit -> settings.default_allowance_min (in minutes)
+    custom -> profile.daily_allowance_min (in minutes)
+    unlimited -> None
+
+    A-23: per-profile limits.
+    """
+    if allowance_mode == "unlimited":
+        return None
+    if allowance_mode == "custom":
+        return profile_allowance_min * 60.0 if profile_allowance_min is not None else None
+    # inherit
+    row = conn.execute("SELECT default_allowance_min FROM settings WHERE id = 1").fetchone()
+    default_min = row["default_allowance_min"] if row else 60
+    return default_min * 60.0
+
+
+def _resolve_max_session_s(
+    conn: sqlite3.Connection, max_session_mode: str, profile_max_session_min: int | None
+) -> float | None:
+    """Resolve the effective max session length for one profile.
+
+    inherit -> settings.default_max_session_min (in minutes)
+    custom -> profile.max_session_min (in minutes)
+    unlimited -> None
+
+    A-23: per-profile limits.
+    """
+    if max_session_mode == "unlimited":
+        return None
+    if max_session_mode == "custom":
+        return profile_max_session_min * 60.0 if profile_max_session_min is not None else None
+    # inherit
+    row = conn.execute("SELECT default_max_session_min FROM settings WHERE id = 1").fetchone()
+    default_min = row["default_max_session_min"] if row else 90
+    return default_min * 60.0
+
+
+def effective_allowance_s(conn: sqlite3.Connection, profile_id: int) -> float | None:
+    """Get the effective allowance (in seconds) for a profile, resolving inherit/custom/unlimited.
+
+    A-23: per-profile limits.
+    """
+    row = conn.execute(
+        "SELECT allowance_mode, daily_allowance_min FROM profile WHERE id = ?",
+        (profile_id,)
+    ).fetchone()
+    if not row:
+        return None
+    return _resolve_allowance_s(conn, row["allowance_mode"], row["daily_allowance_min"])
+
+
+def effective_max_session_s(conn: sqlite3.Connection, profile_id: int) -> float | None:
+    """Get the effective max session length (in seconds) for a profile, resolving inherit/custom/unlimited.
+
+    A-23: per-profile limits.
+    """
+    row = conn.execute(
+        "SELECT max_session_mode, max_session_min FROM profile WHERE id = ?",
+        (profile_id,)
+    ).fetchone()
+    if not row:
+        return None
+    return _resolve_max_session_s(conn, row["max_session_mode"], row["max_session_min"])
+
+
 def profile_policies(conn: sqlite3.Connection, ids: list[int] | None = None) -> list[ProfilePolicy]:
     rows = conn.execute(
-        "SELECT id, daily_allowance_min, counting_mode, max_session_min FROM profile ORDER BY id"
+        "SELECT id, allowance_mode, daily_allowance_min, counting_mode, max_session_mode, max_session_min FROM profile ORDER BY id"
     ).fetchall()
     return [
         ProfilePolicy(
             profile_id=r["id"],
-            allowance_s=r["daily_allowance_min"] * 60.0,
+            allowance_s=_resolve_allowance_s(conn, r["allowance_mode"], r["daily_allowance_min"]),
             mode=CountingMode(r["counting_mode"]),
-            max_session_s=r["max_session_min"] * 60.0,
+            max_session_s=_resolve_max_session_s(conn, r["max_session_mode"], r["max_session_min"]),
         )
         for r in rows
         if ids is None or r["id"] in ids

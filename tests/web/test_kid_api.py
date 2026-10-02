@@ -233,7 +233,8 @@ def test_reduce_fraction_uses_db_allowance_and_clamps(lib, mkstate):
 
 def test_reduce_several_profiles_uses_minimum_fraction(lib, mkstate):
     conn, _ = lib
-    conn.execute("INSERT INTO profile (id, name, daily_allowance_min, created_at) VALUES (2, 'B', 120, 'x')")
+    # A-23: set allowance_mode='custom' to use the custom daily_allowance_min value
+    conn.execute("INSERT INTO profile (id, name, daily_allowance_min, allowance_mode, created_at) VALUES (2, 'B', 120, 'custom', 'x')")
     profiles = [
         {"profile_id": 1, "used_s": 1800, "extra_s": 0, "unlimited": False},   # 0.5 left
         {"profile_id": 2, "used_s": 1800, "extra_s": 0, "unlimited": False},   # 0.75 left

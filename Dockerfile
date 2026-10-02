@@ -4,8 +4,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg \
     tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld tesseract-ocr-deu \
  && rm -rf /var/lib/apt/lists/* \
- # A fixed uid/gid, 1500, unlikely to clash with accounts on the host; the data folders
- # on the host must be owned by it (docs/installation.md).
+ # Default uid/gid 1500, unlikely to clash with accounts on the host. The entrypoint
+ # chowns the data folders and drops to PUID/PGID (default 1500) at start (DP-3).
  && groupadd --gid 1500 tellybox \
  && useradd --uid 1500 --gid tellybox --create-home --shell /usr/sbin/nologin tellybox
 
@@ -25,7 +25,10 @@ ENV PYTHONUNBUFFERED=1 \
 ARG APP_VERSION=dev
 ENV TELLYBOX_VERSION=$APP_VERSION
 
-USER tellybox
+# Starts as root only to fix folder ownership, then drops to PUID/PGID (tellybox/entrypoint.py).
+ENTRYPOINT ["python", "-m", "tellybox.entrypoint"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "-m", "tellybox.healthcheck"]
 
 # One image, several services (web, cast, worker); compose picks the command.
 CMD ["python", "-m", "tellybox.web"]

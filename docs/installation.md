@@ -44,11 +44,10 @@ docker build -t tellybox:latest --build-arg APP_VERSION=$(git describe --always)
 
 ## 2. Prepare the folders
 
-Pick a home for Tellybox; this guide uses `/opt/tellybox`. The containers run as **uid/gid 1500**, so that user must own the data folders:
+Pick a home for Tellybox; this guide uses `/opt/tellybox`. The containers run as **uid/gid 1500** by default (set `PUID` and `PGID` to pick another owner). They start as root only to take ownership of `data/`, `media/` and `backups/`, then drop privileges, so you don't need to `chown` those folders yourself:
 
 ```sh
 sudo mkdir -p /opt/tellybox/{data,media,backups,secrets}
-sudo chown 1500:1500 /opt/tellybox/{data,media,backups}
 ```
 
 | Folder | Contents |
@@ -99,12 +98,6 @@ services:
     environment:
       <<: *env
       TELLYBOX_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   cast:
     <<: *tellybox
@@ -128,7 +121,7 @@ services:
 
 Some notes on this file:
 - **All three services need the same environment.** The web app talks to the cast service on `127.0.0.1:<TELLYBOX_CAST_API_PORT>`, and all three share the database and media folder.
-- **Pick free ports.** 8080 and 8081 are popular (UniFi uses both, for example). Change `TELLYBOX_WEB_PORT`, `TELLYBOX_MEDIA_BASE_URL` and the healthcheck together.
+- **Pick free ports.** 8080 and 8081 are popular (UniFi uses both, for example). Change `TELLYBOX_WEB_PORT` and `TELLYBOX_MEDIA_BASE_URL` together. The image has its own healthcheck, which follows the port variables.
 - **On Fedora or RHEL with SELinux**, add `:z` to each bind mount (`./data:/data:z`).
 - **Run only one Tellybox per Chromecast.** Two cast services will fight over the same TV.
 
@@ -177,6 +170,7 @@ All settings are environment variables. What you can change in the admin pages (
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
+| `PUID`, `PGID` | `1500`, `1500` | The uid/gid the services run as. The container starts as root, takes ownership of `/data`, `/media` and `/backups` (top-level check only, so a large library isn't scanned on every start), then drops to this user. `0` means run as root and must be set explicitly. Ignored when you start the container with `user:` or `--user`. |
 | `TELLYBOX_ADMIN_PASSWORD_FILE` | none | A file containing the admin password (preferred). |
 | `TELLYBOX_ADMIN_PASSWORD` | none | The admin password itself. If neither is set, the admin pages stay locked. Changing the password signs out every session. |
 | `TELLYBOX_WEB_PORT` | `8080` | Port for the kid app, the admin pages and the media files. |
@@ -292,7 +286,7 @@ docker compose stop
 cp data/tellybox.db data/tellybox.db.before-restore
 rm -f data/tellybox.db-wal data/tellybox.db-shm
 cp backups/tellybox-YYYYMMDD-HHMM.db data/tellybox.db
-chown 1500:1500 data/tellybox.db
+chown 1500:1500 data/tellybox.db   # your PUID:PGID; only the top-level folder is fixed automatically
 docker compose start
 ```
 
@@ -324,13 +318,13 @@ The repository contains a GitHub Actions workflow (`.github/workflows/docker-pub
 | **No Chromecast found** | The containers use `network_mode: host`, and the server and Chromecast are on the same subnet (not a guest network with client isolation). Multicast/mDNS isn't blocked between them. `docker compose logs cast` shows discovery. |
 | **The TV shows the Cast icon but no video, or times out** | The Chromecast can't reach `TELLYBOX_MEDIA_BASE_URL`. Set it to `http://<server LAN IP>:<web port>` and allow that port from the LAN in the firewall. |
 | **Admin says "Admin is locked"** | No password is configured. Set `TELLYBOX_ADMIN_PASSWORD_FILE` (readable by uid 1500) or `TELLYBOX_ADMIN_PASSWORD` on the `web` service and recreate it. |
-| **Permission denied in the logs** | The data folders must be owned by uid/gid 1500: `sudo chown -R 1500:1500 data media backups`. |
+| **Permission denied in the logs** | The container fixes the ownership of `data`, `media` and `backups` at start, so this usually means the folder is read-only or on a filesystem that refuses `chown` (some NFS exports). Set `PUID`/`PGID` to the folder's owner instead. If you run with `user:` in compose, the container can't chown anything and the folders must already belong to that user. |
 | **Downloads fail with a YouTube error** | Press "Update yt-dlp" on the **Jobs** page, then retry the job on the **Jobs** page. Private, members-only and age-restricted videos can't be downloaded. |
 | **A page hangs while loading, with many Tellybox tabs open** | Your proxy serves HTTP/1.1, and every tab's live stream holds one of the browser's 6 connections. Enable HTTP/2 on the proxy (see [HTTPS](#https-with-a-reverse-proxy)) or close some tabs. |
 | **A video still has a sponsor segment** | SponsorBlock's data comes from its users and often arrives after a video is published. Tellybox checks each new video again every night for 7 days and replaces the file when segments are added. The episode's page (**Library** → the show → the episode) shows what was cut, or that SponsorBlock was unreachable or off for it. Videos added before SponsorBlock was available are only cut after **Download again with SponsorBlock** on that page. |
 | **Time isn't counted for something playing** | Only playback started from Tellybox is timed. Casting from the YouTube app on a phone is deliberately ignored. |
 | **The pages are in the wrong language** | Tellybox follows each browser's language preference (English, Dutch or German; anything else gets English). Change the order of preferred languages in the browser or phone settings. There's no language setting in Tellybox itself. |
-| **Port already in use** | Another service owns 8080 or 8081. Change `TELLYBOX_WEB_PORT` and `TELLYBOX_CAST_API_PORT` (and the media URL and healthcheck). |
+| **Port already in use** | Another service owns 8080 or 8081. Change `TELLYBOX_WEB_PORT` and `TELLYBOX_CAST_API_PORT` (and the media URL). |
 
 ## Command-line tools
 

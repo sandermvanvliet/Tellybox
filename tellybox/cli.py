@@ -20,7 +20,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tellybox import backup, db, ingest, jobs, library
+from tellybox import backup, db, ingest, jobs, library, privileges
 from tellybox.config import Config
 from tellybox.ytdlp import YtDlp, YtDlpError
 
@@ -234,6 +234,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # `docker compose exec` starts as root: write files as the service user (DP-3).
+    if os.geteuid() == 0:
+        try:
+            privileges.drop_root(*privileges.target_ids())
+        except ValueError as e:
+            print(f"tellybox: {e}", file=sys.stderr)
+            return 2
     logging.basicConfig(level=logging.INFO, format="%(asctime)s level=%(levelname)s logger=%(name)s %(message)s")
     parser = build_parser()
     args = parser.parse_args(argv)

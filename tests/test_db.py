@@ -73,3 +73,16 @@ def test_migration_008_keeps_existing_jobs(tmp_path):  # SponsorBlock rebuilds t
     assert conn.execute("SELECT count(*) FROM position_shift").fetchone()[0] == 0
     assert conn.execute("SELECT sponsorblock_categories FROM settings").fetchone()[0] == "sponsor,selfpromo,interaction"
     assert conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'job_queue'").fetchone()
+
+
+def test_migration_012_marks_an_existing_password_as_env(tmp_path):  # DP-4
+    conn = db.connect(tmp_path / "t.db")
+    for version, _name, sql in db.migrations():
+        if version <= 11:
+            for statement in db._split_sql(sql):
+                conn.execute(statement)
+            conn.execute(f"PRAGMA user_version = {version}")
+    conn.execute("UPDATE settings SET admin_password_hash = 'x' WHERE id = 1")
+    assert db.migrate(conn) == db.migrations()[-1][0] >= 12
+    row = conn.execute("SELECT admin_password_hash, admin_password_source, admin_setup_code_hash FROM settings").fetchone()
+    assert tuple(row) == ("x", "env", None)

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-01 15:50+0200\n"
+"POT-Creation-Date: 2026-10-02 11:20+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -177,16 +177,33 @@ msgstr ""
 msgid "Non-music section"
 msgstr ""
 
-#: tellybox/web/admin/__init__.py:76
-msgid "This sign-in form must be sent from this page."
+#: tellybox/web/admin/__init__.py:87
+msgid "This form must be sent from this page."
 msgstr ""
 
-#: tellybox/web/admin/__init__.py:82
+#: tellybox/web/admin/__init__.py:93 tellybox/web/admin/__init__.py:130
 #, python-format
 msgid "Too many attempts. Try again in %(seconds)d s."
 msgstr ""
 
-#: tellybox/web/admin/__init__.py:86
+#: tellybox/web/admin/__init__.py:96
+msgid "Wrong setup code."
+msgstr ""
+
+#: tellybox/web/admin/__init__.py:98
+#, python-format
+msgid "The password must be at least %(n)d characters."
+msgstr ""
+
+#: tellybox/web/admin/__init__.py:101
+msgid "The two passwords are not the same."
+msgstr ""
+
+#: tellybox/web/admin/__init__.py:124
+msgid "This sign-in form must be sent from this page."
+msgstr ""
+
+#: tellybox/web/admin/__init__.py:134
 msgid "Wrong password."
 msgstr ""
 
@@ -1725,19 +1742,6 @@ msgstr ""
 msgid "Nothing held."
 msgstr ""
 
-#: tellybox/web/admin/templates/locked.html:3
-msgid "Locked"
-msgstr ""
-
-#: tellybox/web/admin/templates/locked.html:6
-msgid "Admin is locked"
-msgstr ""
-
-#: tellybox/web/admin/templates/locked.html:7
-#, python-format
-msgid "Admin is locked: set %(variable)s"
-msgstr ""
-
 #: tellybox/web/admin/templates/login.html:3
 #: tellybox/web/admin/templates/login.html:12
 msgid "Sign in"
@@ -1875,6 +1879,43 @@ msgstr ""
 
 #: tellybox/web/admin/templates/settings.html:117
 msgid "Search"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:3
+msgid "Set up the admin password"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:6
+msgid "Set up Tellybox"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:7
+msgid "Choose the password for this admin area. You need the setup code that Tellybox wrote to its log when it started:"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:9
+#, python-format
+msgid "On a server: run %(command)s and look for the line with the setup code."
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:10
+msgid "In Home Assistant: open the add-on's Log tab."
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:13
+msgid "Setup code"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:16
+msgid "New password"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:19
+msgid "Repeat the password"
+msgstr ""
+
+#: tellybox/web/admin/templates/setup.html:22
+msgid "Set password and sign in"
 msgstr ""
 
 #: tellybox/web/admin/templates/show.html:12

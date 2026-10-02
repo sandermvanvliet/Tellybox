@@ -55,9 +55,9 @@ sudo mkdir -p /opt/tellybox/{data,media,backups,secrets}
 | `data/` | The SQLite database, the media-link signing key and the self-updating yt-dlp install |
 | `media/` | Episodes, thumbnails and show artwork |
 | `backups/` | Database backups (see [Backups](#backups-and-restoring)) |
-| `secrets/` | The admin password file |
+| `secrets/` | The admin password file (optional, see below) |
 
-Store the admin password as a file, so it doesn't end up in the compose file or your shell history:
+**The admin password is optional here.** Without one, Tellybox asks you to choose it in the browser on first run, using a setup code from the logs (see [First-run setup](#5-first-run-setup)). If you prefer to set it from the host instead, for example to manage it with your own secrets tooling, store it as a file so it doesn't end up in the compose file or your shell history:
 
 ```sh
 sudo sh -c 'read -r -s -p "Admin password: " p && printf %s "$p" > /opt/tellybox/secrets/admin-password'
@@ -94,10 +94,11 @@ services:
     volumes:
       - ./data:/data
       - ./media:/media
-      - ./secrets/admin-password:/run/secrets/admin-password:ro
+      # Optional: a fixed admin password. Without it, you choose one in the browser on first run.
+      # - ./secrets/admin-password:/run/secrets/admin-password:ro
     environment:
       <<: *env
-      TELLYBOX_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
+      # TELLYBOX_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
 
   cast:
     <<: *tellybox
@@ -150,7 +151,13 @@ The cast API (8081) listens on `127.0.0.1` only, so it needs no rule. mDNS disco
 
 ## 5. First-run setup
 
-1. **Sign in:** open `http://<server>:8080/admin` and sign in with the admin password.
+1. **Choose the admin password:** open `http://<server>:8080/admin`. If you didn't configure a password, you land on the setup page. Tellybox writes a one-time setup code to the log of the `web` service each time it starts without a password; find it with:
+
+   ```sh
+   docker compose logs web | grep "setup code"
+   ```
+
+   (In Home Assistant, it's in the add-on's Log tab.) Enter the code, then choose a password of at least 8 characters, and you're signed in. The code stops working once used, and a restart makes a new one. If you configured a password in the compose file instead, just sign in with it.
 2. **Choose the TV:** in **Settings**, pick your Chromecast. With only one on the network, it's chosen automatically. Tellybox remembers it and reconnects on its own after restarts or power cuts.
 3. **Set the limits:** also in **Settings**:
    - the daily allowance (default 60 minutes);
@@ -171,8 +178,8 @@ All settings are environment variables. What you can change in the admin pages (
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PUID`, `PGID` | `1500`, `1500` | The uid/gid the services run as. The container starts as root, takes ownership of `/data`, `/media` and `/backups` (top-level check only, so a large library isn't scanned on every start), then drops to this user. `0` means run as root and must be set explicitly. Ignored when you start the container with `user:` or `--user`. |
-| `TELLYBOX_ADMIN_PASSWORD_FILE` | none | A file containing the admin password (preferred). |
-| `TELLYBOX_ADMIN_PASSWORD` | none | The admin password itself. If neither is set, the admin pages stay locked. Changing the password signs out every session. |
+| `TELLYBOX_ADMIN_PASSWORD_FILE` | none | A file containing the admin password (preferred over the variable below). Overrides a password chosen in the browser. |
+| `TELLYBOX_ADMIN_PASSWORD` | none | The admin password itself. Overrides a password chosen in the browser. If neither is set, you choose the password in the browser on first run. Changing the password signs out every session. |
 | `TELLYBOX_WEB_PORT` | `8080` | Port for the kid app, the admin pages and the media files. |
 | `TELLYBOX_WEB_HOST` | `0.0.0.0` | Address the web app listens on. |
 | `TELLYBOX_MEDIA_BASE_URL` | `http://<LAN IP>:<web port>` | The URL the Chromecast uses to fetch videos. It's detected automatically. Set it explicitly if the server has several interfaces (Docker bridges, VPNs) or the detection picks the wrong one. Use plain `http://` and an IP address: a Chromecast can't resolve local-only DNS names. |
@@ -317,7 +324,7 @@ The repository contains a GitHub Actions workflow (`.github/workflows/docker-pub
 | --- | --- |
 | **No Chromecast found** | The containers use `network_mode: host`, and the server and Chromecast are on the same subnet (not a guest network with client isolation). Multicast/mDNS isn't blocked between them. `docker compose logs cast` shows discovery. |
 | **The TV shows the Cast icon but no video, or times out** | The Chromecast can't reach `TELLYBOX_MEDIA_BASE_URL`. Set it to `http://<server LAN IP>:<web port>` and allow that port from the LAN in the firewall. |
-| **Admin says "Admin is locked"** | No password is configured. Set `TELLYBOX_ADMIN_PASSWORD_FILE` (readable by uid 1500) or `TELLYBOX_ADMIN_PASSWORD` on the `web` service and recreate it. |
+| **Forgot the admin password** | If you chose it in the browser: run `docker compose exec web tellybox reset-password`. It clears the password, signs everyone out and prints a new setup code; open `/admin/setup` and choose a new password. (Restarting `web` instead logs a new code, which also works.) If the password comes from `TELLYBOX_ADMIN_PASSWORD` or `_FILE`, change it there and recreate the `web` service. |
 | **Permission denied in the logs** | The container fixes the ownership of `data`, `media` and `backups` at start, so this usually means the folder is read-only or on a filesystem that refuses `chown` (some NFS exports). Set `PUID`/`PGID` to the folder's owner instead. If you run with `user:` in compose, the container can't chown anything and the folders must already belong to that user. |
 | **Downloads fail with a YouTube error** | Press "Update yt-dlp" on the **Jobs** page, then retry the job on the **Jobs** page. Private, members-only and age-restricted videos can't be downloaded. |
 | **A page hangs while loading, with many Tellybox tabs open** | Your proxy serves HTTP/1.1, and every tab's live stream holds one of the browser's 6 connections. Enable HTTP/2 on the proxy (see [HTTPS](#https-with-a-reverse-proxy)) or close some tabs. |
@@ -336,5 +343,6 @@ docker compose exec worker tellybox jobs                                       #
 docker compose exec worker tellybox retry <job id>                             # retry a failed job
 docker compose exec worker tellybox ytdlp-update                               # queue a yt-dlp update
 docker compose exec worker tellybox backup /backups --keep 14                  # consistent database backup
+docker compose exec web tellybox reset-password                                 # forget a browser-chosen admin password, print a setup code
 docker compose exec worker tellybox migrate                                    # apply migrations (also done on start)
 ```

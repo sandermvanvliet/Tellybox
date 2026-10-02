@@ -32,15 +32,15 @@ This guide takes you from an empty server to kids picking videos on the TV. Setu
 
 ## 1. Get the image
 
-Tellybox is one image that runs three services (`web`, `cast` and `worker`). Build it from source:
+Tellybox is one image that runs three services (`web`, `cast` and `worker`). It's published on the GitHub Container Registry, for amd64 (and arm64 from the first release):
 
 ```sh
-git clone https://github.com/sandermvanvliet/Tellybox.git
-cd Tellybox
-docker build -t tellybox:latest --build-arg APP_VERSION=$(git describe --always) .
+docker pull ghcr.io/sandermvanvliet/tellybox:edge
 ```
 
-`APP_VERSION` is optional. It's shown on the admin dashboard and at `/healthz`.
+`edge` follows the main branch. Versioned releases (`0.1`, `0.1.0`, and `latest` for the newest) start with the first release; switch to `latest` or a version then.
+
+To build it yourself instead, clone the repository and run `docker build -t tellybox:latest --build-arg APP_VERSION=$(git describe --always) .`. `APP_VERSION` is shown on the admin dashboard and at `/healthz`.
 
 ## 2. Prepare the folders
 
@@ -72,7 +72,7 @@ Save this as `/opt/tellybox/docker-compose.yml`. Replace `192.168.1.10` with the
 
 ```yaml
 x-tellybox: &tellybox
-  image: tellybox:latest
+  image: ghcr.io/sandermvanvliet/tellybox:edge
   network_mode: host          # required: mDNS discovery, and the Chromecast fetches media from the host
   restart: unless-stopped
   logging:
@@ -301,9 +301,9 @@ Episodes added after the backup have files in `media/` but no rows in the databa
 ## Updating
 
 ```sh
-cd ~/Tellybox && git pull
-docker build -t tellybox:latest --build-arg APP_VERSION=$(git describe --always) .
-cd /opt/tellybox && docker compose up -d
+cd /opt/tellybox
+docker compose pull
+docker compose up -d
 ```
 
 - **Migrations:** database migrations run automatically on start. They only move forward, so take a backup before upgrading if you might want to roll back.
@@ -313,7 +313,7 @@ cd /opt/tellybox && docker compose up -d
 ### Automatic deploys
 
 The repository contains a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that tests every push to `main`, builds the image to GHCR and deploys it over SSH (`docker compose pull && docker compose up -d`). To use it for your own fork:
-1. Change `IMAGE_NAME` in the workflow, and point `image:` in your compose file at `ghcr.io/<you>/tellybox:latest`.
+1. Change `IMAGE_NAME` in the workflow, and point `image:` in your compose file at `ghcr.io/<you>/tellybox:edge` (main builds `edge`; `v*` tags build releases and `latest`, and aren't deployed).
 2. Create a deploy user on the server with an SSH key.
 3. Set the `DEPLOY_HOST`, `DEPLOY_PORT` (the SSH port, usually 22), `DEPLOY_USER`, `DEPLOY_PATH` and `DEPLOY_SSH_KEY` secrets.
 

@@ -24,12 +24,12 @@ Self-hosted app that lets young kids pick parent-approved videos on any device a
 - SponsorBlock (v3): through yt-dlp's built-in support (`--sponsorblock-remove`); no separate client.
 - Frontend: lightweight, server-rendered or a small SPA; live updates via SSE.
 - Interface languages (NF-13): English, Dutch, German via gettext catalogs read with Babel.
-- Three services sharing the DB and media volume: `web`, `worker` (jobs), `cast` (Chromecast session + timer).
+- Three services sharing the DB and media volume: `web`, `worker` (jobs), `cast` (Chromecast session + timer). From step 15 they run as one container by default (`python -m tellybox` supervises them), or split by compose.
 - yt-dlp must be updatable without rebuilding the image (CI-5).
 
 ## How to work
 
-- Build in the order of "Build order after v1" in the PRD (v1 is done): kid profiles, the admin API for Home Assistant (step 9), SponsorBlock, channel subscriptions, manual splitting, Tellybox receiver (step 13, moved ahead), smart splitting. One step per branch or PR.
+- Build in the order of "Build order after v1" in the PRD (v1 is done): kid profiles, the admin API for Home Assistant (step 9), SponsorBlock, channel subscriptions, manual splitting, Tellybox receiver (step 13, moved ahead), smart splitting. Step 15 (easier installation) was added on 2026-10-02 and is built before 11. One step per branch or PR.
 - Before coding a step, propose a short plan and wait for approval.
 - Write tests for timer logic (WT-*) with a fake clock and a fake Chromecast; no real device needed for unit tests.
 - Keep a running log in `docs/PROGRESS.md`: what's done, what's next, open decisions.

@@ -8,7 +8,7 @@ const LABELS = {
   en: {
     "Time left": "Time left",
     "Time's up for today": "Time's up for today",
-    "No time limit today": "No time limit today",
+    "No time limit": "No time limit",
     "%(pct)s% of today's time left": "%(pct)s% of today's time left",
     "%(pct)s% of today's time left, almost done": "%(pct)s% of today's time left, almost done",
     "Keep watching": "Keep watching",
@@ -25,7 +25,7 @@ const LABELS = {
   nl: {
     "Time left": "Tijd over",
     "Time's up for today": "De tijd is op voor vandaag",
-    "No time limit today": "Vandaag geen tijdslimiet",
+    "No time limit": "Geen tijdslimiet",
     "%(pct)s% of today's time left": "Nog %(pct)s% van de tijd over vandaag",
     "%(pct)s% of today's time left, almost done": "Nog %(pct)s% van de tijd over vandaag, bijna klaar",
     "Keep watching": "Verder kijken",
@@ -42,7 +42,7 @@ const LABELS = {
   de: {
     "Time left": "Verbleibende Zeit",
     "Time's up for today": "Die Zeit für heute ist um",
-    "No time limit today": "Heute ohne Zeitlimit",
+    "No time limit": "Kein Zeitlimit",
     "%(pct)s% of today's time left": "Noch %(pct)s% der Zeit für heute",
     "%(pct)s% of today's time left, almost done": "Noch %(pct)s% der Zeit für heute, fast vorbei",
     "Keep watching": "Weiterschauen",

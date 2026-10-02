@@ -56,13 +56,15 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   "profiles": [                          // every profile, in the admin's order (sort_order, id)
     {
       "id": 1, "name": "Mila", "avatar": "fox" | null,
-      "allowance_s": 3600,               // the daily allowance (AD-2)
+      "allowance_s": 3600 | null,        // the daily allowance (AD-2, A-23); null = unlimited
+      "allowance_source": "inherit" | "custom" | "unlimited",  // A-23
       "extra_s": 900,                    // extra time given today
       "used_s": 2710,
       "remaining_s": 1790 | null,        // null = unlimited today
       "unlimited": false, "blocked": false,
       "mode": "ignore_pauses" | "wall_clock",
-      "max_session_s": 5400 | null,      // WT-3; null = none
+      "max_session_s": 5400 | null,      // WT-3; null = none (A-23)
+      "max_session_source": "inherit" | "custom" | "unlimited",  // A-23
       "session_elapsed_s": 1200 | null,  // this profile's open viewing session (A-13)
       "can_start": true,
       "reason": null | "allowance" | "session_max" | "blocked",

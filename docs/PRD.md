@@ -55,7 +55,7 @@ Requirement IDs are referenced in the release plan. Priority: **Must** = require
 | --- | --- | --- | --- |
 | PR-1 | Admin creates a profile per kid with a name and a picture (avatar or photo) used for selection. | Must | v2 |
 | PR-2 | The kid page starts with a "who's watching" screen showing profile pictures only. More than one profile can be selected for watching together. | Must | v2 |
-| PR-3 | Each profile has its own daily allowance, usage, continue-watching list and history. | Must | v2 |
+| PR-3 | Each profile has its own daily allowance (inherit from default, custom or unlimited), usage, continue-watching list and history. Maximum session length is also per-profile (inherit, custom or unlimited) (A-23). | Must | v2 |
 | PR-4 | When several profiles watch together, watch time is deducted from each of them, and playback is allowed only while all have time left. | Should | v2 |
 
 In v1, before profiles exist, a single household profile holds one shared allowance. The data model includes profiles from the start, so v2 needs no migration of history.
@@ -91,9 +91,9 @@ Profiles separate time, history and continue watching; every profile sees the wh
 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
-| WT-1 | Each profile has a daily allowance in minutes, reset at a configurable time (default 04:00 local). | Must | v1 |
+| WT-1 | Each profile has a daily allowance in minutes (inherited from default, custom, or unlimited), reset at a configurable time (default 04:00 local) (A-23). | Must | v1 |
 | WT-2 | Counting mode is configurable: **ignore pauses** (only playing time counts) or **wall clock** (time counts from play until stop, pauses included). | Must | v1 |
-| WT-3 | With "ignore pauses", a maximum wall-clock session length applies (e.g. 90 min). When it's reached, the session ends even if play-time allowance remains. | Must | v1 |
+| WT-3 | With "ignore pauses", a per-profile maximum wall-clock session length applies (inherited from default, custom, or unlimited) (A-23). When it's reached, the session ends even if play-time allowance remains. | Must | v1 |
 | WT-4 | When the allowance runs out mid-episode, the current episode finishes, then playback stops and autoplay is suppressed. | Must | v1 |
 | WT-5 | The finish-the-episode grace is capped (default 15 min) so an unsplit long video cannot run on indefinitely. | Must | v1 |
 | WT-6 | Rewatching counts toward the allowance like any other viewing. | Must | v1 |
@@ -185,7 +185,7 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
 | AD-1 | Admin pages require a password; sessions expire after 30 days of inactivity. | Must | v1 |
-| AD-2 | Settings page: allowance per profile, counting mode, maximum session length, reset time, grace cap and selected Chromecast. | Must | v1 |
+| AD-2 | Settings page: per-profile allowance (inherit/custom/unlimited) and maximum session length (inherit/custom/unlimited), counting mode, household default limits, reset time, grace cap and selected Chromecast (A-23). | Must | v1 |
 | AD-3 | Dashboard: now playing, time used and remaining per profile, override buttons (WT-7) and job status. It must be usable on a phone. | Must | v1 |
 | AD-4 | Viewing history per profile: episode, start and end time, minutes counted, and overrides applied. | Must | v1 |
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
@@ -272,7 +272,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| Profile | name, picture, daily allowance, counting mode | v1 has one household profile |
+| Profile | name, picture, daily allowance (inherit/custom/unlimited), maximum session length (inherit/custom/unlimited), counting mode | v1 has one household profile; limits per-profile from v2 (A-23) |
 | Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories not set = the global setting, none = SponsorBlock off for the show (SB-2) |
 | SourceVideo | YouTube ID, channel, title, duration, file path, status, removed segments, SponsorBlock re-check until | The downloaded original; may be deleted after splitting |
 | Episode | show, source video, start/end offset, title, thumbnail, file path, order, hidden | What kids see and play |
@@ -371,6 +371,7 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-20 | Videos downloaded before v3 are not cut by the daily re-check; the admin can download one again with SponsorBlock from its episode page (step 10, 2026-09-30). |
 | A-21 | After a split, the source file is kept unless the admin ticks "delete the original video after cutting" when approving (unticked by default). A kept source can be split again (owner, 2026-10-01). |
 | A-22 | A compilation that automatic detection (ES-10) picks up stays hidden from the kid app until its split is approved, or the admin publishes it whole (owner, 2026-10-01). |
+| A-23 | Per-profile limits (daily allowance and maximum session length): each limit mode is inherit (use the household default), custom (profile-specific value), or unlimited (no limit). Existing profiles were migrated to custom mode. Counting mode, grace cap, session break, and extra minutes work the same whether limits are inherited, custom or unlimited. Extra minutes are ignored if a profile is unlimited (issue #27, 2026-10-02). |
 
 ### Open questions
 

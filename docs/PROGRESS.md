@@ -474,8 +474,18 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
   - `_sky()` in the controller runs one small profile query per tick while the receiver runs; cache it if it shows up.
   - No lint was run (ruff isn't in the venv).
 
+### Per-profile limits (issue #27, branch feature/per-profile-limits)
+Settings page and admin API: allowance and maximum session length per profile are now inherit, custom or unlimited (A-23).
+- **Settings page:** household default daily allowance and max session length (minutes 1–1440); per-profile selects for both limits (use default / custom / unlimited); number inputs shown only when custom.
+- **Admin API:** `allowance_s` and `max_session_s` are null when unlimited; new fields `allowance_source` and `max_session_source` (inherit/custom/unlimited).
+- **Kid app:** "No time limit today" changed to "No time limit" in the sky label (screen-reader aid).
+- **Docs:** PRD PR-3, WT-1, WT-3, AD-2 and Profile row updated; new assumption A-23; admin-api.md updated.
+- **Translations:** new English, Dutch and German UI strings in the settings form.
+- **Tests:** 35 setting tests cover modes round-trip to the DB, validation of custom numbers, default settings, page rendering.
+- **Open:** real-device checks on the owner's home server (set one profile unlimited and one custom, play on the Chromecast, confirm sky and dashboard badge).
+
 ### Then
-11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
+11. Channel subscriptions (v4).
 
 ## Open decisions / follow-ups
 

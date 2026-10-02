@@ -9,7 +9,25 @@
   <section class="card">
     <div class="row profile-head">{{ pf.picture(p, 40) }}<h2>{{ p.name }}</h2></div>
     <div class="stack">
-      <label>{{ _("Daily allowance (minutes)") }}
+      <label>{{ _("Daily allowance") }}
+        <select name="profile_{{ p.id }}_allowance_mode" class="allowance-mode" data-pid="{{ p.id }}">
+          <option value="inherit" {% if values['profile_' ~ p.id ~ '_allowance_mode'] == 'inherit' %}selected{% endif %}>
+            {{ _("Use default") }}
+          </option>
+          <option value="custom" {% if values['profile_' ~ p.id ~ '_allowance_mode'] == 'custom' %}selected{% endif %}>
+            {{ _("Custom") }}
+          </option>
+          <option value="unlimited" {% if values['profile_' ~ p.id ~ '_allowance_mode'] == 'unlimited' %}selected{% endif %}>
+            {{ _("Unlimited") }}
+          </option>
+        </select>
+      </label>
+      {% if errors.get('profile_' ~ p.id ~ '_allowance_mode') %}
+        <p class="flash error">{{ errors['profile_' ~ p.id ~ '_allowance_mode'] }}</p>
+      {% endif %}
+
+      <label class="custom-input" data-pid="{{ p.id }}" data-mode="allowance">
+        {{ _("Minutes (1–1440)") }}
         <input type="number" name="profile_{{ p.id }}_allowance_min" min="1" max="1440"
                value="{{ values['profile_' ~ p.id ~ '_allowance_min'] }}">
       </label>
@@ -31,7 +49,25 @@
         <p class="flash error">{{ errors['profile_' ~ p.id ~ '_counting_mode'] }}</p>
       {% endif %}
 
-      <label>{{ _("Maximum session length (minutes)") }}
+      <label>{{ _("Maximum session length") }}
+        <select name="profile_{{ p.id }}_max_session_mode" class="max-session-mode" data-pid="{{ p.id }}">
+          <option value="inherit" {% if values['profile_' ~ p.id ~ '_max_session_mode'] == 'inherit' %}selected{% endif %}>
+            {{ _("Use default") }}
+          </option>
+          <option value="custom" {% if values['profile_' ~ p.id ~ '_max_session_mode'] == 'custom' %}selected{% endif %}>
+            {{ _("Custom") }}
+          </option>
+          <option value="unlimited" {% if values['profile_' ~ p.id ~ '_max_session_mode'] == 'unlimited' %}selected{% endif %}>
+            {{ _("Unlimited") }}
+          </option>
+        </select>
+      </label>
+      {% if errors.get('profile_' ~ p.id ~ '_max_session_mode') %}
+        <p class="flash error">{{ errors['profile_' ~ p.id ~ '_max_session_mode'] }}</p>
+      {% endif %}
+
+      <label class="custom-input" data-pid="{{ p.id }}" data-mode="session">
+        {{ _("Minutes (1–1440)") }}
         <input type="number" name="profile_{{ p.id }}_max_session_min" min="1" max="1440"
                value="{{ values['profile_' ~ p.id ~ '_max_session_min'] }}">
       </label>
@@ -45,6 +81,18 @@
   <section class="card">
     <h2>{{ _("Household") }}</h2>
     <div class="stack">
+      <label>{{ _("Default daily allowance (minutes)") }}
+        <input type="number" name="default_allowance_min" min="1" max="1440"
+               value="{{ values.default_allowance_min }}">
+      </label>
+      {% if errors.get('default_allowance_min') %}<p class="flash error">{{ errors.default_allowance_min }}</p>{% endif %}
+
+      <label>{{ _("Default maximum session length (minutes)") }}
+        <input type="number" name="default_max_session_min" min="1" max="1440"
+               value="{{ values.default_max_session_min }}">
+      </label>
+      {% if errors.get('default_max_session_min') %}<p class="flash error">{{ errors.default_max_session_min }}</p>{% endif %}
+
       <label>{{ _("Reset time (local, HH:MM)") }}
         <input type="text" name="reset_time" inputmode="numeric" placeholder="04:00" value="{{ values.reset_time }}">
       </label>
@@ -117,4 +165,7 @@
     <button class="btn" type="submit">{{ _("Search") }}</button>
   </form>
 </section>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/admin/static/settings.js"></script>
 {% endblock %}

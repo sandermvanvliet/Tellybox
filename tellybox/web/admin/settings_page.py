@@ -48,27 +48,33 @@ def create_router(ctx: AdminContext) -> APIRouter:
 
     def profiles() -> list[sqlite3.Row]:
         return conn.execute(
-            "SELECT id, name, avatar, picture_path, daily_allowance_min, counting_mode, max_session_min"
+            "SELECT id, name, avatar, picture_path, allowance_mode, daily_allowance_min, counting_mode,"
+            " max_session_mode, max_session_min"
             " FROM profile ORDER BY sort_order, id"
         ).fetchall()
 
     def global_settings() -> sqlite3.Row:
         return conn.execute(
-            "SELECT reset_time, grace_cap_min, session_break_min, receiver_app_id"
+            "SELECT reset_time, grace_cap_min, session_break_min, receiver_app_id,"
+            " default_allowance_min, default_max_session_min"
             " FROM settings WHERE id = 1"
         ).fetchone()
 
     def default_values() -> dict[str, str]:
         values: dict[str, str] = {}
         for p in profiles():
+            values[f"profile_{p['id']}_allowance_mode"] = p["allowance_mode"]
             values[f"profile_{p['id']}_allowance_min"] = str(p["daily_allowance_min"])
             values[f"profile_{p['id']}_counting_mode"] = p["counting_mode"]
+            values[f"profile_{p['id']}_max_session_mode"] = p["max_session_mode"]
             values[f"profile_{p['id']}_max_session_min"] = str(p["max_session_min"])
         s = global_settings()
         values["reset_time"] = s["reset_time"]
         values["grace_cap_min"] = str(s["grace_cap_min"])
         values["session_break_min"] = str(s["session_break_min"])
         values["receiver_app_id"] = s["receiver_app_id"] or ""
+        values["default_allowance_min"] = str(s["default_allowance_min"])
+        values["default_max_session_min"] = str(s["default_max_session_min"])
         return values
 
     def devices_context() -> dict:
@@ -101,20 +107,48 @@ def create_router(ctx: AdminContext) -> APIRouter:
         values = {k: str(v) for k, v in form.items()}
         errors: dict[str, str] = {}
 
-        parsed_profiles: list[tuple[int, int, str, int]] = []
+        parsed_profiles: list[tuple[int, str, int | None, str, str, int | None]] = []
         for p in profiles():
             pid = p["id"]
-            allowance, err = _parse_minutes(form.get(f"profile_{pid}_allowance_min"), 1, 1440)
-            if err:
-                errors[f"profile_{pid}_allowance_min"] = err
-            mode = form.get(f"profile_{pid}_counting_mode")
-            if mode not in (CountingMode.IGNORE_PAUSES.value, CountingMode.WALL_CLOCK.value):
+            allowance_mode = form.get(f"profile_{pid}_allowance_mode", "").strip()
+            if allowance_mode not in ("inherit", "custom", "unlimited"):
+                errors[f"profile_{pid}_allowance_mode"] = _("Choose a mode.")
+
+            allowance = None  # only a custom value is validated and stored (A-23)
+            if allowance_mode == "custom":
+                allowance, err = _parse_minutes(form.get(f"profile_{pid}_allowance_min"), 1, 1440)
+                if err:
+                    errors[f"profile_{pid}_allowance_min"] = err
+
+            counting_mode = form.get(f"profile_{pid}_counting_mode")
+            if counting_mode not in (CountingMode.IGNORE_PAUSES.value, CountingMode.WALL_CLOCK.value):
                 errors[f"profile_{pid}_counting_mode"] = _("Choose a counting mode.")
-            max_session, err = _parse_minutes(form.get(f"profile_{pid}_max_session_min"), 1, 1440)
-            if err:
-                errors[f"profile_{pid}_max_session_min"] = err
-            if not err and allowance is not None and mode is not None and max_session is not None:
-                parsed_profiles.append((pid, allowance, mode, max_session))
+
+            max_session_mode = form.get(f"profile_{pid}_max_session_mode", "").strip()
+            if max_session_mode not in ("inherit", "custom", "unlimited"):
+                errors[f"profile_{pid}_max_session_mode"] = _("Choose a mode.")
+
+            max_session = None
+            if max_session_mode == "custom":
+                max_session, err = _parse_minutes(form.get(f"profile_{pid}_max_session_min"), 1, 1440)
+                if err:
+                    errors[f"profile_{pid}_max_session_min"] = err
+
+            if (not errors.get(f"profile_{pid}_allowance_mode") and
+                not errors.get(f"profile_{pid}_allowance_min") and
+                counting_mode is not None and
+                not errors.get(f"profile_{pid}_counting_mode") and
+                not errors.get(f"profile_{pid}_max_session_mode") and
+                not errors.get(f"profile_{pid}_max_session_min")):
+                parsed_profiles.append((pid, allowance_mode, allowance, counting_mode, max_session_mode, max_session))
+
+        # Validate and parse default settings
+        default_allowance, err = _parse_minutes(form.get("default_allowance_min"), 1, 1440)
+        if err:
+            errors["default_allowance_min"] = err
+        default_max_session, err = _parse_minutes(form.get("default_max_session_min"), 1, 1440)
+        if err:
+            errors["default_max_session_min"] = err
 
         reset_time = _parse_time(form.get("reset_time"))
         if reset_time is None:
@@ -136,15 +170,18 @@ def create_router(ctx: AdminContext) -> APIRouter:
                           **page_context(values=values, errors=errors, sb_selected=sb_chosen))
 
         with _transaction(conn):
-            for pid, allowance, mode, max_session in parsed_profiles:
+            for pid, a_mode, allowance, counting_mode, ms_mode, max_session in parsed_profiles:
                 conn.execute(
-                    "UPDATE profile SET daily_allowance_min = ?, counting_mode = ?, max_session_min = ? WHERE id = ?",
-                    (allowance, mode, max_session, pid),
+                    "UPDATE profile SET allowance_mode = ?, daily_allowance_min = COALESCE(?, daily_allowance_min),"
+                    " counting_mode = ?, max_session_mode = ?, max_session_min = COALESCE(?, max_session_min)"
+                    " WHERE id = ?",
+                    (a_mode, allowance, counting_mode, ms_mode, max_session, pid),
                 )
             conn.execute(
                 "UPDATE settings SET reset_time = ?, grace_cap_min = ?, session_break_min = ?,"
-                " receiver_app_id = ? WHERE id = 1",
-                (reset_time.strftime("%H:%M"), grace_cap, session_break, receiver_app_id or None),
+                " receiver_app_id = ?, default_allowance_min = ?, default_max_session_min = ? WHERE id = 1",
+                (reset_time.strftime("%H:%M"), grace_cap, session_break, receiver_app_id or None,
+                 default_allowance, default_max_session),
             )
             conn.execute("UPDATE settings SET sponsorblock_categories = ? WHERE id = 1", (sponsorblock.to_csv(sb_chosen),))
         return see_other("/admin/settings", flash=_("Saved. The TV picks this up within 15 s."))

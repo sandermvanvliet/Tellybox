@@ -33,7 +33,7 @@ export function applySky(state, { body, sun, skyEl }) {
   // Screen readers only: the same meaning the sky shows.
   let label;
   if (p === "night") label = tr("Time's up for today");
-  else if (p === "unlimited") label = tr("No time limit today");
+  else if (p === "unlimited") label = tr("No time limit");
   else {
     const pct = Math.round(clamp01(state.sky?.fraction_left ?? 1) * 100);
     label = p === "dusk"

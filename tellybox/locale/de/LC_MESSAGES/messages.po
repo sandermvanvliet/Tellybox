@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 11:20+0200\n"
+"POT-Creation-Date: 2026-10-02 20:05+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -333,27 +333,27 @@ msgstr "GB"
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:28
+#: tellybox/web/admin/dashboard.py:29
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes braucht einen positiven Wert"
 
-#: tellybox/web/admin/dashboard.py:28
+#: tellybox/web/admin/dashboard.py:29
 msgid "extra_minutes is at most 240"
 msgstr "extra_minutes darf höchstens 240 sein"
 
-#: tellybox/web/admin/dashboard.py:159
+#: tellybox/web/admin/dashboard.py:167
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde gestoppt."
 
-#: tellybox/web/admin/dashboard.py:160
+#: tellybox/web/admin/dashboard.py:168
 msgid "Stopped."
 msgstr "Gestoppt."
 
-#: tellybox/web/admin/dashboard.py:174
+#: tellybox/web/admin/dashboard.py:182
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Cast-Dienst nicht erreichbar; die Änderung wurde nicht übernommen."
 
-#: tellybox/web/admin/dashboard.py:175
+#: tellybox/web/admin/dashboard.py:183
 msgid "Done."
 msgstr "Erledigt."
 
@@ -1013,44 +1013,49 @@ msgstr "Gib eine ganze Zahl an Minuten ein."
 msgid "Enter a number between %(lo)d and %(hi)d."
 msgstr "Gib eine Zahl zwischen %(lo)d und %(hi)d ein."
 
-#: tellybox/web/admin/settings_page.py:112
+#: tellybox/web/admin/settings_page.py:115
+#: tellybox/web/admin/settings_page.py:132
+msgid "Choose a mode."
+msgstr "Wählen Sie einen Modus."
+
+#: tellybox/web/admin/settings_page.py:128
 msgid "Choose a counting mode."
 msgstr "Wähle eine Zählweise."
 
-#: tellybox/web/admin/settings_page.py:121
+#: tellybox/web/admin/settings_page.py:161
 msgid "Enter a time as HH:MM."
 msgstr "Gib eine Uhrzeit als HH:MM ein."
 
-#: tellybox/web/admin/settings_page.py:131
+#: tellybox/web/admin/settings_page.py:171
 msgid "Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty."
 msgstr "Gib die 8 Zeichen (0-9, A-F) der App-ID ein oder lass das Feld leer."
 
-#: tellybox/web/admin/settings_page.py:150
+#: tellybox/web/admin/settings_page.py:192
 msgid "Saved. The TV picks this up within 15 s."
 msgstr "Gespeichert. Der Fernseher übernimmt das innerhalb von 15 s."
 
-#: tellybox/web/admin/settings_page.py:157
+#: tellybox/web/admin/settings_page.py:199
 msgid "Cast service unreachable; couldn't search for devices."
 msgstr "Cast-Dienst nicht erreichbar; Gerätesuche nicht möglich."
 
-#: tellybox/web/admin/settings_page.py:160
+#: tellybox/web/admin/settings_page.py:202
 msgid "No Chromecasts found."
 msgstr "Keine Chromecasts gefunden."
 
-#: tellybox/web/admin/settings_page.py:162
+#: tellybox/web/admin/settings_page.py:204
 #, python-format
 msgid "Found: %(names)s."
 msgstr "Gefunden: %(names)s."
 
-#: tellybox/web/admin/settings_page.py:169
+#: tellybox/web/admin/settings_page.py:211
 msgid "Unknown device; search again."
 msgstr "Unbekanntes Gerät; such noch einmal."
 
-#: tellybox/web/admin/settings_page.py:171
+#: tellybox/web/admin/settings_page.py:213
 msgid "Cast service unreachable; nothing was changed."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde geändert."
 
-#: tellybox/web/admin/settings_page.py:172
+#: tellybox/web/admin/settings_page.py:214
 msgid "Chromecast selected."
 msgstr "Chromecast ausgewählt."
 
@@ -1362,7 +1367,7 @@ msgid "The original video was deleted after splitting, so it can't be split agai
 msgstr "Das Originalvideo wurde nach dem Aufteilen gelöscht und kann deshalb nicht erneut aufgeteilt werden."
 
 #: tellybox/web/admin/templates/episode.html:30
-#: tellybox/web/admin/templates/settings.html:73
+#: tellybox/web/admin/templates/settings.html:121
 #: tellybox/web/admin/templates/show.html:34
 msgid "SponsorBlock"
 msgstr "SponsorBlock"
@@ -1765,7 +1770,7 @@ msgid "No picture"
 msgstr "Kein Bild"
 
 #: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:87
+#: tellybox/web/admin/templates/settings.html:135
 #: tellybox/web/admin/templates/show.html:60
 #: tellybox/web/admin/templates/show.html:117
 msgid "Save"
@@ -1806,78 +1811,106 @@ msgid "Add a profile"
 msgstr "Profil hinzufügen"
 
 #: tellybox/web/admin/templates/settings.html:12
-msgid "Daily allowance (minutes)"
-msgstr "Fernsehzeit pro Tag (Minuten)"
+msgid "Daily allowance"
+msgstr "Tägliches Fernseh-Budget"
 
-#: tellybox/web/admin/templates/settings.html:20
+#: tellybox/web/admin/templates/settings.html:15
+#: tellybox/web/admin/templates/settings.html:55
+msgid "Use default"
+msgstr "Standard verwenden"
+
+#: tellybox/web/admin/templates/settings.html:18
+#: tellybox/web/admin/templates/settings.html:58
+msgid "Custom"
+msgstr "Benutzerdefiniert"
+
+#: tellybox/web/admin/templates/settings.html:21
+#: tellybox/web/admin/templates/settings.html:61
+msgid "Unlimited"
+msgstr "Unbegrenzt"
+
+#: tellybox/web/admin/templates/settings.html:30
+#: tellybox/web/admin/templates/settings.html:70
+msgid "Minutes (1–1440)"
+msgstr "Minuten (1–1440)"
+
+#: tellybox/web/admin/templates/settings.html:38
 msgid "Counting mode"
 msgstr "Zählweise"
 
-#: tellybox/web/admin/templates/settings.html:23
+#: tellybox/web/admin/templates/settings.html:41
 msgid "Count playing time only"
 msgstr "Nur Abspielzeit zählen"
 
-#: tellybox/web/admin/templates/settings.html:26
+#: tellybox/web/admin/templates/settings.html:44
 msgid "Count clock time"
 msgstr "Verstrichene Zeit zählen (auch Pausen)"
 
-#: tellybox/web/admin/templates/settings.html:34
-msgid "Maximum session length (minutes)"
-msgstr "Maximale Sitzungsdauer (Minuten)"
+#: tellybox/web/admin/templates/settings.html:52
+msgid "Maximum session length"
+msgstr "Maximale Sitzungsdauer"
 
-#: tellybox/web/admin/templates/settings.html:46
+#: tellybox/web/admin/templates/settings.html:82
 msgid "Household"
 msgstr "Haushalt"
 
-#: tellybox/web/admin/templates/settings.html:48
+#: tellybox/web/admin/templates/settings.html:84
+msgid "Default daily allowance (minutes)"
+msgstr "Standaard tägliches Fernseh-Budget (Minuten)"
+
+#: tellybox/web/admin/templates/settings.html:90
+msgid "Default maximum session length (minutes)"
+msgstr "Standaard maximale Sitzungsdauer (Minuten)"
+
+#: tellybox/web/admin/templates/settings.html:96
 msgid "Reset time (local, HH:MM)"
 msgstr "Neuer Tag beginnt um (Ortszeit, HH:MM)"
 
-#: tellybox/web/admin/templates/settings.html:53
+#: tellybox/web/admin/templates/settings.html:101
 msgid "Grace cap (minutes, 0–60)"
 msgstr "Maximale Nachspielzeit (Minuten, 0–60)"
 
-#: tellybox/web/admin/templates/settings.html:58
+#: tellybox/web/admin/templates/settings.html:106
 msgid "Session break (minutes, 1–240)"
 msgstr "Sitzungsende nach Pause (Minuten, 1–240)"
 
-#: tellybox/web/admin/templates/settings.html:63
+#: tellybox/web/admin/templates/settings.html:111
 msgid "Tellybox receiver app ID"
 msgstr "App-ID des Tellybox-Empfängers"
 
-#: tellybox/web/admin/templates/settings.html:68
+#: tellybox/web/admin/templates/settings.html:116
 msgid "Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own."
 msgstr "Optional. Leer heißt, der Fernseher nutzt den Standard-Medienempfänger. Wie du deinen eigenen registrierst, steht im Abschnitt Tellybox receiver in docs/installation.md."
 
-#: tellybox/web/admin/templates/settings.html:75
+#: tellybox/web/admin/templates/settings.html:123
 msgid "Cut these kinds of segments out of videos. Tick nothing to turn SponsorBlock off."
 msgstr "Diese Arten von Segmenten aus Videos herausschneiden. Nichts ankreuzen, um SponsorBlock auszuschalten."
 
-#: tellybox/web/admin/templates/settings.html:83
+#: tellybox/web/admin/templates/settings.html:131
 msgid "Segments are cut from new downloads and from videos still inside their 7-day re-check. Each show can override this."
 msgstr "Segmente werden aus neuen Downloads und aus Videos herausgeschnitten, die noch in ihrer 7-tägigen Nachprüfung liegen. Jede Serie kann das überschreiben."
 
-#: tellybox/web/admin/templates/settings.html:95
+#: tellybox/web/admin/templates/settings.html:158
 msgid "Device"
 msgstr "Gerät"
 
-#: tellybox/web/admin/templates/settings.html:95
+#: tellybox/web/admin/templates/settings.html:158
 msgid "Address"
 msgstr "Adresse"
 
-#: tellybox/web/admin/templates/settings.html:99
+#: tellybox/web/admin/templates/settings.html:162
 msgid "selected"
 msgstr "ausgewählt"
 
-#: tellybox/web/admin/templates/settings.html:105
+#: tellybox/web/admin/templates/settings.html:168
 msgid "Use this one"
 msgstr "Dieses verwenden"
 
-#: tellybox/web/admin/templates/settings.html:114
+#: tellybox/web/admin/templates/settings.html:177
 msgid "No Chromecasts known yet."
 msgstr "Noch keine Chromecasts bekannt."
 
-#: tellybox/web/admin/templates/settings.html:117
+#: tellybox/web/admin/templates/settings.html:180
 msgid "Search"
 msgstr "Suchen"
 

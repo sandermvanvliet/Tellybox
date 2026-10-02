@@ -9,9 +9,13 @@ import pytest
 from tests.web.conftest import PROFILE
 
 VALID_FORM = {
+    f"profile_{PROFILE}_allowance_mode": "custom",
     f"profile_{PROFILE}_allowance_min": "45",
     f"profile_{PROFILE}_counting_mode": "wall_clock",
+    f"profile_{PROFILE}_max_session_mode": "custom",
     f"profile_{PROFILE}_max_session_min": "70",
+    "default_allowance_min": "60",
+    "default_max_session_min": "90",
     "reset_time": "05:30",
     "grace_cap_min": "10",
     "session_break_min": "20",
@@ -146,3 +150,145 @@ def test_settings_shows_each_profiles_avatar_in_order(admin, admin_env):
     text = admin.get("/admin/settings").text
     assert "/static/avatars/fox.svg" in text and "/static/avatars/owl.svg" in text
     assert text.index("Noor") < text.index("Mila")
+
+
+def test_allowance_mode_inherit_roundtrips(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "inherit"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+    row = admin_env.conn.execute(
+        "SELECT allowance_mode, daily_allowance_min FROM profile WHERE id = ?", (PROFILE,)
+    ).fetchone()
+    assert row["allowance_mode"] == "inherit"
+
+
+def test_allowance_mode_custom_roundtrips(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "custom"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+    row = admin_env.conn.execute(
+        "SELECT allowance_mode, daily_allowance_min FROM profile WHERE id = ?", (PROFILE,)
+    ).fetchone()
+    assert row["allowance_mode"] == "custom"
+    assert row["daily_allowance_min"] == 45
+
+
+def test_allowance_mode_unlimited_roundtrips(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "unlimited"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+    row = admin_env.conn.execute(
+        "SELECT allowance_mode, daily_allowance_min FROM profile WHERE id = ?", (PROFILE,)
+    ).fetchone()
+    assert row["allowance_mode"] == "unlimited"
+
+
+def test_max_session_mode_roundtrips(admin, admin_env):
+    for mode in ["inherit", "custom", "unlimited"]:
+        form = {**VALID_FORM, f"profile_{PROFILE}_max_session_mode": mode}
+        r = admin.post("/admin/settings", data=form, follow_redirects=False)
+        assert r.status_code == 303
+
+        row = admin_env.conn.execute(
+            "SELECT max_session_mode FROM profile WHERE id = ?", (PROFILE,)
+        ).fetchone()
+        assert row["max_session_mode"] == mode
+
+
+def test_invalid_allowance_mode_rejected(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "maybe"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+
+
+def test_invalid_max_session_mode_rejected(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_max_session_mode": "sometimes"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+
+
+def test_custom_allowance_validates_number(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "custom", f"profile_{PROFILE}_allowance_min": "0"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+    assert "error" in r.text.lower()
+
+
+def test_custom_allowance_not_validated_when_inherit(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "inherit", f"profile_{PROFILE}_allowance_min": "0"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+
+def test_custom_max_session_validates_number(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_max_session_mode": "custom", f"profile_{PROFILE}_max_session_min": "0"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+
+
+def test_custom_max_session_not_validated_when_unlimited(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_max_session_mode": "unlimited", f"profile_{PROFILE}_max_session_min": "0"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+
+def test_default_allowance_saved(admin, admin_env):
+    form = {**VALID_FORM, "default_allowance_min": "75"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+    row = admin_env.conn.execute(
+        "SELECT default_allowance_min FROM settings WHERE id = 1"
+    ).fetchone()
+    assert row["default_allowance_min"] == 75
+
+
+def test_default_max_session_saved(admin, admin_env):
+    form = {**VALID_FORM, "default_max_session_min": "120"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 303
+
+    row = admin_env.conn.execute(
+        "SELECT default_max_session_min FROM settings WHERE id = 1"
+    ).fetchone()
+    assert row["default_max_session_min"] == 120
+
+
+def test_invalid_default_allowance_rejected(admin, admin_env):
+    form = {**VALID_FORM, "default_allowance_min": "0"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+
+
+def test_invalid_default_max_session_rejected(admin, admin_env):
+    form = {**VALID_FORM, "default_max_session_min": "-5"}
+    r = admin.post("/admin/settings", data=form, follow_redirects=False)
+    assert r.status_code == 422
+
+
+def test_settings_page_renders_modes_selected(admin, admin_env):
+    admin_env.conn.execute(
+        "UPDATE profile SET allowance_mode = 'unlimited', max_session_mode = 'custom' WHERE id = ?", (PROFILE,)
+    )
+    r = admin.get("/admin/settings")
+    assert r.status_code == 200
+    # Check that unlimited and custom are selected
+    assert f'<option value="unlimited" selected>' in r.text or 'value="unlimited" selected' in r.text
+
+
+def test_custom_value_survives_switching_to_default_and_back(admin, admin_env):  # A-23
+    """Saving a profile as inherit/unlimited must not overwrite the stored custom minutes."""
+    admin.post("/admin/settings", data={**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "custom",
+                                        f"profile_{PROFILE}_allowance_min": "45",
+                                        f"profile_{PROFILE}_max_session_mode": "custom",
+                                        f"profile_{PROFILE}_max_session_min": "75"}, follow_redirects=False)
+    admin.post("/admin/settings", data={**VALID_FORM, f"profile_{PROFILE}_allowance_mode": "unlimited",
+                                        f"profile_{PROFILE}_allowance_min": "",
+                                        f"profile_{PROFILE}_max_session_mode": "inherit",
+                                        f"profile_{PROFILE}_max_session_min": ""}, follow_redirects=False)
+    row = admin_env.conn.execute(
+        "SELECT daily_allowance_min, max_session_min FROM profile WHERE id = ?", (PROFILE,)).fetchone()
+    assert (row["daily_allowance_min"], row["max_session_min"]) == (45, 75)

@@ -205,6 +205,21 @@ A token-authenticated JSON API lets a home-automation system (first Home Assista
 | HA-7 | Overrides applied through the API are recorded with the token's name, and the history shows it. | Should | v2.1 |
 | HA-8 | Every API action goes through Tellybox's cast service; the API offers no way to cast directly or to start playback when time is up. | Must | v2.1 |
 
+### Installation
+
+Installing Tellybox takes one compose file and one settings file, on any Linux server or home-server platform with host networking. Added by the owner on 2026-10-02 (step 15), from the "Simplifying Tellybox deployment" review.
+
+| ID | Requirement | Priority | Release |
+| --- | --- | --- | --- |
+| DP-1 | Releases publish a versioned image (`X.Y.Z`, `X.Y`, `latest`) for amd64 and arm64; the main branch publishes `edge`. | Must | 15 |
+| DP-2 | Each release attaches a ready-made compose file and a commented settings file (`.env`); installing means downloading both, setting the time zone and starting it. | Must | 15 |
+| DP-3 | The container fixes the ownership of its data, media and backup folders at start and then drops root; `PUID`/`PGID` choose the user. No manual `chown`. | Must | 15 |
+| DP-4 | Without a configured admin password, the first visit to the admin sets one, guarded by a one-time setup code printed in the logs. An environment password still wins. | Must | 15 |
+| DP-5 | One container runs web, cast and worker by default; the three separate services stay supported. | Must | 15 |
+| DP-6 | An install script sets up a plain Linux server with Docker in one command. | Should | 15 |
+| DP-7 | A Home Assistant add-on installs Tellybox on Home Assistant OS. | Should | 15 |
+| DP-8 | Templates for Unraid, TrueNAS SCALE, CasaOS and Umbrel, and a guide for Synology. | Could | 15 |
+
 ## Non-functional requirements
 
 The system must run unattended on a CPU-only home server and recover on its own from restarts and network blips.
@@ -220,7 +235,7 @@ The system must run unattended on a CPU-only home server and recover on its own 
 | NF-7 | Reliability | After a restart, the server reconnects to the Chromecast, restores timer state and resumes queued jobs within 60 seconds. |
 | NF-8 | Reliability | Failed downloads or encodes never publish partial files; they can be retried from the admin page. |
 | NF-9 | Storage | Media, database and config live on mounted volumes. A single SQLite file holds all state, so backup means copying one file. |
-| NF-10 | Deployment | Ships as a Docker Compose stack using host networking (required for mDNS discovery), deployed through the owner's existing deploy-flow repository. |
+| NF-10 | Deployment | Ships as one container (or a Docker Compose stack of three services) using host networking (required for mDNS discovery). The owner's server is deployed through the owner's existing deploy-flow repository. |
 | NF-11 | Operations | Structured logs to stdout. Admin dashboard shows job failures and Chromecast connection status. |
 | NF-12 | Usability | Admin pages work on a phone screen. Kid pages work on screens from 4.7" phones to desktop. |
 | NF-13 | Usability | The interface is in English, Dutch or German, chosen per browser from its language preferences (Accept-Language, `navigator.languages`), with English as the fallback. It covers all admin text and the kid app's screen-reader labels; content titles are not translated. |
@@ -306,6 +321,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 12. **Manual splitting (v5).** Scrub player, cut marking, chapter import, review screen, frame-accurate cutting.
 13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of SponsorBlock, subscriptions and splitting by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
 14. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection. (Renumbered from 12 when the admin API was inserted as step 9 and the receiver kept 13, 2026-09-29.)
+15. **Easier installation.** Versioned multi-arch images, a release compose file, no manual prep, a first-run password, a single container, an install script, a Home Assistant add-on and platform templates (DP-1..DP-8). (Added by the owner, 2026-10-02, and built before 11. Plan: `docs/plans/step15-installation.md`.)
 
 ## Risks, assumptions and open questions
 

@@ -142,7 +142,8 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - 10: SponsorBlock, deployed; device checks open;
 - 11: subscriptions;
 - 12: manual splitting;
-- 14: smart splitting.
+- 14: smart splitting;
+- 15: easier installation, added on 2026-10-02 and built before 11.
 
 ### Resume here (2026-09-30)
 
@@ -152,7 +153,12 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 2. **Step 8, kid profiles (v2):** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`.
 3. **PR #10** (installation guide: reboot the Chromecast after changing the receiver app) is open.
 
-On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. **The next step to build is 11, channel subscriptions (v4).**
+On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. On 2026-10-02 the owner added step 15, easier installation (DP-1..DP-8), and put it before 11. **Step 15 is in progress; 11, channel subscriptions (v4), comes after it.**
+
+### 15. Easier installation, in progress
+Plan `docs/plans/step15-installation.md`, approved 2026-10-02. One PR per part:
+- **A. Versioned, multi-arch image (DP-1):** v* tags build amd64 + arm64 as `X.Y.Z`, `X.Y` and `latest`, and create the GitHub release with the install files. main builds amd64 only, as `edge` (and `sha-…`), and is the only thing deployed. Owner action: point the deploy flow's image at `:edge` before merging, or production stays on the last release.
+- B. Root entrypoint, PUID/PGID, healthcheck (DP-3). C. First-run password with a setup code (DP-4). D. Single container and release compose (DP-5, DP-2), then cut `v0.1.0`. E. Install script (DP-6). F. Home Assistant add-on (DP-7). G. Platform templates (DP-8).
 
 ### 12. Manual splitting (v5), done
 Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
@@ -438,7 +444,7 @@ Moved ahead of SponsorBlock, subscriptions and splitting by the owner on 2026-09
   - No lint was run (ruff isn't in the venv).
 
 ### Then
-11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
+15. Easier installation (in progress) · 11. Channel subscriptions (v4) · 12. Manual splitting (v5) · 14. Smart splitting (v6).
 
 ## Open decisions / follow-ups
 

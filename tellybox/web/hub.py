@@ -18,6 +18,7 @@ SSE_KEEPALIVE_S = 15.0
 # Before the first cast state arrives nothing is known: TV unreachable, sky unknown.
 INITIAL_STATE: dict = {
     "tv": "unreachable",
+    "device_name": None,
     "now_playing": None,
     "sky": {"fraction_left": None, "last_five": False, "unlimited": False},
     "time_up": False,

@@ -31,6 +31,7 @@ from tellybox.cast.device import (
     ConnectionState,
     ConnectionStatus,
     DeviceEvent,
+    DeviceInfo,
     LoadFailed,
     MediaStatus,
     PlayerState,
@@ -46,6 +47,7 @@ from tellybox.timer import Action, Activity, Decision, TimeUpReason, WatchTimer,
 log = logging.getLogger(__name__)
 
 TICK_S = 1.0
+CONNECT_WAIT_S = 20.0  # PB-6: how long a pick waits for a profile's TV to connect
 PERSIST_EVERY_S = 15.0       # WT-8: at least every 30 s
 STATUS_POLL_EVERY_S = 30.0   # drift check; the device sends nothing while playing
 RECOVERY_WAIT_S = 10.0       # NF-7: how long to wait for our media to show up after a restart
@@ -132,6 +134,7 @@ class CastController:
         media_base_url: str,
         secret: bytes,
         device: CastDevice | None = None,
+        device_factory: Callable[[DeviceInfo], CastDevice] | None = None,
         sleep: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         self.conn = conn
@@ -141,6 +144,8 @@ class CastController:
         self.media_base_url = media_base_url
         self.secret = secret
         self.device = device
+        self.device_factory = device_factory  # PB-6: opens the connection to a profile's own TV
+        self._connected = asyncio.Event()  # set when the current device reports CONNECTED
         self.connection = ConnectionState.DISCONNECTED
         self.current: Current | None = None
 
@@ -222,6 +227,7 @@ class CastController:
                 await self.device.close()
         self.device = device
         self.connection = ConnectionState.DISCONNECTED
+        self._connected.clear()
         self._night_until, self._rx_sent = None, None
         self._device_task = asyncio.create_task(self._device_loop(device), name="cast-device")
         self._broadcast()
@@ -254,8 +260,6 @@ class CastController:
         """The kids ``profile_ids`` picked an episode (KA-5, PR-2). Replaces whatever plays (A-5).
         None means every profile; an empty list is an error. The group starts only if every
         member may (PR-4)."""
-        if self.device is None:
-            raise NoDevice()
         episode = library.get_episode(self.conn, episode_id)
         if episode is None:
             raise KeyError(episode_id)
@@ -264,18 +268,38 @@ class CastController:
         self._apply_position_shifts(now)  # SB-3: resume from the remapped position
         if profile_ids is None:
             profiles = list(self._known_profiles)
+            first = profiles[0] if profiles else None
         elif not profile_ids:
             raise ValueError("a pick needs at least one profile")
         else:
             profiles = sorted(set(profile_ids))
+            first = list(dict.fromkeys(profile_ids))[0]  # PB-6: the first picker's TV wins
             if unknown := [p for p in profiles if p not in self._known_profiles]:
                 raise UnknownProfile(unknown[0])
+        target = store.target_device(self.conn, first) if first is not None else store.selected_device(self.conn)
+        if self.device is None and (target is None or self.device_factory is None):
+            raise NoDevice()
         decision = self.timer.on_pick(now, profiles)
         self._decision = decision
         if not decision.can_start:
             self._broadcast()
-            raise PlayRefused(decision)
+            raise PlayRefused(decision)  # a refused pick never moves the session to another TV
+        await self._route_to(target)
         await self._start_episode(episode, now, profiles)
+
+    async def _route_to(self, target: DeviceInfo | None) -> None:
+        """PB-6: play on ``target``, the picking profile's TV. A different TV ends what plays on the old one
+        (one session at a time), then connects before the pick loads."""
+        if target is None or self.device_factory is None:
+            return
+        if self.device is not None and self.device.info.uuid == target.uuid:
+            return
+        log.info("switching to %s for this pick", target.name)
+        await self.set_device(self.device_factory(target))
+        try:
+            await asyncio.wait_for(self._connected.wait(), CONNECT_WAIT_S)
+        except TimeoutError:
+            raise CastCommandError(f"{target.name} is not reachable") from None
 
     async def pause(self) -> None:
         if self.current and self.device:
@@ -427,6 +451,7 @@ class CastController:
                     # Freeze counting: we can't see what happens on the TV (conservative, like a restart).
                     self._decision = self.timer.set_activity(now, Activity.STOPPED)
         elif state == ConnectionState.CONNECTED:
+            self._connected.set()
             self._reconnected = self._lost_at is not None
             self._lost_at = None
 

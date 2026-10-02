@@ -44,7 +44,7 @@ def profile_order(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     Note: does not include allowance info; use store.effective_allowance_s() for resolved allowances (A-23).
     """
     return conn.execute(
-        "SELECT id, name, picture_path, avatar FROM profile ORDER BY sort_order, id"
+        "SELECT id, name, picture_path, avatar, ui_mode FROM profile ORDER BY sort_order, id"
     ).fetchall()
 
 
@@ -295,7 +295,8 @@ def _fraction_left(conn: sqlite3.Connection, timer: dict, remaining_s: float) ->
 
 
 def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
-    """Reduce the cast service's state to what the kid screen shows; no device or admin details."""
+    """Reduce the cast service's state to what the kid screen shows. The only device detail is the TV's
+    name (KA-11); the reader UI shows it, the icon UI ignores it."""
     timer = cast.get("timer") or {}
     remaining = timer.get("remaining_s")
     if remaining is None:
@@ -313,8 +314,10 @@ def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
     days = [p["day"] for p in entries.values() if p.get("day")]
     profiles_row = profile_order(conn)
     allowances = {r["id"]: store.effective_allowance_s(conn, r["id"]) for r in profiles_row}
+    device = cast.get("device") or {}
     return {
         "tv": "ok" if cast.get("connection") == "CONNECTED" else "unreachable",
+        "device_name": device.get("name") or None,  # KA-11, PB-6
         "now_playing": now_playing,
         "sky": sky,
         "time_up": bool(cast.get("time_up")),
@@ -362,7 +365,7 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
         blank = {"fraction_left": None, "last_five": False, "unlimited": False, "time_up": False}
         return [{"profile_id": r["id"], "name": r["name"],
                  "picture": f"/img/profile/{r['id']}.jpg" if r["picture_path"] else None,
-                 "avatar": r["avatar"], **(reduced.get(str(r["id"])) or blank)}
+                 "avatar": r["avatar"], "ui_mode": r["ui_mode"], **(reduced.get(str(r["id"])) or blank)}
                 for r in profile_order(conn)]
 
     @router.get("/api/kid/home")

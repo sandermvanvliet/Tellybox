@@ -1,4 +1,7 @@
+import sqlite3
 import threading
+
+import pytest
 
 from tellybox import db
 
@@ -88,15 +91,15 @@ def test_migration_012_marks_an_existing_password_as_env(tmp_path):  # DP-4
     assert tuple(row) == ("x", "env", None)
 
 
-def test_migration_013_existing_rows_become_custom(tmp_path):  # A-23
+def test_migration_014_existing_rows_become_custom(tmp_path):  # A-23
     """Existing profiles keep their current behavior (custom limits) after migration."""
     conn = db.connect(tmp_path / "t.db")
     for version, _name, sql in db.migrations():
-        if version <= 12:
+        if version <= 13:
             for statement in db._split_sql(sql):
                 conn.execute(statement)
             conn.execute(f"PRAGMA user_version = {version}")
-    assert db.migrate(conn) == db.migrations()[-1][0] >= 13
+    assert db.migrate(conn) == db.migrations()[-1][0] >= 14
 
     # Existing household profile should have custom limits
     row = conn.execute("SELECT allowance_mode, max_session_mode FROM profile WHERE id = 1").fetchone()
@@ -107,7 +110,7 @@ def test_migration_013_existing_rows_become_custom(tmp_path):  # A-23
     assert tuple(row) == (60, 90)
 
 
-def test_migration_013_new_rows_default_to_inherit(tmp_path):  # A-23
+def test_migration_014_new_rows_default_to_inherit(tmp_path):  # A-23
     """New profiles default to inherit limits after migration."""
     conn = db.open_db(tmp_path / "t.db")
 
@@ -121,3 +124,11 @@ def test_migration_013_new_rows_default_to_inherit(tmp_path):  # A-23
 
     row = conn.execute("SELECT allowance_mode, max_session_mode FROM profile WHERE name = 'Child'").fetchone()
     assert tuple(row) == ("inherit", "inherit")
+
+
+def test_migration_013_profile_defaults(tmp_path):  # KA-11, PB-6
+    conn = db.open_db(tmp_path / "t.db")
+    row = conn.execute("SELECT ui_mode, cast_device_uuid FROM profile").fetchone()
+    assert (row["ui_mode"], row["cast_device_uuid"]) == ("icons", None)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("UPDATE profile SET ui_mode = 'bogus'")

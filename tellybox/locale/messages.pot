@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 20:05+0200\n"
+"POT-Creation-Date: 2026-10-02 20:17+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1013,7 +1013,7 @@ msgstr ""
 msgid "Enter a number between %(lo)d and %(hi)d."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:115
+#: tellybox/web/admin/settings_page.py:118
 #: tellybox/web/admin/settings_page.py:132
 msgid "Choose a mode."
 msgstr ""
@@ -1022,40 +1022,48 @@ msgstr ""
 msgid "Choose a counting mode."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:161
+#: tellybox/web/admin/settings_page.py:143
+msgid "Choose a kid app style."
+msgstr ""
+
+#: tellybox/web/admin/settings_page.py:146
+msgid "Choose one of the known TVs, or the default."
+msgstr ""
+
+#: tellybox/web/admin/settings_page.py:168
 msgid "Enter a time as HH:MM."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:171
+#: tellybox/web/admin/settings_page.py:178
 msgid "Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:192
+#: tellybox/web/admin/settings_page.py:200
 msgid "Saved. The TV picks this up within 15 s."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:199
+#: tellybox/web/admin/settings_page.py:207
 msgid "Cast service unreachable; couldn't search for devices."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:202
+#: tellybox/web/admin/settings_page.py:210
 msgid "No Chromecasts found."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:204
+#: tellybox/web/admin/settings_page.py:212
 #, python-format
 msgid "Found: %(names)s."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:211
+#: tellybox/web/admin/settings_page.py:219
 msgid "Unknown device; search again."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:213
+#: tellybox/web/admin/settings_page.py:221
 msgid "Cast service unreachable; nothing was changed."
 msgstr ""
 
-#: tellybox/web/admin/settings_page.py:214
+#: tellybox/web/admin/settings_page.py:222
 msgid "Chromecast selected."
 msgstr ""
 
@@ -1367,7 +1375,7 @@ msgid "The original video was deleted after splitting, so it can't be split agai
 msgstr ""
 
 #: tellybox/web/admin/templates/episode.html:30
-#: tellybox/web/admin/templates/settings.html:121
+#: tellybox/web/admin/templates/settings.html:148
 #: tellybox/web/admin/templates/show.html:34
 msgid "SponsorBlock"
 msgstr ""
@@ -1770,7 +1778,7 @@ msgid "No picture"
 msgstr ""
 
 #: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:135
+#: tellybox/web/admin/templates/settings.html:162
 #: tellybox/web/admin/templates/show.html:60
 #: tellybox/web/admin/templates/show.html:117
 msgid "Save"
@@ -1850,67 +1858,87 @@ msgstr ""
 msgid "Maximum session length"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:82
-msgid "Household"
+#: tellybox/web/admin/templates/settings.html:78
+msgid "Kid app style"
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:81
+msgid "Pictures only (no reading)"
 msgstr ""
 
 #: tellybox/web/admin/templates/settings.html:84
-msgid "Default daily allowance (minutes)"
+msgid "Pictures and text (for readers)"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:90
-msgid "Default maximum session length (minutes)"
+#: tellybox/web/admin/templates/settings.html:92
+msgid "TV"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:96
-msgid "Reset time (local, HH:MM)"
+#: tellybox/web/admin/templates/settings.html:95
+msgid "Default TV (the one chosen below)"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:101
-msgid "Grace cap (minutes, 0–60)"
-msgstr ""
-
-#: tellybox/web/admin/templates/settings.html:106
-msgid "Session break (minutes, 1–240)"
+#: tellybox/web/admin/templates/settings.html:109
+msgid "Household"
 msgstr ""
 
 #: tellybox/web/admin/templates/settings.html:111
-msgid "Tellybox receiver app ID"
+msgid "Default daily allowance (minutes)"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:116
-msgid "Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own."
+#: tellybox/web/admin/templates/settings.html:117
+msgid "Default maximum session length (minutes)"
 msgstr ""
 
 #: tellybox/web/admin/templates/settings.html:123
+msgid "Reset time (local, HH:MM)"
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:128
+msgid "Grace cap (minutes, 0–60)"
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:133
+msgid "Session break (minutes, 1–240)"
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:138
+msgid "Tellybox receiver app ID"
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:143
+msgid "Optional. Empty means the TV uses the Default Media Receiver. See the Tellybox receiver section of docs/installation.md to register your own."
+msgstr ""
+
+#: tellybox/web/admin/templates/settings.html:150
 msgid "Cut these kinds of segments out of videos. Tick nothing to turn SponsorBlock off."
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:131
+#: tellybox/web/admin/templates/settings.html:158
 msgid "Segments are cut from new downloads and from videos still inside their 7-day re-check. Each show can override this."
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:158
+#: tellybox/web/admin/templates/settings.html:170
 msgid "Device"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:158
+#: tellybox/web/admin/templates/settings.html:170
 msgid "Address"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:162
+#: tellybox/web/admin/templates/settings.html:174
 msgid "selected"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:168
+#: tellybox/web/admin/templates/settings.html:180
 msgid "Use this one"
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:177
+#: tellybox/web/admin/templates/settings.html:189
 msgid "No Chromecasts known yet."
 msgstr ""
 
-#: tellybox/web/admin/templates/settings.html:180
+#: tellybox/web/admin/templates/settings.html:192
 msgid "Search"
 msgstr ""
 

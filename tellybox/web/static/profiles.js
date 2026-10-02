@@ -106,12 +106,20 @@ function el(tag, cls, attrs = {}) {
 }
 
 // The corner button: the picked kids' pictures, overlapping. Names are the screen-reader label.
-export function fillWhoButton(button, profiles, ids) {
+// In the reader UI (KA-11) the names and a "Change" label are shown next to the pictures.
+export function fillWhoButton(button, profiles, ids, reader = false) {
   const picked = ids.map((id) => profiles.find((p) => p.profile_id === id)).filter(Boolean);
   const shown = picked.slice(0, 4);
   button.dataset.count = String(Math.max(1, shown.length));
   button.replaceChildren(...shown.map((p) => pic(p)));
   if (!shown.length) button.append(pic({ profile_id: 0 }));
+  button.classList.toggle("is-reader", reader);
+  if (reader) {
+    const text = el("span", "who-text");
+    text.append(Object.assign(el("span", "who-names"), { textContent: picked.map((p) => p.name).join(", ") }));
+    text.append(Object.assign(el("span", "who-change"), { textContent: tr("Change") }));
+    button.prepend(text);
+  }
   button.setAttribute("aria-label", `${tr("Change who's watching")}: ${picked.map((p) => p.name).join(", ")}`);
 }
 

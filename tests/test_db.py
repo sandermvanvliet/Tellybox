@@ -1,4 +1,7 @@
+import sqlite3
 import threading
+
+import pytest
 
 from tellybox import db
 
@@ -86,3 +89,11 @@ def test_migration_012_marks_an_existing_password_as_env(tmp_path):  # DP-4
     assert db.migrate(conn) == db.migrations()[-1][0] >= 12
     row = conn.execute("SELECT admin_password_hash, admin_password_source, admin_setup_code_hash FROM settings").fetchone()
     assert tuple(row) == ("x", "env", None)
+
+
+def test_migration_013_profile_defaults(tmp_path):  # KA-11, PB-6
+    conn = db.open_db(tmp_path / "t.db")
+    row = conn.execute("SELECT ui_mode, cast_device_uuid FROM profile").fetchone()
+    assert (row["ui_mode"], row["cast_device_uuid"]) == ("icons", None)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("UPDATE profile SET ui_mode = 'bogus'")

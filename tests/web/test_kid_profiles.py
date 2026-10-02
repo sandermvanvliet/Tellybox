@@ -41,13 +41,20 @@ def test_profiles_in_admin_order_with_picture_rules(env, mkstate):
     r = client.get("/api/kid/profiles")
     assert r.status_code == 200
     assert r.json() == [
-        {"profile_id": 1, "name": "Mila", "picture": None, "avatar": "fox",
+        {"profile_id": 1, "name": "Mila", "picture": None, "avatar": "fox", "ui_mode": "icons",
          "time_up": False, "fraction_left": 0.25, "last_five": False, "unlimited": False},
-        {"profile_id": 3, "name": "Sam", "picture": "/img/profile/3.jpg", "avatar": None,
+        {"profile_id": 3, "name": "Sam", "picture": "/img/profile/3.jpg", "avatar": None, "ui_mode": "icons",
          "time_up": False, "fraction_left": None, "last_five": False, "unlimited": True},
-        {"profile_id": 2, "name": "Noor", "picture": None, "avatar": "owl",
+        {"profile_id": 2, "name": "Noor", "picture": None, "avatar": "owl", "ui_mode": "icons",
          "time_up": True, "fraction_left": 0.0, "last_five": True, "unlimited": False},
     ]
+
+
+def test_profiles_carry_their_ui_mode(env):  # KA-11
+    client, conn, *_ = env
+    conn.execute("UPDATE profile SET ui_mode = 'text' WHERE id = 2")
+    modes = {p["profile_id"]: p["ui_mode"] for p in client.get("/api/kid/profiles").json()}
+    assert modes == {1: "icons", 3: "icons", 2: "text"}
 
 
 def test_profiles_when_cast_is_down_still_lists_them(env):

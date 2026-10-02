@@ -5,6 +5,7 @@ import { api, subscribe, HttpError } from "./api.js";
 import { icons, placeholderTv } from "./icons.js";
 import { applySky } from "./sky.js";
 import { label as tr, translatePage } from "./i18n.js";
+import { isReaderGroup, matchesQuery, statusText, timeLeftText } from "./reader.js";
 import { readSelection, writeSelection, clearSelection, selectionValid, reduceGroup, fillWhoButton, renderPicker } from "./profiles.js";
 
 translatePage(); // NF-13: <html lang> and the screen-reader labels in index.html
@@ -34,8 +35,15 @@ let streamDown = false; // SSE errored and no event since: treat the TV as unrea
 let playBusy = false; // one pick request in flight
 let toggleBusy = false; // one pause/resume request in flight
 let route = null;
+let reader = false; // KA-11: the reader UI (text added) for this device's pick
+let searchQuery = ""; // KA-12: the home search box, kept across live refreshes
 let viewToken = 0;
 let cameFromHome = false;
+
+// KA-11: the reader UI only when every picked profile is a reader (never on the picker).
+function computeReader() {
+  return route?.name !== "who" && isReaderGroup(allProfiles, group);
+}
 
 const tvDown = () => streamDown || state.tv !== "ok";
 
@@ -94,9 +102,10 @@ function episodeTile(t, kind) {
 
 // KA-10: a short title under the picture, for adults. aria-hidden because the tile's aria-label
 // already carries it. Always present (even when empty) so it reserves its two lines and
-// tiles in a row line up.
+// tiles in a row line up. KA-11: in the reader UI it is the visible title, read by screen readers
+// like any text, and bigger.
 function caption(title) {
-  const c = el("span", "caption", { "aria-hidden": "true" });
+  const c = el("span", reader ? "caption caption-text" : "caption", reader ? {} : { "aria-hidden": "true" });
   c.textContent = title || "";
   return c;
 }
@@ -148,9 +157,11 @@ async function loadView({ keepPlace = false } = {}) {
   const strip = $(".strip", view);
   const stripLeft = strip ? strip.scrollLeft : 0;
   const focused = document.activeElement && view.contains(document.activeElement) ? document.activeElement : null;
-  const focusKey = focused?.dataset.ep ? `[data-ep="${focused.dataset.ep}"]` : focused?.dataset.show ? `[data-show="${focused.dataset.show}"]` : focused?.classList.contains("btn-home") ? ".btn-home" : null;
+  const keepSearch = focused?.classList.contains("search-input") ? { start: focused.selectionStart, end: focused.selectionEnd } : null;
+  const focusKey = focused?.classList.contains("search-input") ? ".search-input" : focused?.dataset.ep ? `[data-ep="${focused.dataset.ep}"]` : focused?.dataset.show ? `[data-show="${focused.dataset.show}"]` : focused?.classList.contains("btn-home") ? ".btn-home" : null;
 
   picker = null;
+  setReader(computeReader());
   let frag;
   if (r.name === "who") {
     allProfiles = data;
@@ -164,13 +175,23 @@ async function loadView({ keepPlace = false } = {}) {
     view.scrollTop = scrollTop;
     const s = $(".strip", view);
     if (s) s.scrollLeft = stripLeft;
-    if (focusKey) $(focusKey, view)?.focus({ preventScroll: true });
+    if (focusKey) {
+      const f = $(focusKey, view);
+      f?.focus({ preventScroll: true });
+      if (keepSearch && f) f.setSelectionRange(keepSearch.start, keepSearch.end);
+    }
   }
   updateLive();
 }
 
+function setReader(on) {
+  reader = on;
+  document.body.classList.toggle("is-reader", on);
+}
+
 function renderHome(data) {
   const frag = document.createDocumentFragment();
+  if (reader) frag.append(searchBox());
   if (data.continue && data.continue.length) {
     const sec = el("section", "row-continue", { "aria-label": tr("Keep watching") });
     const strip = el("div", "strip");
@@ -183,7 +204,49 @@ function renderHome(data) {
   for (const s of data.shows || []) grid.append(showTile(s));
   shows.append(grid);
   frag.append(shows);
+  if (reader) {
+    frag.append(Object.assign(el("p", "no-matches", { role: "status", hidden: "" }), { textContent: tr("No matches") }));
+    queueMicrotask(applySearch);
+  }
   return frag;
+}
+
+// KA-12: filters the shows and the "keep watching" episodes already on the page, by title.
+function searchBox() {
+  const wrap = el("div", "search");
+  const input = el("input", "search-input", {
+    type: "search",
+    enterkeyhint: "search",
+    autocomplete: "off",
+    autocapitalize: "off",
+    spellcheck: "false",
+    placeholder: tr("Search shows and episodes"),
+    "aria-label": tr("Search shows and episodes"),
+  });
+  input.value = searchQuery;
+  input.addEventListener("input", () => {
+    searchQuery = input.value;
+    applySearch();
+  });
+  wrap.append(input);
+  return wrap;
+}
+
+function applySearch() {
+  if (!reader || route?.name !== "home") return;
+  let any = false;
+  for (const sec of view.querySelectorAll(".row-continue, .row-shows")) {
+    let shown = 0;
+    for (const t of sec.querySelectorAll(".tile")) {
+      const ok = matchesQuery($(".caption", t)?.textContent, searchQuery);
+      t.hidden = !ok;
+      if (ok) shown++;
+    }
+    sec.hidden = shown === 0;
+    any ||= shown > 0;
+  }
+  const none = $(".no-matches", view);
+  if (none) none.hidden = any;
 }
 
 // PR-2: big round pictures, tap to pick (several allowed), then the big arrow.
@@ -208,6 +271,7 @@ function renderShow(data) {
   const head = el("div", "show-head");
   const home = el("button", "round-btn btn-home", { type: "button", "aria-label": tr("Home") });
   home.innerHTML = icons.home;
+  if (reader) home.append(Object.assign(el("span", "btn-text"), { textContent: tr("Home") }));
   head.append(home);
   const art = mediaBox(data.artwork, showColor(data.show_id), "show-art");
   art.setAttribute("role", "img");
@@ -256,7 +320,7 @@ function forgetGroup() {
 function updateWhoButton() {
   const show = allProfiles.length > 1 && group.length > 0 && route && route.name !== "who";
   whoBtn.hidden = !show;
-  if (show) fillWhoButton(whoBtn, allProfiles, group);
+  if (show) fillWhoButton(whoBtn, allProfiles, group, reader);
 }
 
 function onRoute() {
@@ -271,6 +335,7 @@ function onRoute() {
     route = { name: "who" };
   }
   if (route.name !== "who") touchSelection();
+  setReader(computeReader());
   updateWhoButton();
   cameFromHome = route.name === "show" && prev?.name === "home";
   view.scrollTop = 0;
@@ -291,14 +356,21 @@ function refreshSoon() {
 const bar = (() => {
   const thumbSlot = el("span", "np-thumb");
   const btn = el("button", "big-btn", { type: "button", "aria-label": tr("Pause") });
-  btn.innerHTML = `<span class="big-icon"></span>${icons.spinner}`;
+  btn.innerHTML = `<span class="big-icon"></span>${icons.spinner}<span class="big-text" hidden></span>`;
   const idle = el("span", "np-idle", { role: "img", "aria-label": tr("Nothing playing") });
   idle.innerHTML = icons.tvSleepy;
   const offline = el("span", "np-offline", { role: "img", "aria-label": tr("TV not reachable") });
   offline.innerHTML = icons.tvOffline;
-  nowbar.append(idle, offline, thumbSlot, btn);
+  // KA-11: the reader UI's text: title, state, time left today and the TV's name.
+  const text = el("div", "np-text", { hidden: "" });
+  const title = el("span", "np-title");
+  const status = el("span", "np-status");
+  const left = el("span", "np-left");
+  const tv = el("span", "np-tv");
+  text.append(title, status, left, tv);
+  nowbar.append(idle, offline, thumbSlot, text, btn);
   btn.addEventListener("click", toggle);
-  return { thumbSlot, btn, idle, offline, thumbSrc: null, icon: null };
+  return { thumbSlot, btn, idle, offline, text, title, status, left, tv, thumbSrc: null, icon: null };
 })();
 
 function renderBar() {
@@ -310,6 +382,7 @@ function renderBar() {
   bar.offline.hidden = mode !== "offline";
   bar.thumbSlot.hidden = mode !== "playing";
   bar.btn.hidden = mode !== "playing";
+  renderBarText(mode);
   if (mode !== "playing") return;
 
   if (bar.thumbSrc !== np.thumb) {
@@ -328,9 +401,28 @@ function renderBar() {
     $(".big-icon", bar.btn).innerHTML = icons[icon];
   }
   bar.btn.setAttribute("aria-label", paused ? tr("Play") : tr("Pause"));
+  const btnText = $(".big-text", bar.btn);
+  btnText.hidden = !reader;
+  if (reader) btnText.textContent = paused ? tr("Play") : tr("Pause");
   const busy = toggleBusy || np.state === "loading" || np.state === "buffering";
   bar.btn.classList.toggle("is-busy", busy);
   bar.btn.setAttribute("aria-busy", String(busy));
+}
+
+// KA-11: text next to the picture controls. Hidden entirely in the icon UI.
+function renderBarText(mode) {
+  const show = reader;
+  bar.text.hidden = !show;
+  if (!show) return;
+  const np = state.now_playing;
+  const eff = effective();
+  const status = mode === "offline" ? tr("TV not reachable") : mode === "idle" ? tr("Nothing playing") : statusText(np.state);
+  bar.title.textContent = mode === "playing" ? np.title || "" : "";
+  bar.title.hidden = mode !== "playing";
+  bar.status.textContent = status;
+  bar.left.textContent = timeLeftText(eff.sky, eff.time_up);
+  bar.tv.textContent = state.device_name ? tr("on %(tv)s", { tv: state.device_name }) : "";
+  bar.tv.hidden = !state.device_name;
 }
 
 async function toggle() {
@@ -451,6 +543,8 @@ whoBtn.addEventListener("click", () => {
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && route && route.name !== "who") {
+    // The admin may have changed a profile's UI style (KA-11) while the app was in the background.
+    api.profiles().then((p) => { allProfiles = p; if (route.name !== "who" && resolveGroup()) loadView({ keepPlace: true }); }, () => {});
     if (resolveGroup()) loadView({ keepPlace: true });
     else onRoute(); // idle for 30 minutes or a new day: ask again
   }

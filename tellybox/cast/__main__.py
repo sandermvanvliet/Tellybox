@@ -44,7 +44,8 @@ async def main() -> None:
     conn = open_db(config.db_path)
     clock = SystemClock()
     controller = CastController(
-        conn, clock=clock, tz=config.tz, media_base_url=config.media_base_url, secret=config.secret
+        conn, clock=clock, tz=config.tz, media_base_url=config.media_base_url, secret=config.secret,
+        device_factory=PyChromecastDevice,
     )
     await controller.start()
 

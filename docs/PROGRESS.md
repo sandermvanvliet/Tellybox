@@ -143,7 +143,8 @@ The owner reordered the phases on 2026-09-28 (PRD "Build order after v1"): kid p
 - 11: subscriptions;
 - 12: manual splitting;
 - 14: smart splitting;
-- 15: easier installation, added on 2026-10-02 and built before 11.
+- 15: easier installation, added on 2026-10-02 and built before 11;
+- 16: reader UI and per-profile TV (issue #29), added on 2026-10-02.
 
 ### Resume here (2026-09-30)
 
@@ -154,6 +155,12 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 3. **PR #10** (installation guide: reboot the Chromecast after changing the receiver app) is open.
 
 On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. On 2026-10-02 the owner added step 15, easier installation (DP-1..DP-8), and put it before 11. Step 15 is built and released as v0.1.0; its device checks are open. **The next step to build is 11, channel subscriptions (v4).**
+
+### 16. Reader UI and per-profile TV (issue #29, branch `step-16-reader-ui`), in progress
+Plan approved by the owner: the kid app gets a second, text-rich UI chosen per profile (KA-11, KA-12), and each profile gets a default TV (PB-6). The icon UI stays the default and is untouched (KA-2).
+- **Decisions:** the destination is a per-profile default TV only (no picker in the kid app, which just shows "playing on <TV>"); a group pick uses the first selected profile's TV, and a profile without one uses the global selected device; a different TV stops the current session, then plays on the new device (one session at a time); a refused pick never switches TV; a device in group mode shows the reader UI only if every selected profile is a reader.
+- **Backend done:** migration 013 (`profile.ui_mode` `icons|text`, `profile.cast_device_uuid`), cast routing (`CastController.device_factory`, `_route_to`, `store.target_device`), kid API (`ui_mode` on profiles, `device_name` on the state), Settings page fields per profile. Docs: PRD (KA-11, KA-12, PB-6, non-goal 3, data model, AD-2), `docs/kid-api.md`, `docs/cast-api.md`.
+- **Open:** kid frontend (reader UI, search box, labels in `i18n.js`); optional `ui_mode` in the admin API; owner checks on the real Chromecast and phone (set a profile to text and a TV, pick from the phone, confirm it casts to that TV and an icons profile is unchanged).
 
 ### Release process (issue #30, branch `release-process`)
 Releases already existed (v* tags, DP-1); this adds the process around them.

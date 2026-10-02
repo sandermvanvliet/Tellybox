@@ -146,3 +146,53 @@ def test_settings_shows_each_profiles_avatar_in_order(admin, admin_env):
     text = admin.get("/admin/settings").text
     assert "/static/avatars/fox.svg" in text and "/static/avatars/owl.svg" in text
     assert text.index("Noor") < text.index("Mila")
+
+
+# --------------------------------------------------------------------------- reader UI and TV per profile (KA-11, PB-6)
+
+
+def _remember_tvs(conn):
+    conn.executemany(
+        "INSERT INTO cast_device (uuid, name, host, port, model, last_seen_at) VALUES (?, ?, '192.0.2.1', 8009, 'Chromecast', 'x')",
+        [("uuid-living", "Living Room TV"), ("uuid-bedroom", "Bedroom TV")],
+    )
+
+
+def test_settings_defaults_for_ui_mode_and_tv(admin, admin_env):
+    _remember_tvs(admin_env.conn)
+    r = admin.get("/admin/settings")
+    assert f'name="profile_{PROFILE}_ui_mode"' in r.text
+    assert f'name="profile_{PROFILE}_cast_device"' in r.text
+    assert "Bedroom TV" in r.text
+
+
+def test_save_ui_mode_and_tv(admin, admin_env):
+    _remember_tvs(admin_env.conn)
+    form = {**VALID_FORM, f"profile_{PROFILE}_ui_mode": "text", f"profile_{PROFILE}_cast_device": "uuid-bedroom"}
+    assert admin.post("/admin/settings", data=form, follow_redirects=False).status_code == 303
+    row = admin_env.conn.execute("SELECT ui_mode, cast_device_uuid FROM profile WHERE id = ?", (PROFILE,)).fetchone()
+    assert (row["ui_mode"], row["cast_device_uuid"]) == ("text", "uuid-bedroom")
+    # Back to the defaults.
+    form = {**VALID_FORM, f"profile_{PROFILE}_ui_mode": "icons", f"profile_{PROFILE}_cast_device": ""}
+    assert admin.post("/admin/settings", data=form, follow_redirects=False).status_code == 303
+    row = admin_env.conn.execute("SELECT ui_mode, cast_device_uuid FROM profile WHERE id = ?", (PROFILE,)).fetchone()
+    assert (row["ui_mode"], row["cast_device_uuid"]) == ("icons", None)
+
+
+def test_form_without_the_new_fields_leaves_them_alone(admin, admin_env):
+    _remember_tvs(admin_env.conn)
+    admin_env.conn.execute("UPDATE profile SET ui_mode = 'text', cast_device_uuid = 'uuid-living'")
+    assert admin.post("/admin/settings", data=VALID_FORM, follow_redirects=False).status_code == 303
+    row = admin_env.conn.execute("SELECT ui_mode, cast_device_uuid FROM profile WHERE id = ?", (PROFILE,)).fetchone()
+    assert (row["ui_mode"], row["cast_device_uuid"]) == ("text", "uuid-living")
+
+
+@pytest.mark.parametrize("field,bad_value", [("ui_mode", "fancy"), ("ui_mode", ""), ("cast_device", "no-such-tv")])
+def test_bad_ui_mode_or_tv_is_rejected_and_nothing_written(admin, admin_env, field, bad_value):
+    _remember_tvs(admin_env.conn)
+    form = {**VALID_FORM, f"profile_{PROFILE}_{field}": bad_value}
+    assert admin.post("/admin/settings", data=form).status_code == 422
+    row = admin_env.conn.execute(
+        "SELECT daily_allowance_min, ui_mode, cast_device_uuid FROM profile WHERE id = ?", (PROFILE,)
+    ).fetchone()
+    assert (row["daily_allowance_min"], row["ui_mode"], row["cast_device_uuid"]) == (60, "icons", None)

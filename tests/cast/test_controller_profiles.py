@@ -1,9 +1,11 @@
 """Kid profiles in the cast controller (PR-2, PR-4, A-13), with a fake clock and a fake Chromecast."""
 
+import asyncio
+
 import pytest
 
 from tellybox import store
-from tellybox.cast.controller import EndReason, PlayRefused, UnknownProfile
+from tellybox.cast.controller import CastController, EndReason, PlayRefused, UnknownProfile
 from tellybox.cast.fake import FakeCastDevice
 from tellybox.db import to_db
 
@@ -18,6 +20,7 @@ from test_controller import (  # noqa: F401  (fixtures)
     play_calls,
     pump,
     run_for,
+    TZ,
     sessions,
 )
 
@@ -226,3 +229,163 @@ async def test_no_profile_list_means_everyone(conn, clock, fake, episodes, kids)
     ctrl = await make_controller(conn, clock, fake)
     await ctrl.play(episodes[0])
     assert ctrl.current.profile_ids == [1, 2, 3]
+
+
+# --------------------------------------------------------------------------- per-profile TV (PB-6)
+
+from tellybox.cast.controller import NoDevice  # noqa: E402
+from tellybox.cast.device import DeviceInfo  # noqa: E402
+from tellybox.cast.pychromecast_device import CastCommandError  # noqa: E402
+
+LIVING = DeviceInfo(uuid="00000000-0000-0000-0000-00000000000a", name="Living Room TV", host="192.0.2.10")
+BEDROOM = DeviceInfo(uuid="00000000-0000-0000-0000-00000000000b", name="Bedroom TV", host="192.0.2.11")
+
+
+@pytest.fixture
+def tvs(conn, clock):
+    """Two known TVs with the living room as the global selected one; the factory records what it made."""
+    store.remember_devices(conn, [LIVING, BEDROOM], clock.now())
+    store.select_device(conn, LIVING.uuid)
+    made: dict[str, FakeCastDevice] = {}
+
+    def factory(info):
+        made[info.uuid] = FakeCastDevice(clock, info=info, default_duration_s=EPISODE_S)
+        return made[info.uuid]
+
+    return made, factory
+
+
+async def tv_controller(conn, clock, factory, selected_fake):
+    ctrl = await make_controller(conn, clock, selected_fake)
+    ctrl.device_factory = factory
+    return ctrl
+
+
+def set_tv(conn, profile_id, uuid):
+    conn.execute("UPDATE profile SET cast_device_uuid = ? WHERE id = ?", (uuid, profile_id))
+
+
+async def test_profile_without_a_tv_plays_on_the_current_device(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    await play_for(ctrl, living, episodes[0], [2])
+    assert made == {} and ctrl.device is living and play_calls(living)
+
+
+async def test_profile_tv_switches_device_and_plays_there(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    set_tv(conn, 2, BEDROOM.uuid)
+    await ctrl.play(episodes[0], [2])
+    bedroom = made[BEDROOM.uuid]
+    assert ctrl.device is bedroom
+    assert play_calls(bedroom) and not play_calls(living)
+    assert ctrl.state()["device"]["name"] == "Bedroom TV"
+    await ctrl.stop_service()
+
+
+async def test_switching_tv_stops_the_current_session_first(conn, clock, episodes, kids, tvs):  # PB-6, A-5
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    await play_for(ctrl, living, episodes[0], [1])
+    first_session = sessions(conn)[0]["id"]
+    set_tv(conn, 2, BEDROOM.uuid)
+    await ctrl.play(episodes[1], [2])
+    assert ("stop",) in living.calls
+    old = conn.execute("SELECT end_reason FROM watch_session WHERE id = ?", (first_session,)).fetchone()
+    assert old["end_reason"] == EndReason.STOPPED
+    assert ctrl.current.episode.id == episodes[1] and ctrl.current.profile_ids == [2]
+    await ctrl.stop_service()
+
+
+async def test_same_tv_is_not_swapped(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    set_tv(conn, 2, LIVING.uuid)
+    await play_for(ctrl, living, episodes[0], [2])
+    await play_for(ctrl, living, episodes[1], [2])
+    assert made == {} and ctrl.device is living
+
+
+async def test_profile_without_tv_falls_back_to_the_global_device(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    bedroom = FakeCastDevice(clock, info=BEDROOM, default_duration_s=EPISODE_S)  # attached, but not the global one
+    ctrl = await tv_controller(conn, clock, factory, bedroom)
+    await ctrl.play(episodes[0], [1])  # profile 1 has no TV: the global selected one (living room) is the target
+    assert ctrl.device is made[LIVING.uuid]
+    await ctrl.stop_service()
+
+
+async def test_group_uses_the_first_selected_profiles_tv(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    set_tv(conn, 3, BEDROOM.uuid)
+    await ctrl.play(episodes[0], [3, 1])  # 3 was picked first
+    assert ctrl.device is made[BEDROOM.uuid]
+    assert ctrl.current.profile_ids == [1, 3]
+    await ctrl.stop_service()
+
+
+async def test_refused_pick_does_not_switch_tv(conn, clock, episodes, kids, tvs):  # PB-6, PR-4
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    set_tv(conn, 2, BEDROOM.uuid)
+    await ctrl.override("block", profile_ids=[2])
+    with pytest.raises(PlayRefused):
+        await ctrl.play(episodes[0], [2])
+    assert made == {} and ctrl.device is living
+
+
+async def test_unknown_tv_uuid_falls_back_to_the_global_device(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, factory, living)
+    set_tv(conn, 2, "gone")
+    await play_for(ctrl, living, episodes[0], [2])
+    assert made == {} and ctrl.device is living
+
+
+async def test_unreachable_tv_fails_the_pick(conn, clock, episodes, kids, tvs, monkeypatch):  # PB-6
+    made, factory = tvs
+    monkeypatch.setattr("tellybox.cast.controller.CONNECT_WAIT_S", 0.05)
+
+    def dead(info):
+        dev = factory(info)
+
+        async def never(timeout=15.0):
+            await asyncio.sleep(3600)
+
+        dev.connect = never
+        return dev
+
+    living = FakeCastDevice(clock, info=LIVING, default_duration_s=EPISODE_S)
+    ctrl = await tv_controller(conn, clock, dead, living)
+    set_tv(conn, 2, BEDROOM.uuid)
+    with pytest.raises(CastCommandError):
+        await ctrl.play(episodes[0], [2])
+    assert ctrl.current is None
+    await ctrl.stop_service()
+
+
+async def test_no_device_at_all_is_still_no_device(conn, clock, episodes, kids):
+    ctrl = CastController(conn, clock=clock, tz=TZ, media_base_url="http://tv.test:8080", secret=b"s")
+    await ctrl.start(run_loops=False)
+    with pytest.raises(NoDevice):
+        await ctrl.play(episodes[0], [1])
+
+
+async def test_profile_tv_lets_a_deviceless_controller_play(conn, clock, episodes, kids, tvs):  # PB-6
+    made, factory = tvs
+    ctrl = CastController(conn, clock=clock, tz=TZ, media_base_url="http://tv.test:8080", secret=b"s",
+                          device=None, device_factory=factory)
+    await ctrl.start(run_loops=False)
+    set_tv(conn, 2, BEDROOM.uuid)
+    await ctrl.play(episodes[0], [2])
+    assert ctrl.device is made[BEDROOM.uuid] and ctrl.current is not None
+    await ctrl.stop_service()

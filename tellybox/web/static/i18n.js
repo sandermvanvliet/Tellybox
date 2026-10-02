@@ -1,4 +1,4 @@
-// Interface languages (NF-13) for the kid app. It shows no text (KA-2); only the
+// Interface languages (NF-13) for the kid app. It shows no text by default (KA-2); the reader UI (KA-11) adds visible text. Otherwise only the
 // screen-reader labels and <html lang> follow the browser's language. The page is static,
 // so the language comes from navigator.languages with the same rule as the server
 // (tellybox.i18n.negotiate): the first supported primary subtag, else English.
@@ -21,6 +21,13 @@ const LABELS = {
     "Who's watching?": "Who's watching?",
     "Go": "Go",
     "Change who's watching": "Change who's watching",
+    "Playing": "Playing",
+    "Paused": "Paused",
+    "Loading": "Loading",
+    "on %(tv)s": "on %(tv)s",
+    "Search shows and episodes": "Search shows and episodes",
+    "No matches": "No matches",
+    "Change": "Change",
   },
   nl: {
     "Time left": "Tijd over",
@@ -38,6 +45,13 @@ const LABELS = {
     "Who's watching?": "Wie kijkt er?",
     "Go": "Start",
     "Change who's watching": "Wijzig wie er kijkt",
+    "Playing": "Speelt",
+    "Paused": "Gepauzeerd",
+    "Loading": "Laden",
+    "on %(tv)s": "op %(tv)s",
+    "Search shows and episodes": "Zoek series en afleveringen",
+    "No matches": "Niets gevonden",
+    "Change": "Wijzig",
   },
   de: {
     "Time left": "Verbleibende Zeit",
@@ -55,6 +69,13 @@ const LABELS = {
     "Who's watching?": "Wer schaut zu?",
     "Go": "Los",
     "Change who's watching": "Ändern, wer zuschaut",
+    "Playing": "Läuft",
+    "Paused": "Pausiert",
+    "Loading": "Lädt",
+    "on %(tv)s": "auf %(tv)s",
+    "Search shows and episodes": "Sendungen und Folgen suchen",
+    "No matches": "Keine Treffer",
+    "Change": "Ändern",
   },
 };
 

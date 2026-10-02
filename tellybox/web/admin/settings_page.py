@@ -48,7 +48,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
 
     def profiles() -> list[sqlite3.Row]:
         return conn.execute(
-            "SELECT id, name, avatar, picture_path, daily_allowance_min, counting_mode, max_session_min"
+            "SELECT id, name, avatar, picture_path, daily_allowance_min, counting_mode, max_session_min,"
+            " ui_mode, cast_device_uuid"
             " FROM profile ORDER BY sort_order, id"
         ).fetchall()
 
@@ -64,6 +65,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
             values[f"profile_{p['id']}_allowance_min"] = str(p["daily_allowance_min"])
             values[f"profile_{p['id']}_counting_mode"] = p["counting_mode"]
             values[f"profile_{p['id']}_max_session_min"] = str(p["max_session_min"])
+            values[f"profile_{p['id']}_ui_mode"] = p["ui_mode"]
+            values[f"profile_{p['id']}_cast_device"] = p["cast_device_uuid"] or ""
         s = global_settings()
         values["reset_time"] = s["reset_time"]
         values["grace_cap_min"] = str(s["grace_cap_min"])
@@ -101,7 +104,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
         values = {k: str(v) for k, v in form.items()}
         errors: dict[str, str] = {}
 
-        parsed_profiles: list[tuple[int, int, str, int]] = []
+        parsed_profiles: list[tuple[int, int, str, int, str, str | None]] = []
+        known_uuids = {r[0] for r in conn.execute("SELECT uuid FROM cast_device")}
         for p in profiles():
             pid = p["id"]
             allowance, err = _parse_minutes(form.get(f"profile_{pid}_allowance_min"), 1, 1440)
@@ -113,8 +117,16 @@ def create_router(ctx: AdminContext) -> APIRouter:
             max_session, err = _parse_minutes(form.get(f"profile_{pid}_max_session_min"), 1, 1440)
             if err:
                 errors[f"profile_{pid}_max_session_min"] = err
-            if not err and allowance is not None and mode is not None and max_session is not None:
-                parsed_profiles.append((pid, allowance, mode, max_session))
+            # KA-11, PB-6: a form without these fields leaves them as they are.
+            ui_mode = form.get(f"profile_{pid}_ui_mode", p["ui_mode"])
+            if ui_mode not in ("icons", "text"):
+                errors[f"profile_{pid}_ui_mode"] = _("Choose a kid app style.")
+            cast_uuid = str(form.get(f"profile_{pid}_cast_device", p["cast_device_uuid"] or "")) or None
+            if cast_uuid is not None and cast_uuid not in known_uuids and cast_uuid != p["cast_device_uuid"]:
+                errors[f"profile_{pid}_cast_device"] = _("Choose one of the known TVs, or the default.")
+            if (not err and allowance is not None and mode is not None and max_session is not None
+                    and f"profile_{pid}_ui_mode" not in errors and f"profile_{pid}_cast_device" not in errors):
+                parsed_profiles.append((pid, allowance, mode, max_session, ui_mode, cast_uuid))
 
         reset_time = _parse_time(form.get("reset_time"))
         if reset_time is None:
@@ -136,10 +148,11 @@ def create_router(ctx: AdminContext) -> APIRouter:
                           **page_context(values=values, errors=errors, sb_selected=sb_chosen))
 
         with _transaction(conn):
-            for pid, allowance, mode, max_session in parsed_profiles:
+            for pid, allowance, mode, max_session, ui_mode, cast_uuid in parsed_profiles:
                 conn.execute(
-                    "UPDATE profile SET daily_allowance_min = ?, counting_mode = ?, max_session_min = ? WHERE id = ?",
-                    (allowance, mode, max_session, pid),
+                    "UPDATE profile SET daily_allowance_min = ?, counting_mode = ?, max_session_min = ?,"
+                    " ui_mode = ?, cast_device_uuid = ? WHERE id = ?",
+                    (allowance, mode, max_session, ui_mode, cast_uuid, pid),
                 )
             conn.execute(
                 "UPDATE settings SET reset_time = ?, grace_cap_min = ?, session_break_min = ?,"

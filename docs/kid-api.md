@@ -1,4 +1,4 @@
-# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Kid API contract (step 4; tile titles shown since step 7; profiles since step 8)
+# <picture><source media="(prefers-color-scheme: dark)" srcset="images/brand/mark-dark.svg"><img src="images/brand/mark.svg" alt="" width="36" align="top"></picture> Kid API contract (step 4; tile titles shown since step 7; profiles since step 8; reader UI since step 16)
 
 The kid app (static files in `tellybox/web/static/`) talks only to these endpoints of the
 `web` service. No login (NF-1). Only visible content ever appears: hidden shows/episodes and
@@ -17,6 +17,8 @@ time, continue watching and progress only.
 // KidState: everything the kid screen shows live (KA-6..KA-9)
 {
   "tv": "ok" | "unreachable",              // cast service down, or Chromecast not connected
+  "device_name": "Living Room TV" | null,   // step 16 (KA-11): name of the TV playback is on (or would start on);
+                                            // shown only by the reader UI; null when no Chromecast is known
   "now_playing": null | {
     "episode_id": 4, "show_id": 2,
     "thumb": "/img/episode/4.jpg",
@@ -43,6 +45,7 @@ time, continue watching and progress only.
   "name": "Mila",                           // screen-reader label only; never shown (KA-2)
   "picture": "/img/profile/1.jpg" | null,   // uploaded photo; wins over avatar
   "avatar": "fox" | null,                   // built-in avatar: /static/avatars/{avatar}.svg
+  "ui_mode": "icons" | "text",              // step 16 (KA-11): "icons" is the no-reading app (default); "text" the reader UI
   "time_up": false, "fraction_left": 0.62 | null, "last_five": false, "unlimited": false }
 
 // Tile
@@ -69,3 +72,12 @@ time, continue watching and progress only.
 | POST | `/api/kid/pause`, `/api/kid/resume` | 200 KidState; 503 KidState when unreachable |
 | GET | `/img/profile/{id}.jpg` | the profile's uploaded photo (v2); 404 if none |
 | GET | `/img/episode/{id}.jpg`, `/img/show/{id}.jpg` | image; 404 unless visible. Show artwork falls back to the first visible episode's thumbnail; if nothing is available, 404 (the frontend draws a placeholder). |
+
+## Reader UI (step 16, KA-11, PB-6)
+
+`ui_mode` on each Profile tells the app which UI to draw. A device in group mode uses the reader UI only when
+every selected profile has `"text"`; one `"icons"` profile makes the whole device use the icon UI. The server
+doesn't enforce this; the data for both UIs is the same (titles are already in every Tile and in `now_playing`).
+`device_name` is the TV the cast service is connected to. A pick for a profile with its own TV switches to it
+(the cast service stops what plays on the old one first), so the name follows the last pick. The kid app
+never chooses a TV; the admin sets each profile's default on the Settings page (PB-6).

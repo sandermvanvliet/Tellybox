@@ -9,7 +9,7 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
 ```jsonc
 {
   "connection": "CONNECTED" | "CONNECTING" | "DISCONNECTED" | "FAILED" | ...,
-  "device": null | {"uuid": "...", "name": "..."},
+  "device": null | {"uuid": "...", "name": "..."},   // the connected TV; changes when a pick uses a profile's own TV (PB-6)
   "now_playing": null | {
     "episode_id": 4, "show_id": 2, "title": "Alongside",
     "state": "loading" | "playing" | "paused" | "buffering",
@@ -64,7 +64,7 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
 
 | Method | Path | Body | Result |
 |---|---|---|---|
-| POST | `/play` | `{"episode_id": 4, "profile_ids": [1, 3]}` **v2**: 1–20 ids, required | 200 state. 404 no such episode. 409 `{"detail": {"error": "time_up", "reason": ...}}` when the group may not start (any member out of time, blocked or past its session max, PR-4). 422 empty, too long or unknown profile ids. 503 no Chromecast, 502 command failed. |
+| POST | `/play` | `{"episode_id": 4, "profile_ids": [1, 3]}` **v2**: 1–20 ids, required. **Step 16 (PB-6):** the target TV is the first listed profile's default TV (`profile.cast_device_uuid`), else the globally selected device. When it isn't the connected device, a pick that may start first stops what plays on the old one (watch session ended as `stopped`), connects to the new TV (up to 20 s), then loads there; the selected device in `/devices` is not changed. A refused pick (409) never switches. | 200 state. 404 no such episode. 409 `{"detail": {"error": "time_up", "reason": ...}}` when the group may not start (any member out of time, blocked or past its session max, PR-4). 422 empty, too long or unknown profile ids. 503 no Chromecast (none connected, and neither the profile nor the global setting names a known one), 502 command failed, or the profile's TV didn't connect within 20 s. |
 | POST | `/pause`, `/resume`, `/stop` | none | 200 state; 503/502 as above |
 | POST | `/overrides` | `{"kind": "extra_minutes" \| "unlimited" \| "block" \| "stop_now" \| "clear", "value": int \| null, "profile_ids": [int] \| null, "profile_id": int \| null, "source": str \| null}` | 200 state; 422 bad kind or value, unknown profile ids, or both `profile_ids` and `profile_id`. **v2.1:** `profile_ids` (1–20 ids) replaces `profile_id`, which is still accepted; neither = every profile. `clear` sets unlimited and blocked back to false (extra minutes stay), logging one `clear` row per profile. `source` (≤ 64 chars) is written to `override_log.source`: the API token's name, or null for the admin pages (HA-7). Blocking a profile that isn't watching doesn't stop playback. |
 | GET | `/devices` | none | `{"selected": uuid \| null, "devices": [...]}` |

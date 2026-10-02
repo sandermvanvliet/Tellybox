@@ -46,8 +46,43 @@ def test_every_language_has_every_label():
 def test_every_label_used_is_in_the_dictionaries():
     keys = set(_dictionaries()["en"])
     used = set()
-    for name in ("app.js", "sky.js", "profiles.js"):
+    for name in ("app.js", "sky.js", "profiles.js", "reader.js"):
         used |= set(re.findall(r'\btr\("((?:[^"\\]|\\.)*)"', (STATIC / name).read_text(encoding="utf-8")))
     used |= set(re.findall(r'aria-label="([^"]+)"', (STATIC / "index.html").read_text(encoding="utf-8")))
     assert used, "no labels found"
     assert used <= keys, used - keys
+
+
+def test_reader_helpers_in_node(tmp_path):
+    """KA-11/KA-12: the pure reader-UI helpers behave (run with node when it is installed)."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not installed")
+    script = tmp_path / "check.mjs"
+    script.write_text(
+        f"""
+import assert from "node:assert/strict";
+const {{ isReaderGroup, matchesQuery, timeLeftText }} = await import("{(STATIC / 'reader.js').as_uri()}");
+const ps = [{{profile_id: 1, ui_mode: "text"}}, {{profile_id: 2, ui_mode: "icons"}}, {{profile_id: 3}}];
+assert.equal(isReaderGroup(ps, [1]), true);
+assert.equal(isReaderGroup(ps, [1, 2]), false);   // mixed group: icon UI
+assert.equal(isReaderGroup(ps, [1, 3]), false);   // unknown mode: icon UI
+assert.equal(isReaderGroup(ps, [9]), false);
+assert.equal(isReaderGroup(ps, []), false);
+assert.equal(matchesQuery("Peppa Pig", "pig"), true);
+assert.equal(matchesQuery("Café Kids", "cafe"), true);
+assert.equal(matchesQuery("Bluey", "xyz"), false);
+assert.equal(matchesQuery("Bluey", "  "), true);
+assert.equal(timeLeftText({{fraction_left: 0.5}}, false), "50% of today's time left");
+assert.equal(timeLeftText({{unlimited: true}}, false), "No time limit today");
+assert.equal(timeLeftText({{fraction_left: 0.5}}, true), "Time's up for today");
+""",
+        encoding="utf-8",
+    )
+    result = subprocess.run([node, str(script)], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr

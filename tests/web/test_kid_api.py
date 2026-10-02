@@ -171,6 +171,7 @@ def test_reduce_connected(lib, mkstate, mkplaying):
     s = kid.kid_state(conn, mkstate(remaining_s=1800, now_playing=mkplaying(ids.a1, ids.alpha, "paused", "Title a1")))
     assert s == {
         "tv": "ok",
+        "device_name": "Living Room TV",
         "now_playing": {"episode_id": ids.a1, "show_id": ids.alpha, "thumb": f"/img/episode/{ids.a1}.jpg",
                         "title": "Title a1", "state": "paused"},
         "sky": {"fraction_left": 0.5, "last_five": False, "unlimited": False},
@@ -179,6 +180,16 @@ def test_reduce_connected(lib, mkstate, mkplaying):
         "profiles": {"1": {"fraction_left": 0.5, "last_five": False, "unlimited": False, "time_up": False}},
         "day": "2026-09-28",
     }
+
+
+def test_reduce_device_name(lib, mkstate):  # KA-11, PB-6
+    conn, _ = lib
+    state = mkstate()
+    assert kid.kid_state(conn, state)["device_name"] == "Living Room TV"
+    state["device"] = {"uuid": "x", "name": "Bedroom TV"}
+    assert kid.kid_state(conn, state)["device_name"] == "Bedroom TV"
+    state["device"] = None
+    assert kid.kid_state(conn, state)["device_name"] is None
 
 
 @pytest.mark.parametrize("connection", ["CONNECTING", "LOST", "FAILED", "DISCONNECTED", "NO_DEVICE"])
@@ -200,7 +211,7 @@ def test_reduce_player_states(lib, mkstate, mkplaying, cast, kid_state):
 def test_reduce_now_playing_leaks_nothing_else(lib, mkstate, mkplaying):
     conn, ids = lib
     s = kid.kid_state(conn, mkstate(now_playing=mkplaying(ids.a1, ids.alpha)))
-    assert set(s) == {"tv", "now_playing", "sky", "time_up", "watching", "profiles", "day"}
+    assert set(s) == {"tv", "device_name", "now_playing", "sky", "time_up", "watching", "profiles", "day"}
     assert set(s["now_playing"]) == {"episode_id", "show_id", "thumb", "title", "state"}
 
 

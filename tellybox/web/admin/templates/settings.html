@@ -38,6 +38,33 @@
       {% if errors.get('profile_' ~ p.id ~ '_max_session_min') %}
         <p class="flash error">{{ errors['profile_' ~ p.id ~ '_max_session_min'] }}</p>
       {% endif %}
+
+      <label>{{ _("Kid app style") }}
+        <select name="profile_{{ p.id }}_ui_mode">
+          <option value="icons" {% if values['profile_' ~ p.id ~ '_ui_mode'] == 'icons' %}selected{% endif %}>
+            {{ _("Pictures only (no reading)") }}
+          </option>
+          <option value="text" {% if values['profile_' ~ p.id ~ '_ui_mode'] == 'text' %}selected{% endif %}>
+            {{ _("Pictures and text (for readers)") }}
+          </option>
+        </select>
+      </label>
+      {% if errors.get('profile_' ~ p.id ~ '_ui_mode') %}
+        <p class="flash error">{{ errors['profile_' ~ p.id ~ '_ui_mode'] }}</p>
+      {% endif %}
+
+      <label>{{ _("TV") }}
+        <select name="profile_{{ p.id }}_cast_device">
+          {% set chosen = values['profile_' ~ p.id ~ '_cast_device'] %}
+          <option value="" {% if not chosen %}selected{% endif %}>{{ _("Default TV (the one chosen below)") }}</option>
+          {% for d in known_devices %}
+            <option value="{{ d.uuid }}" {% if chosen == d.uuid %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if errors.get('profile_' ~ p.id ~ '_cast_device') %}
+        <p class="flash error">{{ errors['profile_' ~ p.id ~ '_cast_device'] }}</p>
+      {% endif %}
     </div>
   </section>
   {% endfor %}

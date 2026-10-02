@@ -271,6 +271,20 @@ def selected_device(conn: sqlite3.Connection) -> DeviceInfo | None:
     return DeviceInfo(uuid=row["uuid"], name=row["name"], host=row["host"], port=row["port"], model=row["model"])
 
 
+def device_info(conn: sqlite3.Connection, uuid: str | None) -> DeviceInfo | None:
+    """A remembered Chromecast by uuid; None when unknown."""
+    row = conn.execute("SELECT * FROM cast_device WHERE uuid = ?", (uuid,)).fetchone() if uuid else None
+    if not row:
+        return None
+    return DeviceInfo(uuid=row["uuid"], name=row["name"], host=row["host"], port=row["port"], model=row["model"])
+
+
+def target_device(conn: sqlite3.Connection, profile_id: int) -> DeviceInfo | None:
+    """Where this profile's picks play (PB-6): its own default TV when set and known, else the global selected one."""
+    row = conn.execute("SELECT cast_device_uuid FROM profile WHERE id = ?", (profile_id,)).fetchone()
+    return (device_info(conn, row["cast_device_uuid"]) if row else None) or selected_device(conn)
+
+
 def remember_devices(conn: sqlite3.Connection, devices: list[DeviceInfo], now: datetime) -> None:
     for d in devices:
         conn.execute(

@@ -21,7 +21,7 @@ Tellybox is a self-hosted web app that lets young children pick parent-approved 
 
 1. Content sources other than YouTube.
 2. Policing casts started from other apps or devices.
-3. Multiple Chromecasts or multi-room playback.
+3. Multi-room playback: Tellybox never plays on several Chromecasts at once. Several TVs may be known, and each profile can have its own default TV (PB-6), but one session plays at a time.
 4. Public internet exposure; access is LAN plus Tailscale only.
 5. A custom Cast receiver app before v7; the Default Media Receiver stays the fallback even then (CR-6).
 
@@ -67,7 +67,7 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
 | KA-1 | Web app usable on any phone, tablet or desktop browser on the LAN; responsive, touch-first, large tap targets. | Must | v1 |
-| KA-2 | No text is required to use the app: navigation uses thumbnails, show artwork and icons only. The short episode and show titles of KA-10 are an aid for adults; nothing depends on reading them. | Must | v1 |
+| KA-2 | No text is required to use the app: navigation uses thumbnails, show artwork and icons only. The short episode and show titles of KA-10 are an aid for adults; nothing depends on reading them. This is the default for every profile; KA-11 is the only exception. | Must | v1 |
 | KA-3 | Home screen shows a "continue watching" row, then one tile per show (channel). Tapping a show opens its episode grid in episode order. | Must | v1 |
 | KA-4 | Only approved episodes are visible. The kid app has no search, URL entry, or link to the admin page. | Must | v1 |
 | KA-5 | Tapping an episode casts it to the TV. If something is already playing, the new pick replaces it. | Must | v1 |
@@ -76,6 +76,8 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | KA-8 | Remaining time is shown visually (e.g. a shrinking bar or icons), with a visible change in the last 5 minutes. | Could | v1 |
 | KA-9 | When the allowance is used up, the app shows a friendly "time's up" screen and picks are disabled until tomorrow or a parent override. | Must | v1 |
 | KA-10 | Episode tiles (episode grid and continue watching) show the episode title in small print below the thumbnail, and show tiles show the show's name below the artwork, cut off after two lines. It helps a parent find the video a kid is describing. The picture stays the main element. The admin shortens a long title by renaming the episode or show (LM-1). | Should | v1 |
+| KA-11 | Reader UI, opt-in per profile. The admin can set a profile's kid app style to "text" (default "icons", which is the KA-2 app, unchanged). With "text", the app also shows episode and show titles at full size, the now-playing title and state, the time left today, the name of the TV it plays on, and text on the controls. A device in group mode shows the reader UI only when every selected profile is a reader; otherwise it shows the icon UI, so a child who can't read never gets a text-dependent screen. The picture language stays; text is added, never required. | Should | v8 |
+| KA-12 | In the reader UI, a search box on the home screen filters the visible shows and episodes by title. It searches only approved content (KA-4). | Could | v8 |
 
 ### Playback and casting
 
@@ -86,6 +88,7 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | PB-3 | When an episode ends, the next episode of the same show plays automatically, unless time has run out or autoplay is turned off for that show. | Must | v1 |
 | PB-4 | Playback position is saved per profile, so "continue watching" resumes where the kid left off. An episode counts as finished at 95% played. | Should | v1 |
 | PB-5 | If the Chromecast disconnects or another app takes over, the server records the session as ended and the kid page shows the stopped state. | Must | v1 |
+| PB-6 | Each profile can have a default TV (one of the known Chromecasts); without one it uses the globally selected device (PB-1). A pick plays on the picking profile's TV; in a group, the first selected profile's TV. When that differs from the TV in use, what plays there is stopped first, then the pick plays on the new TV (one session at a time). A refused pick (PR-4) never moves playback. The kid app only shows which TV it plays on; it has no TV picker. | Should | v8 |
 
 ### Watch timer
 
@@ -185,7 +188,7 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
 | AD-1 | Admin pages require a password; sessions expire after 30 days of inactivity. | Must | v1 |
-| AD-2 | Settings page: allowance per profile, counting mode, maximum session length, reset time, grace cap and selected Chromecast. | Must | v1 |
+| AD-2 | Settings page: allowance per profile, counting mode, maximum session length, kid app style and default TV per profile (KA-11, PB-6), reset time, grace cap and selected Chromecast. | Must | v1 |
 | AD-3 | Dashboard: now playing, time used and remaining per profile, override buttons (WT-7) and job status. It must be usable on a phone. | Must | v1 |
 | AD-4 | Viewing history per profile: episode, start and end time, minutes counted, and overrides applied. | Must | v1 |
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
@@ -272,7 +275,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| Profile | name, picture, daily allowance, counting mode | v1 has one household profile |
+| Profile | name, picture, daily allowance, counting mode, UI mode (icons or text, KA-11), default TV (PB-6) | v1 has one household profile; UI mode defaults to icons, default TV to none (the global device) |
 | Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories not set = the global setting, none = SponsorBlock off for the show (SB-2) |
 | SourceVideo | YouTube ID, channel, title, duration, file path, status, removed segments, SponsorBlock re-check until | The downloaded original; may be deleted after splitting |
 | Episode | show, source video, start/end offset, title, thumbnail, file path, order, hidden | What kids see and play |
@@ -322,6 +325,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of SponsorBlock, subscriptions and splitting by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
 14. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection. (Renumbered from 12 when the admin API was inserted as step 9 and the receiver kept 13, 2026-09-29.)
 15. **Easier installation.** Versioned multi-arch images, a release compose file, no manual prep, a first-run password, a single container, an install script, a Home Assistant add-on and platform templates (DP-1..DP-8). (Added by the owner, 2026-10-02, and built before 11. Plan: `docs/plans/step15-installation.md`.)
+16. **Reader UI and per-profile TV (v8).** A text-rich kid app that the admin switches on per profile (KA-11, KA-12), and a default TV per profile (PB-6). The no-text app stays the default (KA-2). (Added from GitHub issue #29, 2026-10-02.)
 
 ## Risks, assumptions and open questions
 

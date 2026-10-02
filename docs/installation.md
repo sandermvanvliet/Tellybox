@@ -7,6 +7,7 @@ This guide takes you from an empty server to kids picking videos on the TV. Setu
 - [2. Edit the settings](#2-edit-the-settings)
 - [3. Start it](#3-start-it)
 - [4. First-run setup](#4-first-run-setup)
+- [Other platforms](#other-platforms)
 - [Configuration reference](#configuration-reference)
 - [Tellybox receiver (optional)](#tellybox-receiver-optional)
 - [HTTPS with a reverse proxy](#https-with-a-reverse-proxy)
@@ -105,6 +106,17 @@ The cast API (8081) listens on `127.0.0.1` only, so it needs no rule. mDNS disco
 5. **Give the kids the app:** open `http://<server>:8080` on their tablet or phone and use "Add to Home Screen". It opens full screen like an app.
 6. **Try it:** tap an episode. The TV should start within a few seconds.
 7. **Optionally, set up the Tellybox receiver** for the sky, loading and goodnight screens on the TV: see [Tellybox receiver](#tellybox-receiver-optional).
+
+## Other platforms
+
+The steps above work on any Linux host. If you run a NAS or a home-server system, these shortcuts may suit you better. They all run the same image with host networking. Ready-made files are in [`deploy/platforms/`](../deploy/platforms/). After the install, continue with [First-run setup](#4-first-run-setup).
+
+- **Home Assistant OS:** an add-on is coming. <!-- TODO: link and install steps once the add-on is published. -->
+- **Unraid:** copy `deploy/platforms/unraid/tellybox.xml` to `/boot/config/plugins/dockerMan/templates-user/` on the flash drive. Then choose **Docker > Add Container** and pick the Tellybox template. It runs as user 99 and group 100, the Unraid convention, and the media folder defaults to `/mnt/user/media/tellybox`. Open the WebUI button for `/admin`.
+- **TrueNAS SCALE** (24.10 or newer): create a dataset with `data`, `media` and `backups` folders. Open `deploy/platforms/truenas/docker-compose.yml`, change `tank` to your pool name and set `TZ`. Then choose **Apps > Discover Apps > menu > Install via YAML**, name it `tellybox` and paste the file.
+- **CasaOS:** choose **App Store > Custom Install**, paste `deploy/platforms/casaos/docker-compose.yml` and install. Data lives under `/DATA/AppData/tellybox/`. Set `TZ` first.
+- **Umbrel:** not available yet. The app files are ready in `deploy/platforms/umbrel/`, but the app only appears in a community app store once someone publishes it there.
+- **Synology Container Manager:** you need DSM 7.2 or newer. Host networking works there. Open **Container Manager > Project > Create**, set the path to `/volume1/docker/tellybox` and choose **Create docker-compose.yml**. Paste the release `docker-compose.yml` from step 1, and replace `env_file: .env` with an `environment:` list holding the values from `env.example` (at least `TZ`). Then build the project.
 
 ## Configuration reference
 

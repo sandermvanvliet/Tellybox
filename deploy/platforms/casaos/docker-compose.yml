@@ -1,0 +1,81 @@
+# Tellybox for CasaOS / ZimaOS. Import with "Install a customized app" in the
+# CasaOS app store, or paste this file there. Linux only; needs host networking.
+name: tellybox
+services:
+  tellybox:
+    image: ghcr.io/sandermvanvliet/tellybox:latest
+    container_name: tellybox
+    # Required: the server finds the Chromecast with mDNS, and the Chromecast
+    # downloads videos straight from the host.
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Amsterdam
+      TELLYBOX_WEB_PORT: "8080"
+      TELLYBOX_CAST_API_PORT: "8081"
+      PUID: "1000"
+      PGID: "1000"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/tellybox/data
+        target: /data
+      - type: bind
+        source: /DATA/AppData/tellybox/media
+        target: /media
+      - type: bind
+        source: /DATA/AppData/tellybox/backups
+        target: /backups
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Your time zone. The daily reset (04:00) and the history use it.
+        - container: TELLYBOX_WEB_PORT
+          description:
+            en_us: Web port of the kid app and the admin pages. If you change it, also change port_map in the app settings.
+        - container: TELLYBOX_CAST_API_PORT
+          description:
+            en_us: Internal API, localhost only. Change it if the port is taken.
+        - container: PUID
+          description:
+            en_us: User id the services run as. The folders are owned by it.
+        - container: PGID
+          description:
+            en_us: Group id the services run as.
+      volumes:
+        - container: /data
+          description:
+            en_us: Database, signing key and yt-dlp install.
+        - container: /media
+          description:
+            en_us: Episodes, thumbnails and show artwork.
+        - container: /backups
+          description:
+            en_us: Optional database backups.
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: tellybox
+  author: Sander van Vliet
+  developer: Sander van Vliet
+  category: Media
+  icon: https://raw.githubusercontent.com/sandermvanvliet/Tellybox/main/tellybox/web/static/icon-512.png
+  index: /admin
+  port_map: "8080"
+  title:
+    en_us: Tellybox
+  tagline:
+    en_us: Parent-approved videos for kids, on the TV
+  description:
+    en_us: |-
+      Lets young kids pick parent-approved videos on any phone or tablet and plays them on the TV through a Chromecast, within a daily time allowance. You approve every video, and the kids' screen works without reading.
+      First run: open the app, go to /admin/setup and enter the setup code from the container log. Run only one Tellybox per Chromecast.
+  tips:
+    before_install:
+      en_us: Tellybox finds your Chromecast with mDNS, so it runs with host networking. The server and the Chromecast must be on the same LAN. Videos are stored in /DATA/AppData/tellybox/media, so point that folder at another disk if you want them elsewhere.
+  website: https://github.com/sandermvanvliet/Tellybox
+  repo: https://github.com/sandermvanvliet/Tellybox
+  support: https://github.com/sandermvanvliet/Tellybox/issues
+  docs: https://github.com/sandermvanvliet/Tellybox/blob/main/docs/installation.md

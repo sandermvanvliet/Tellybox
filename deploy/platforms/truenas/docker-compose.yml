@@ -1,0 +1,31 @@
+# Tellybox for TrueNAS SCALE 24.10 or newer.
+# Apps > Discover Apps > menu (three dots) > Install via YAML. Name the app
+# "tellybox" and paste this file. Before you do:
+#   1. Create a dataset (for example <pool>/tellybox) with three folders:
+#      data, media and backups.
+#   2. Replace "tank" below with your pool name (and the folder names if you
+#      chose others).
+#   3. Set TZ to your time zone.
+# PUID/PGID: the container takes ownership of the three folders itself, so
+# there is no need to set permissions on the dataset. Pick any unused uid/gid.
+name: tellybox
+services:
+  tellybox:
+    image: ghcr.io/sandermvanvliet/tellybox:latest
+    container_name: tellybox
+    # Required: the server finds the Chromecast with mDNS, and the Chromecast
+    # downloads videos straight from the host.
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Amsterdam
+      TELLYBOX_WEB_PORT: "8080"
+      TELLYBOX_CAST_API_PORT: "8081"
+      PUID: "1500"
+      PGID: "1500"
+      # Optional. Only if autodetection picks the wrong network interface.
+      # TELLYBOX_MEDIA_BASE_URL: http://192.168.1.10:8080
+    volumes:
+      - /mnt/tank/tellybox/data:/data
+      - /mnt/tank/tellybox/media:/media
+      - /mnt/tank/tellybox/backups:/backups

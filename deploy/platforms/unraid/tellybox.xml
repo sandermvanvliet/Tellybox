@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  Tellybox: Unraid Community Applications template.
+  PUID/PGID default to 99/100 (nobody:users), the Unraid convention: shares
+  and appdata on Unraid are owned by that user, so Tellybox can read and write
+  them like any other container. Change them only if you know you need to.
+-->
+<Container version="2">
+  <Name>Tellybox</Name>
+  <Repository>ghcr.io/sandermvanvliet/tellybox:latest</Repository>
+  <Registry>https://github.com/sandermvanvliet/Tellybox/pkgs/container/tellybox</Registry>
+  <Network>host</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sandermvanvliet/Tellybox/issues</Support>
+  <Project>https://github.com/sandermvanvliet/Tellybox</Project>
+  <ReadMe>https://github.com/sandermvanvliet/Tellybox/blob/main/docs/installation.md</ReadMe>
+  <TemplateURL>https://raw.githubusercontent.com/sandermvanvliet/Tellybox/main/deploy/platforms/unraid/tellybox.xml</TemplateURL>
+  <Overview>Lets young kids pick parent-approved videos on any phone or tablet and plays them on the TV through a Chromecast, within a daily time allowance. You approve every video, and the kids' screen works without reading. Needs host networking so it can find the Chromecast. First run: open the WebUI, go to /admin/setup and enter the setup code from the container log. Run only one Tellybox per Chromecast.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:8080]/admin</WebUI>
+  <Icon>https://raw.githubusercontent.com/sandermvanvliet/Tellybox/main/tellybox/web/static/icon-512.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/tellybox/data" Mode="rw" Description="Database, signing key and the self-updating yt-dlp install." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/tellybox/data</Config>
+  <Config Name="Media" Target="/media" Default="/mnt/user/media/tellybox" Mode="rw" Description="Downloaded episodes, thumbnails and show artwork (about 0.5 to 1 GB per hour of video)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/tellybox</Config>
+  <Config Name="Backups" Target="/backups" Default="/mnt/user/appdata/tellybox/backups" Mode="rw" Description="Optional: database backups." Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/appdata/tellybox/backups</Config>
+  <Config Name="Time zone" Target="TZ" Default="Europe/Amsterdam" Description="Your time zone. The daily reset (04:00) and the history use it." Type="Variable" Display="always" Required="true" Mask="false">Europe/Amsterdam</Config>
+  <Config Name="Web port" Target="TELLYBOX_WEB_PORT" Default="8080" Description="Port of the kid app (/) and the admin pages (/admin). With host networking, change it here if the port is taken." Type="Variable" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Cast API port" Target="TELLYBOX_CAST_API_PORT" Default="8081" Description="Internal API, localhost only. Change it if the port is taken." Type="Variable" Display="advanced" Required="true" Mask="false">8081</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Description="User id the services run as (Unraid: 99 = nobody)." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Description="Group id the services run as (Unraid: 100 = users)." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
+  <Config Name="Media base URL" Target="TELLYBOX_MEDIA_BASE_URL" Default="" Description="Optional. Only if autodetection picks the wrong network interface: how the Chromecast reaches the server, for example http://192.168.1.10:8080" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Admin password" Target="TELLYBOX_ADMIN_PASSWORD" Default="" Description="Optional. Leave empty to choose the password in the browser, with the setup code from the container log." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+</Container>

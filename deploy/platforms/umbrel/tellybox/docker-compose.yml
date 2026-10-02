@@ -1,0 +1,22 @@
+# Host networking is required: the server finds the Chromecast with mDNS, and
+# the Chromecast downloads videos straight from the host. Like Home Assistant in
+# the Umbrel app store, there is no app_proxy: the app listens on its own port.
+version: "3.7"
+
+services:
+  server:
+    # TODO before submitting: pin to a release and add the multi-arch digest,
+    # for example ghcr.io/sandermvanvliet/tellybox:1.0.0@sha256:<digest>
+    image: ghcr.io/sandermvanvliet/tellybox:latest
+    network_mode: host
+    restart: on-failure
+    environment:
+      TZ: UTC
+      TELLYBOX_WEB_PORT: "8080"
+      TELLYBOX_CAST_API_PORT: "8081"
+      PUID: "1000"
+      PGID: "1000"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${APP_DATA_DIR}/media:/media
+      - ${APP_DATA_DIR}/backups:/backups

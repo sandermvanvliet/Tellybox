@@ -1,0 +1,33 @@
+manifestVersion: 1.1
+id: tellybox
+category: media
+name: Tellybox
+# TODO before submitting: set to the release the compose file pins.
+version: "1.0.0"
+tagline: Parent-approved videos for kids, on the TV
+description: >-
+  Lets young kids pick parent-approved videos on any phone or tablet and plays
+  them on the TV through a Chromecast, within a daily time allowance.
+
+
+  You approve every video before it reaches the kids' screen, and that screen
+  works without reading: it uses thumbnails, artwork and icons.
+
+
+  First run: open the app, go to /admin/setup and enter the setup code from the
+  app's logs. Tellybox finds your Chromecast with mDNS, so the Umbrel and the
+  Chromecast must be on the same network. Run only one Tellybox per Chromecast.
+developer: Sander van Vliet
+website: https://github.com/sandermvanvliet/Tellybox
+dependencies: []
+repo: https://github.com/sandermvanvliet/Tellybox
+support: https://github.com/sandermvanvliet/Tellybox/issues
+port: 8080
+gallery: []
+path: "/admin"
+defaultUsername: ""
+defaultPassword: ""
+torOnly: false
+releaseNotes: ""
+submitter: Sander van Vliet
+submission: ""

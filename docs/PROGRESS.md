@@ -191,6 +191,19 @@ Plan `docs/plans/step15-installation.md`, approved 2026-10-02. One PR per part, 
   - A clean install from the release on a Linux host (`install.sh`, or the two files), then the usual real-device checks.
   - External catalog submissions: Unraid CA, CasaOS AppStore, Umbrel apps (after a release with pinned digests).
 
+### 17 and 18. Seek and in-app playback, planned, awaiting owner approval
+Plan `docs/plans/step17-18-seek-and-in-app-playback.md` (2026-10-03), branch `plan/seek-and-in-app-playback`. Nothing is built, and the PRD and CLAUDE.md are untouched until the implementation PRs.
+- **17. Seek (issue #32, KA-13, CR-9):** a `seek` command through the device, controller, cast API and kid API, with back/forward 10 s buttons and a progress bar in the now-playing bar. KA-6 is amended (seek allowed; volume and skip stay out).
+- **18. In-app playback (issue #31, PB-7, KA-14, WT-10..WT-12):** a virtual "app" session in the cast service, fed by page heartbeats, with short-lived media URLs and a per-profile setting (default on). It needs a carve-out in the CLAUDE.md hard rule and in PRD.md:43. **18b** (handoff between app and TV) is a separate PR.
+- **Open decisions:**
+  1. Steps 17 and 18, or folded into v8, and does this wait for step 11?
+  2. Seek on both receivers, or the Tellybox receiver only?
+  3. Kid seek controls: 10 s buttons, a draggable bar, or both?
+  4. "Play here": a global switch in the kid app, or a per-profile default target?
+  5. Is the scoping acceptable: server-side counting plus a short-lived URL, no device lock?
+  6. Per-profile in-app setting as a boolean or a three-way (TV only, app only, both)?
+- Depends on step 16 and per-profile limits being merged first (migration numbers, requirement IDs).
+
 ### 12. Manual splitting (v5), done
 Plan `docs/plans/step12-14-splitting.md` (steps 12 and 14), approved 2026-10-01. Subagent briefs: `docs/plans/step12-handoff.md`. Branch `step12/manual-split`.
 - **Decision (owner, 2026-10-01):** the approve form has "delete the original video after cutting", unticked by default; a kept source can be split again (A-21).

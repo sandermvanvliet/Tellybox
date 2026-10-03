@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 20:17+0200\n"
+"POT-Creation-Date: 2026-10-03 08:55+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -177,35 +177,43 @@ msgstr "Opvulling of zijspoor"
 msgid "Non-music section"
 msgstr "Deel zonder muziek"
 
-#: tellybox/web/admin/__init__.py:87
+#: tellybox/web/admin/__init__.py:88
 msgid "This form must be sent from this page."
 msgstr "Dit formulier moet vanaf deze pagina verstuurd worden."
 
-#: tellybox/web/admin/__init__.py:93 tellybox/web/admin/__init__.py:130
+#: tellybox/web/admin/__init__.py:94 tellybox/web/admin/__init__.py:135
 #, python-format
 msgid "Too many attempts. Try again in %(seconds)d s."
 msgstr "Te veel pogingen. Probeer het over %(seconds)d s opnieuw."
 
-#: tellybox/web/admin/__init__.py:96
+#: tellybox/web/admin/__init__.py:97
 msgid "Wrong setup code."
 msgstr "Onjuiste installatiecode."
 
-#: tellybox/web/admin/__init__.py:98
+#: tellybox/web/admin/__init__.py:99
 #, python-format
 msgid "The password must be at least %(n)d characters."
 msgstr "Het wachtwoord moet minstens %(n)d tekens hebben."
 
-#: tellybox/web/admin/__init__.py:101
+#: tellybox/web/admin/__init__.py:102
 msgid "The two passwords are not the same."
 msgstr "De twee wachtwoorden zijn niet gelijk."
 
-#: tellybox/web/admin/__init__.py:124
+#: tellybox/web/admin/__init__.py:129
 msgid "This sign-in form must be sent from this page."
 msgstr "Dit inlogformulier moet vanaf deze pagina verstuurd worden."
 
-#: tellybox/web/admin/__init__.py:134
+#: tellybox/web/admin/__init__.py:138
 msgid "Wrong password."
 msgstr "Onjuist wachtwoord."
+
+#: tellybox/web/admin/__init__.py:169 tellybox/web/admin/__init__.py:195
+msgid "Sign-in with OIDC failed. Try again."
+msgstr "Inloggen met OIDC is mislukt. Probeer het opnieuw."
+
+#: tellybox/web/admin/__init__.py:200
+msgid "Your account may not use the Tellybox admin."
+msgstr "Je account mag het Tellybox-beheer niet gebruiken."
 
 #: tellybox/web/admin/add.py:25
 msgid ""
@@ -1815,7 +1823,8 @@ msgid "Nothing held."
 msgstr "Er wacht niets op vrijgave."
 
 #: tellybox/web/admin/templates/login.html:3
-#: tellybox/web/admin/templates/login.html:12
+#: tellybox/web/admin/templates/login.html:18
+#: tellybox/web/admin/templates/signed_in.html:3
 msgid "Sign in"
 msgstr "Inloggen"
 
@@ -1824,6 +1833,14 @@ msgid "Tellybox admin"
 msgstr "Tellybox-beheer"
 
 #: tellybox/web/admin/templates/login.html:9
+msgid "Sign in with OIDC"
+msgstr "Inloggen met OIDC"
+
+#: tellybox/web/admin/templates/login.html:10
+msgid "or"
+msgstr "of"
+
+#: tellybox/web/admin/templates/login.html:15
 msgid "Password"
 msgstr "Wachtwoord"
 
@@ -2300,6 +2317,14 @@ msgstr "Typ \"%(word)s\" om te bevestigen"
 #: tellybox/web/admin/templates/show.html:237
 msgid "Delete episode and its files"
 msgstr "Aflevering en bestanden verwijderen"
+
+#: tellybox/web/admin/templates/signed_in.html:7
+msgid "Signed in. Continuing…"
+msgstr "Ingelogd. Even geduld…"
+
+#: tellybox/web/admin/templates/signed_in.html:8
+msgid "Continue"
+msgstr "Verder"
 
 #: tellybox/web/admin/templates/split.html:14
 msgid "Hidden from the kids until you approve the split"

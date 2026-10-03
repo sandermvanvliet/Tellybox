@@ -4,12 +4,18 @@
 {% block content %}
 <section class="card narrow">
   <h1>{{ _("Tellybox admin") }}</h1>
+  {% if oidc_enabled %}
+  <div class="stack">
+    <a class="btn primary" href="/admin/oidc/start?next={{ next | urlencode }}">{{ _("Sign in with OIDC") }}</a>
+    <p class="or muted">{{ _("or") }}</p>
+  </div>
+  {% endif %}
   <form method="post" action="/admin/login" class="stack">
     <input type="hidden" name="next" value="{{ next }}">
     <label>{{ _("Password") }}
-      <input type="password" name="password" autocomplete="current-password" required autofocus>
+      <input type="password" name="password" autocomplete="current-password" required{% if not oidc_enabled %} autofocus{% endif %}>
     </label>
-    <button class="btn primary">{{ _("Sign in") }}</button>
+    <button class="btn{% if not oidc_enabled %} primary{% endif %}">{{ _("Sign in") }}</button>
   </form>
 </section>
 {% endblock %}

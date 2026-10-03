@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from tellybox.db import to_db
 from tellybox.timer import day_for
-from tellybox import auth
+from tellybox import auth, oidc
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ def purge(conn: sqlite3.Connection, now: datetime, tz: ZoneInfo, reset_time: tim
         "login_throttle": conn.execute(
             "DELETE FROM login_throttle WHERE updated_at < ?", (throttle_cutoff,)
         ).rowcount,
+        "oidc_login": oidc.purge_stale_logins(conn, now),  # AD-6: sign-ins that never came back
     }
     log.info("purge: %s", counts)
     return counts

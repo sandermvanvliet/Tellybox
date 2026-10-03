@@ -92,6 +92,7 @@ class AdminContext:
     clock: Clock
     cast: object  # CastClient-like (tellybox.web.cast_client)
     ytdlp: object  # YtDlp-like, for previews (tellybox.ytdlp)
+    oidc: object | None = None  # OidcClient-like (tellybox.oidc); None: password sign-in only (AD-6)
 
 
 # --------------------------------------------------------------------------- request checks

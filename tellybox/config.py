@@ -7,6 +7,7 @@ import secrets
 import socket
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 
@@ -52,6 +53,58 @@ def admin_password_from_env(env: dict[str, str]) -> str | None:
     return value or None
 
 
+OIDC_CALLBACK_PATH = "/admin/oidc/callback"
+OIDC_REQUIRED = ("TELLYBOX_OIDC_CLIENT_ID", "TELLYBOX_OIDC_REDIRECT_URI", "TELLYBOX_OIDC_ADMIN_GROUP")
+
+
+@dataclass(frozen=True)
+class OidcConfig:
+    """Admin sign-in with an OpenID Connect provider (AD-6); only members of `admin_group` get in."""
+
+    issuer: str  # e.g. https://id.example.org; discovery is <issuer>/.well-known/openid-configuration
+    client_id: str
+    redirect_uri: str  # exactly as registered at the provider; ends in OIDC_CALLBACK_PATH
+    admin_group: str
+    client_secret: str | None = field(default=None, repr=False)  # None: a public client (PKCE only)
+    groups_claim: str = "groups"
+    scopes: str = "openid profile email groups"
+
+
+def oidc_from_env(env: dict[str, str]) -> OidcConfig | None:
+    """TELLYBOX_OIDC_* (AD-6). None when TELLYBOX_OIDC_ISSUER is unset or empty.
+
+    With an issuer, a missing or malformed setting raises ValueError, so the services refuse to
+    start rather than letting every account at the provider in. The provider itself isn't
+    contacted here: it may be down while the kid app and password sign-in work.
+    """
+    issuer = env.get("TELLYBOX_OIDC_ISSUER", "").strip()
+    if not issuer:
+        return None
+    if missing := [name for name in OIDC_REQUIRED if not env.get(name, "").strip()]:
+        raise ValueError(f"TELLYBOX_OIDC_ISSUER is set, so these must be set too: {', '.join(missing)}")
+    redirect_uri = env["TELLYBOX_OIDC_REDIRECT_URI"].strip()
+    parts = urlsplit(redirect_uri)
+    if parts.scheme not in ("http", "https") or not parts.netloc or not parts.path.endswith(OIDC_CALLBACK_PATH):
+        raise ValueError(f"TELLYBOX_OIDC_REDIRECT_URI must be a full URL ending in {OIDC_CALLBACK_PATH}")
+    if urlsplit(issuer).scheme not in ("http", "https"):
+        raise ValueError("TELLYBOX_OIDC_ISSUER must be a URL, e.g. https://id.example.org")
+    secret = env.get("TELLYBOX_OIDC_CLIENT_SECRET")
+    if not secret and (file := env.get("TELLYBOX_OIDC_CLIENT_SECRET_FILE")):
+        secret = Path(file).read_text().rstrip("\r\n")
+    scopes = " ".join(env.get("TELLYBOX_OIDC_SCOPES", "").split()) or OidcConfig.scopes
+    if "openid" not in scopes.split():
+        raise ValueError("TELLYBOX_OIDC_SCOPES must include openid")
+    return OidcConfig(
+        issuer=issuer,
+        client_id=env["TELLYBOX_OIDC_CLIENT_ID"].strip(),
+        redirect_uri=redirect_uri,
+        admin_group=env["TELLYBOX_OIDC_ADMIN_GROUP"].strip(),
+        client_secret=secret or None,
+        groups_claim=env.get("TELLYBOX_OIDC_GROUPS_CLAIM", "").strip() or OidcConfig.groups_claim,
+        scopes=scopes,
+    )
+
+
 @dataclass(frozen=True)
 class Config:
     db_path: Path
@@ -65,6 +118,7 @@ class Config:
     media_base_url: str  # how the Chromecast reaches the web service, e.g. http://192.168.1.10:8080
     secret: bytes
     admin_password: str | None = field(default=None, repr=False)  # None: admin is locked
+    oidc: OidcConfig | None = None  # None: password sign-in only (AD-6)
     version: str = "dev"  # TELLYBOX_VERSION, set by the Dockerfile's APP_VERSION build arg
 
     @classmethod
@@ -85,5 +139,6 @@ class Config:
             media_base_url=base_url.rstrip("/"),
             secret=load_or_create_secret(Path(env.get("TELLYBOX_SECRET_FILE", data_dir / "secret.key"))),
             admin_password=admin_password_from_env(env),
+            oidc=oidc_from_env(env),
             version=env.get("TELLYBOX_VERSION", "dev"),
         )

@@ -49,7 +49,7 @@ Self-hosted app that lets young kids pick parent-approved videos on any device a
 - Profiles arrive in v2, but the data model includes them from v1 (single household profile). There is no PIN, and every profile sees the whole library (A-7, A-8).
 - SponsorBlock segments are cut out of the file at download, not skipped during playback. The defaults are sponsor, self-promotion and interaction reminders, set globally and overridable per show. A daily re-check for 7 days replaces the file if new segments appear (SB-1..SB-5).
 - Channel subscriptions never auto-approve; every upload goes through the inbox (A-9).
-- History retained 21 days. Single admin, password login.
+- History retained 21 days. Single admin; password login, plus optional OIDC sign-in for one group (AD-6).
 - Viewing session (WT-3) spans picks and autoplay; it ends only after 15 min with nothing playing (paused or stopped). BUFFERING counts as playing.
 - Reaching the max session length is handled like running out of allowance: finish the episode (grace-capped), then stop.
 - "Unlimited today" lifts both the allowance and the max session length. Block and stop-now take effect immediately, without grace.

@@ -7,3 +7,6 @@ Ready-made app entries for NAS and home-server platforms. All of them run the sa
 - **TrueNAS SCALE** (`truenas/docker-compose.yml`): for SCALE 24.10 or newer. Create a dataset with `data`, `media` and `backups` folders, change `tank` in the paths to your pool, then use **Apps > Discover Apps > menu > Install via YAML** and paste the file.
 - **Umbrel** (`umbrel/tellybox/`): an app folder (`umbrel-app.yml` and `docker-compose.yml`) for a community app store or for the official one. It is not installable from this repository alone: it needs a pinned release and image digest first (see the TODOs in the files).
 - **Synology**: no file needed. Use the release `docker-compose.yml` in Container Manager (see the installation guide).
+
+
+Sign in with OIDC (`TELLYBOX_OIDC_*`) is not supported yet on CasaOS, TrueNAS SCALE and Umbrel: their compose files don't pass those settings. Unraid has fields for it.

@@ -12,6 +12,7 @@ This guide takes you from an empty server to kids picking videos on the TV. Setu
 - [Configuration reference](#configuration-reference)
 - [Tellybox receiver (optional)](#tellybox-receiver-optional)
 - [HTTPS with a reverse proxy](#https-with-a-reverse-proxy)
+- [Sign in with OIDC (optional)](#sign-in-with-oidc-optional)
 - [Remote access with Tailscale](#remote-access-with-tailscale)
 - [Backups and restoring](#backups-and-restoring)
 - [Updating](#updating)
@@ -140,9 +141,9 @@ The steps above work on any Linux host. If you run a NAS or a home-server system
 
 - **Home Assistant OS:** use the [Tellybox add-on](https://github.com/sandermvanvliet/tellybox-ha-addon). In **Settings > Add-ons > Add-on store**, open the menu, choose **Repositories** and add `https://github.com/sandermvanvliet/tellybox-ha-addon`. Install **Tellybox**, start it, and read the setup code in its **Log** tab. Videos go to `/media/tellybox`, so they show up in Home Assistant's media browser. The [Tellybox integration](https://github.com/sandermvanvliet/ha-tellybox) adds the dashboard controls.
 - **Unraid:** copy `deploy/platforms/unraid/tellybox.xml` to `/boot/config/plugins/dockerMan/templates-user/` on the flash drive. Then choose **Docker > Add Container** and pick the Tellybox template. It runs as user 99 and group 100, the Unraid convention, and the media folder defaults to `/mnt/user/media/tellybox`. Open the WebUI button for `/admin`.
-- **TrueNAS SCALE** (24.10 or newer): create a dataset with `data`, `media` and `backups` folders. Open `deploy/platforms/truenas/docker-compose.yml`, change `tank` to your pool name and set `TZ`. Then choose **Apps > Discover Apps > menu > Install via YAML**, name it `tellybox` and paste the file.
-- **CasaOS:** choose **App Store > Custom Install**, paste `deploy/platforms/casaos/docker-compose.yml` and install. Data lives under `/DATA/AppData/tellybox/`. Set `TZ` first.
-- **Umbrel:** not available yet. The app files are ready in `deploy/platforms/umbrel/`, but the app only appears in a community app store once someone publishes it there.
+- **TrueNAS SCALE** (24.10 or newer): create a dataset with `data`, `media` and `backups` folders. Open `deploy/platforms/truenas/docker-compose.yml`, change `tank` to your pool name and set `TZ`. Then choose **Apps > Discover Apps > menu > Install via YAML**, name it `tellybox` and paste the file. Sign in with OIDC isn't supported on this platform yet: its file doesn't pass the `TELLYBOX_OIDC_*` settings.
+- **CasaOS:** choose **App Store > Custom Install**, paste `deploy/platforms/casaos/docker-compose.yml` and install. Data lives under `/DATA/AppData/tellybox/`. Set `TZ` first. Sign in with OIDC isn't supported on this platform yet: its file doesn't pass the `TELLYBOX_OIDC_*` settings.
+- **Umbrel:** not available yet. The app files are ready in `deploy/platforms/umbrel/`, but the app only appears in a community app store once someone publishes it there. Sign in with OIDC isn't supported in these files yet.
 - **Synology Container Manager:** you need DSM 7.2 or newer. Host networking works there. Open **Container Manager > Project > Create**, set the path to `/volume1/docker/tellybox` and choose **Create docker-compose.yml**. Paste the release `docker-compose.yml` from step 1, and replace `env_file: .env` with an `environment:` list holding the values from `env.example` (at least `TZ`). Then build the project.
 
 ## Configuration reference
@@ -155,6 +156,14 @@ All settings are environment variables. What you can change in the admin pages (
 | `TELLYBOX_TAG` | `latest` | Which image version the release compose file runs: `latest` (the newest release), a version such as `0.1` or `0.1.0`, or `edge` (the main branch). Read by Compose, not by Tellybox. See [Updating](#updating). |
 | `TELLYBOX_ADMIN_PASSWORD_FILE` | none | A file containing the admin password (preferred over the variable below). Overrides a password chosen in the browser. |
 | `TELLYBOX_ADMIN_PASSWORD` | none | The admin password itself. Overrides a password chosen in the browser. If neither is set, you choose the password in the browser on first run. Changing the password signs out every session. |
+| `TELLYBOX_OIDC_ISSUER` | none | Turns on [sign-in with OIDC](#sign-in-with-oidc-optional): the provider's issuer URL, e.g. `https://id.example.org`. Then the client id, redirect URI and admin group are required too, or Tellybox doesn't start. |
+| `TELLYBOX_OIDC_CLIENT_ID` | none | The client id from the provider. |
+| `TELLYBOX_OIDC_CLIENT_SECRET_FILE` | none | A file containing the client secret (preferred over the variable below). Leave both unset for a public client; PKCE is always used. |
+| `TELLYBOX_OIDC_CLIENT_SECRET` | none | The client secret itself. |
+| `TELLYBOX_OIDC_REDIRECT_URI` | none | Your Tellybox address with `/admin/oidc/callback`, e.g. `https://tellybox.example.org/admin/oidc/callback`, exactly as registered at the provider. |
+| `TELLYBOX_OIDC_ADMIN_GROUP` | none | Only members of this group may use the admin pages with OIDC. |
+| `TELLYBOX_OIDC_GROUPS_CLAIM` | `groups` | The claim holding the user's groups (a list, or one name). |
+| `TELLYBOX_OIDC_SCOPES` | `openid profile email groups` | Scopes to request. Must include `openid`. Some providers need a different scope for the groups claim. |
 | `TELLYBOX_WEB_PORT` | `8080` | Port for the kid app, the admin pages and the media files. |
 | `TELLYBOX_WEB_HOST` | `0.0.0.0` | Address the web app listens on. |
 | `TELLYBOX_MEDIA_BASE_URL` | `http://<LAN IP>:<web port>` | Optional override. The URL the Chromecast uses to fetch videos is detected automatically. Set it explicitly if the server has several interfaces (Docker bridges, VPNs) or the detection picks the wrong one. Use plain `http://` and an IP address: a Chromecast can't resolve local-only DNS names. |
@@ -164,7 +173,7 @@ All settings are environment variables. What you can change in the admin pages (
 | `TELLYBOX_MEDIA_DIR` | `/media` (in the image) | Video files and images. |
 | `TELLYBOX_DB` | `<data>/tellybox.db` | Database path. |
 | `TELLYBOX_SECRET_FILE` | `<data>/secret.key` | Key for signing media links. It's created on first start. Media links stay valid across restarts for 24 hours. |
-| `TELLYBOX_OPTIONS_FILE` | none | A JSON file with `web_port`, `cast_api_port`, `media_base_url` and `admin_password`, read at start-up. Used by the Home Assistant add-on (`/data/options.json`). Variables you set yourself win over the file. When the container starts as root, the data and media folders are also created if missing. |
+| `TELLYBOX_OPTIONS_FILE` | none | A JSON file with `web_port`, `cast_api_port`, `media_base_url`, `admin_password` and the OIDC options (`oidc_issuer`, `oidc_client_id`, `oidc_client_secret`, `oidc_redirect_uri`, `oidc_admin_group`), read at start-up. Used by the Home Assistant add-on (`/data/options.json`). Variables you set yourself win over the file. When the container starts as root, the data and media folders are also created if missing. |
 | `TZ` or `TELLYBOX_TZ` | the host's zone, else UTC | Local time zone for the daily reset, schedules and history. |
 
 ## Tellybox receiver (optional)
@@ -244,6 +253,37 @@ server {
     }
 }
 ```
+
+## Sign in with OIDC (optional)
+
+If you already sign in to other apps with an identity provider (Pocket ID, Authentik, Keycloak, Authelia, …), the admin pages can use it too. The sign-in page then shows **Sign in with OIDC** above the password form.
+
+- **The password stays.** OIDC is an extra way in. If the provider is down, sign in with the password.
+- **One group gets in.** Only members of the group in `TELLYBOX_OIDC_ADMIN_GROUP` are admitted; everyone else at the provider is refused. Without a group, Tellybox doesn't start.
+- **Set the password first.** [First-run setup](#4-first-run-setup) still comes first. OIDC sign-in works once a password exists.
+- **Not on every platform yet.** The CasaOS, TrueNAS SCALE and Umbrel files don't pass the OIDC settings, so OIDC isn't supported there yet. Unraid, the Home Assistant add-on and Docker Compose support it.
+- **A name the browser can reach.** The provider sends the browser back to Tellybox, usually under an HTTPS name on your [reverse proxy](#https-with-a-reverse-proxy).
+
+1. **Register Tellybox at the provider** as an OpenID Connect client (a confidential client with a secret, or a public client: Tellybox always uses PKCE). The redirect or callback URL is your Tellybox address followed by `/admin/oidc/callback`, for example `https://tellybox.example.org/admin/oidc/callback`. Note the client id and secret.
+2. **Make the admin group,** for example `tellybox-admins`, and add the parents to it. The provider must send the user's groups, in the ID token or the userinfo response. Most use a `groups` claim with a `groups` scope; for others, see below.
+3. **Add the settings** to `.env`:
+
+   ```sh
+   TELLYBOX_OIDC_ISSUER=https://id.example.org
+   TELLYBOX_OIDC_CLIENT_ID=tellybox
+   TELLYBOX_OIDC_CLIENT_SECRET=the-client-secret
+   TELLYBOX_OIDC_REDIRECT_URI=https://tellybox.example.org/admin/oidc/callback
+   TELLYBOX_OIDC_ADMIN_GROUP=tellybox-admins
+   ```
+
+4. **Recreate the container:** `docker compose up -d --force-recreate`. Then open the admin's sign-in page and choose **Sign in with OIDC**.
+
+Some notes per provider:
+
+- **Pocket ID:** add an OIDC client with the callback URL above, and a user group for the parents. The `groups` scope puts the group names in the `groups` claim, so the defaults work.
+- **Other providers:** use the group's name exactly as it appears in the claim. Keycloak's group mapper, for example, sends the full path (`/tellybox-admins`) unless you turn that off. If the claim has another name, such as `roles`, set `TELLYBOX_OIDC_GROUPS_CLAIM`. If the provider needs another scope for it, set `TELLYBOX_OIDC_SCOPES`.
+
+Signing out of Tellybox ends only the Tellybox session, not the one at the provider. Sessions last 30 days, as with the password, and a changed `TELLYBOX_ADMIN_PASSWORD` signs out OIDC sessions too.
 
 ## Remote access with Tailscale
 
@@ -364,6 +404,7 @@ Some notes:
 | --- | --- |
 | **No Chromecast found** | The containers use `network_mode: host`, and the server and Chromecast are on the same subnet (not a guest network with client isolation). Multicast/mDNS isn't blocked between them. `docker compose logs tellybox` shows discovery (look for lines from `tellybox.cast`). |
 | **The TV shows the Cast icon but no video, or times out** | The Chromecast can't reach `TELLYBOX_MEDIA_BASE_URL`. Set it to `http://<server LAN IP>:<web port>` and allow that port from the LAN in the firewall. |
+| **Sign in with OIDC fails** | If the provider shows an error instead of sending you back, the redirect URI differs from the one registered there (scheme, name or port). Otherwise the page only says it failed, and the reason is in the log: `docker compose logs tellybox \| grep OIDC`. Common causes: the issuer URL is not exactly the provider's, or the server's clock is off. "Your account may not use the Tellybox admin" means the user isn't in `TELLYBOX_OIDC_ADMIN_GROUP`, or the provider doesn't send the groups (see [Sign in with OIDC](#sign-in-with-oidc-optional)). |
 | **Forgot the admin password** | If you chose it in the browser: run `docker compose exec tellybox tellybox reset-password`. It clears the password, signs everyone out and prints a new setup code; open `/admin/setup` and choose a new password. (Restarting `web` instead logs a new code, which also works.) If the password comes from `TELLYBOX_ADMIN_PASSWORD` or `_FILE`, change it there and recreate the container (`docker compose up -d --force-recreate`). |
 | **Permission denied in the logs** | The container fixes the ownership of `data`, `media` and `backups` at start, so this usually means the folder is read-only or on a filesystem that refuses `chown` (some NFS exports). Set `PUID`/`PGID` to the folder's owner instead. If you run with `user:` in compose, the container can't chown anything and the folders must already belong to that user. |
 | **Downloads fail with a YouTube error** | Press "Update yt-dlp" on the **Jobs** page, then retry the job on the **Jobs** page. Private, members-only and age-restricted videos can't be downloaded. |

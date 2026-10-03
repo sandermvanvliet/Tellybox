@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from tellybox import auth
 from tellybox.i18n import _
+from tellybox.oidc import BROWSER_COOKIE, LOGIN_TTL, OidcError, is_admin
 from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages
 from tellybox.web.admin.common import (
     STATIC_DIR,
@@ -45,7 +46,7 @@ def set_session_cookie(response: Response, request: Request, token: str) -> None
 
 
 def mount_admin(app: FastAPI, ctx: AdminContext) -> None:
-    conn, clock = ctx.conn, ctx.clock
+    conn, clock, oidc = ctx.conn, ctx.clock, ctx.oidc
     auth.install_password(conn, ctx.config.admin_password)
     if auth.is_locked(conn):  # DP-4: no password yet; a fresh code on every start
         code = auth.new_setup_code(conn, clock.now())
@@ -107,36 +108,103 @@ def mount_admin(app: FastAPI, ctx: AdminContext) -> None:
         set_session_cookie(response, request, token)
         return response
 
+    def login_form(request: Request, next: str, status_code: int = 200, error: str | None = None) -> Response:
+        """The sign-in page; with OIDC configured, its button comes first (AD-6)."""
+        return render(request, "login.html", status_code=status_code, next=next, error=error,
+                      oidc_enabled=oidc is not None)
+
     @public.get("/admin/login")
     def login_page(request: Request, next: str | None = None) -> Response:
         if auth.is_locked(conn):
             return see_other("/admin/setup")
         if auth.touch_session(conn, request.cookies.get(auth.SESSION_COOKIE), clock.now()):
             return see_other(_safe_next(next))
-        return render(request, "login.html", next=_safe_next(next))
+        return login_form(request, _safe_next(next))
 
     @public.post("/admin/login")
     def login(request: Request, password: str = Form(""), next: str = Form("/admin")) -> Response:
         if auth.is_locked(conn):
             return see_other("/admin/setup")
         if not same_origin(request):
-            return render(request, "login.html", status_code=403, next=_safe_next(next),
-                          error=_("This sign-in form must be sent from this page."))
+            return login_form(request, _safe_next(next), 403, _("This sign-in form must be sent from this page."))
         now = clock.now()
         address = client_address(request)
         wait = auth.throttle_wait_s(conn, address, now)
         if wait > 0:
-            return render(request, "login.html", status_code=429, next=_safe_next(next),
-                          error=_("Too many attempts. Try again in %(seconds)d s.") % {"seconds": int(wait + 0.999)})
+            return login_form(request, _safe_next(next), 429,
+                              _("Too many attempts. Try again in %(seconds)d s.") % {"seconds": int(wait + 0.999)})
         if not auth.check_password(conn, password):
             auth.record_failure(conn, address, now)
-            return render(request, "login.html", status_code=401, next=_safe_next(next),
-                          error=_("Wrong password."))
+            return login_form(request, _safe_next(next), 401, _("Wrong password."))
         auth.clear_failures(conn, address)
         token = auth.create_session(conn, now)
         response = see_other(_safe_next(next))
         set_session_cookie(response, request, token)
         return response
+
+    if oidc is not None:
+        # AD-6: only mounted with OIDC configured (otherwise a 404). No password throttle: there's
+        # no password to guess, and each state works once. While locked, setup comes first (DP-4).
+
+        def set_browser_cookie(response: Response, request: Request, value: str) -> None:
+            """Binds the sign-in to this browser. SameSite=Lax, unlike the Strict session cookie:
+            the provider sends the browser back with a cross-site top-level GET, which carries Lax
+            cookies but not Strict ones. It only lives on /admin/oidc, for one sign-in."""
+            response.set_cookie(BROWSER_COOKIE, value, path="/admin/oidc", httponly=True, samesite="lax",
+                                secure=is_https(request), max_age=int(LOGIN_TTL.total_seconds()))
+
+        def clear_browser_cookie(response: Response, request: Request) -> Response:
+            response.delete_cookie(BROWSER_COOKIE, path="/admin/oidc", httponly=True, samesite="lax",
+                                   secure=is_https(request))
+            return response
+
+        @public.get("/admin/oidc/start")
+        async def oidc_start(request: Request, next: str | None = None) -> Response:
+            if auth.is_locked(conn):
+                return see_other("/admin/setup")
+            try:
+                url, browser = await oidc.begin(conn, _safe_next(next), clock.now())
+            except OidcError as exc:
+                log.warning("admin sign-in with OIDC could not start: %s", exc)
+                return login_form(request, _safe_next(next), 502, _("Sign-in with OIDC failed. Try again."))
+            response = see_other(url)
+            set_browser_cookie(response, request, browser)
+            return response
+
+        @public.get("/admin/oidc/callback")
+        async def oidc_callback(request: Request, code: str = "", state: str = "", error: str = "") -> Response:
+            """The provider sends the browser back here, a navigation a cross-site page started.
+
+            Browsers treat every hop of such a redirect chain as cross-site, so a 303 to `next` would
+            arrive without our SameSite=Strict cookie and bounce to the sign-in page. Success is
+            therefore a 200 page that sets the cookie and moves on itself (meta refresh, plus a
+            link): a navigation this page starts is same-site, and carries the cookie."""
+            if auth.is_locked(conn):
+                return see_other("/admin/setup")
+            now = clock.now()
+            try:
+                if error:
+                    raise OidcError(f"the provider answered {error!r} "
+                                    f"({request.query_params.get('error_description', '')!r})")
+                if not code or not state:
+                    raise OidcError("callback without code or state")
+                identity, next = await oidc.finish(conn, code, state, request.cookies.get(BROWSER_COOKIE), now)
+            except OidcError as exc:
+                log.warning("admin sign-in with OIDC failed: %s", exc)
+                return clear_browser_cookie(
+                    login_form(request, "/admin", 400, _("Sign-in with OIDC failed. Try again.")), request)
+            if not is_admin(identity, oidc.config.admin_group):
+                log.warning("admin sign-in with OIDC refused: %s (%s) is not in group %r",
+                            identity.name, identity.subject, oidc.config.admin_group)
+                return clear_browser_cookie(
+                    login_form(request, next, 403, _("Your account may not use the Tellybox admin.")), request)
+            log.info("admin signed in with OIDC as %s (%s)", identity.name, identity.subject)
+            token = auth.create_session(conn, now)
+            response = render(request, "signed_in.html", next=next)
+            # The URL carries the code and state: keep it out of caches and any Referer.
+            response.headers["Referrer-Policy"] = "no-referrer"
+            set_session_cookie(response, request, token)
+            return clear_browser_cookie(response, request)
 
     guard = AdminGuard(conn, clock)
 

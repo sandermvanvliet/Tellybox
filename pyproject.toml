@@ -20,6 +20,7 @@ dependencies = [
     "jinja2>=3.1",  # admin pages
     "python-multipart>=0.0.9",  # admin form posts
     "argon2-cffi>=23.1",  # admin password hash (AD-1)
+    "joserfc>=1.7.5",  # admin sign-in with OIDC: ID token signature and claims (AD-6)
     "babel>=2.14",  # interface languages: catalogs, extraction, dates (NF-13)
     # Smart splitting (v6): frame handling and title-card hashes; scene changes come from ffmpeg.
     "opencv-python-headless>=4.10",

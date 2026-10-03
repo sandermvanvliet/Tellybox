@@ -192,6 +192,7 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | AD-3 | Dashboard: now playing, time used and remaining per profile, override buttons (WT-7) and job status. It must be usable on a phone. | Must | v1 |
 | AD-4 | Viewing history per profile: episode, start and end time, minutes counted, and overrides applied. | Must | v1 |
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
+| AD-6 | Optionally, the admin signs in with an OpenID Connect provider instead of the password; only members of one configured group are admitted, and the password stays available. | Should | — |
 
 ### Admin API (Home Assistant)
 
@@ -376,6 +377,11 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-21 | After a split, the source file is kept unless the admin ticks "delete the original video after cutting" when approving (unticked by default). A kept source can be split again (owner, 2026-10-01). |
 | A-22 | A compilation that automatic detection (ES-10) picks up stays hidden from the kid app until its split is approved, or the admin publishes it whole (owner, 2026-10-01). |
 | A-23 | Per-profile limits (daily allowance and maximum session length): each limit mode is inherit (use the household default), custom (profile-specific value), or unlimited (no limit). Existing profiles were migrated to custom mode. Counting mode, grace cap, session break, and extra minutes work the same whether limits are inherited, custom or unlimited. Extra minutes are ignored if a profile is unlimited (issue #27, 2026-10-02). |
+| A-24 | OIDC sign-in (AD-6) is an extra way into the admin, never the only one: the password stays, so the admin is reachable while the provider is down (owner, 2026-10-02, issue #28). |
+| A-25 | First-run setup (DP-4) is unchanged with OIDC configured: without a password, every admin page goes to the setup page. OIDC sign-in works once a password exists (owner, 2026-10-02). |
+| A-26 | Only members of one group (`TELLYBOX_OIDC_ADMIN_GROUP`) are admitted, and the group is the single admin. OIDC configured without a group stops the services from starting, rather than letting every account at the provider in (owner, 2026-10-02). |
+| A-27 | OIDC is configured through environment variables only, including an explicit redirect URI; nothing is in the settings page. The sign-in page shows one "Sign in with OIDC" button, without a provider name or logo (owner, 2026-10-02). |
+| A-28 | An OIDC sign-in creates the same admin session as the password (AD-1): 30 days sliding, ended by sign-out or a changed environment password. Sign-out is local; there is no sign-out at the provider. A sign-in only completes in the browser that started it. API tokens are unaffected (A-16) (owner, 2026-10-02). |
 
 ### Open questions
 

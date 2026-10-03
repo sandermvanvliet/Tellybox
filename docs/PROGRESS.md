@@ -154,7 +154,27 @@ Steps 9 and 13 are done. What's open is on the owner's side:
 2. **Step 8, kid profiles (v2):** the playback checks on the real TV, in `docs/plans/step8-device-checks.md`.
 3. **PR #10** (installation guide: reboot the Chromecast after changing the receiver app) is open.
 
-On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. On 2026-10-02 the owner added step 15, easier installation (DP-1..DP-8), and put it before 11. Step 15 is built and released as v0.1.0; its device checks are open. **The next step to build is 11, channel subscriptions (v4).**
+On 2026-10-01 the owner chose to build splitting next (steps 12 and 14), ahead of 11, channel subscriptions (v4). Step 12 is done, and step 14 is deployed with its v6 gate open. On 2026-10-02 the owner added step 15, easier installation (DP-1..DP-8), and put it before 11. Step 15 is built and released as v0.1.0; its device checks are open. Admin sign-in with OIDC (AD-6, issue #28) is built from an approved plan; its PR and the owner's checks are open. **The next step to build is 11, channel subscriptions (v4).**
+
+### Admin sign-in with OIDC (AD-6, issue #28), built; checks open
+Plan `docs/plans/oidc-admin-login.md`, approved by the owner on 2026-10-02 (A-24..A-28). Branch `oidc/admin-login`, one PR.
+- **Config:** `TELLYBOX_OIDC_*` fill `Config.oidc` (`oidc_from_env`). With an issuer but no client id, redirect URI or admin group, every service refuses to start and names what's missing. The provider isn't contacted at start. The add-on options `oidc_*` map to the variables.
+- **Migration 015:** `oidc_login`, one row per sign-in in progress (state hash, nonce, PKCE verifier, `next`, browser hash); the worker's purge drops rows older than 10 minutes.
+- **`tellybox/oidc.py`:**
+  - discovery and JWKS on the first sign-in, kept in memory; an unknown `kid` fetches the keys once more;
+  - the authorization code flow with PKCE S256; the ID token checked with joserfc (signature, `iss`, `aud`/`azp`, `exp`/`iat` with 60 s leeway, `nonce`), asymmetric algorithms only;
+  - groups from the ID token, else from userinfo; `is_admin` for the one group;
+  - each sign-in is bound to the browser that started it: a random `tb_oidc` cookie (HttpOnly, SameSite=Lax, `/admin/oidc`, 10 minutes), whose SHA-256 must match the stored one, so a leaked callback URL is useless elsewhere and a forged callback can't sign someone in (login CSRF).
+- **Routes**, only mounted with OIDC configured: `/admin/oidc/start` and `/admin/oidc/callback`. Success creates the usual admin session and answers with a short "Signed in" page that moves on to `next` itself, since a redirect from the provider's cross-site navigation would arrive without the SameSite=Strict cookie; not in the group is a 403 with the password form; any other failure is a 400 with a general message and the detail in the log. Every callback outcome clears `tb_oidc`. While locked, both go to setup (DP-4).
+- **Sign-in page:** "Sign in with OIDC" above the password form; nl and de.
+- **Library:** joserfc only. Authlib 1.8 deprecates its httpx integration for `httpx2`, so the plan's fallback (plain httpx) is used; see the plan's "Changed while building".
+- **Docs:** PRD AD-6 and A-24..A-28, the installation guide's "Sign in with OIDC (optional)" section and configuration rows, `.env.example`, the Unraid template.
+- 1569 tests (61 new), against a fake provider on `httpx.MockTransport`.
+- Tested by the contributor against Pocket ID behind a reverse proxy: a group member signs in, a non-member is refused.
+- **Open (owner):**
+  - Choose AD-6's release.
+  - With the provider stopped: password sign-in still works; the OIDC button shows the failure message.
+  - The add-on's `config.yaml` schema for the `oidc_*` options (in `sandermvanvliet/tellybox-ha-addon`).
 
 ### 16. Reader UI and per-profile TV (issue #29, branch `step-16-reader-ui`), in progress
 Plan approved by the owner: the kid app gets a second, text-rich UI chosen per profile (KA-11, KA-12), and each profile gets a default TV (PB-6). The icon UI stays the default and is untouched (KA-2).

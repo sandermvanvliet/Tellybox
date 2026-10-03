@@ -112,6 +112,21 @@ def test_removes_expired_admin_sessions_and_stale_throttle_rows(conn):
     assert conn.execute("SELECT count(*) FROM login_throttle").fetchone()[0] == 1
 
 
+def test_removes_oidc_sign_ins_older_than_10_minutes(conn):  # AD-6
+    for state, age in (("stale", timedelta(minutes=11)), ("edge", timedelta(minutes=10)),
+                       ("fresh", timedelta(minutes=2))):
+        conn.execute(
+            """INSERT INTO oidc_login (state_hash, nonce, code_verifier, next, browser_hash, created_at)
+               VALUES (?, 'n', 'v', '/admin', 'b', ?)""",
+            (state, to_db(NOW - age)),
+        )
+
+    counts = purge.purge(conn, NOW, TZ, RESET)
+
+    assert counts["oidc_login"] == 2
+    assert [r[0] for r in conn.execute("SELECT state_hash FROM oidc_login")] == ["fresh"]
+
+
 def test_purge_is_idempotent(conn):
     _watch_session(conn, 1, started=NOW - timedelta(days=40), ended=NOW - timedelta(days=22))
     purge.purge(conn, NOW, TZ, RESET)

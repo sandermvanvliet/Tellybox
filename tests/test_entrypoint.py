@@ -72,6 +72,19 @@ def test_options_to_env_maps_and_skips_empty():
     }
 
 
+def test_options_to_env_maps_the_oidc_options():  # AD-6
+    opts = {"oidc_issuer": "https://id.example.org", "oidc_client_id": "tellybox", "oidc_client_secret": "s",
+            "oidc_redirect_uri": "https://tellybox.example.org/admin/oidc/callback",
+            "oidc_admin_group": "tellybox-admins"}
+    assert entrypoint.options_to_env(opts, {}) == {
+        "TELLYBOX_OIDC_ISSUER": "https://id.example.org",
+        "TELLYBOX_OIDC_CLIENT_ID": "tellybox",
+        "TELLYBOX_OIDC_CLIENT_SECRET": "s",
+        "TELLYBOX_OIDC_REDIRECT_URI": "https://tellybox.example.org/admin/oidc/callback",
+        "TELLYBOX_OIDC_ADMIN_GROUP": "tellybox-admins",
+    }
+
+
 def test_options_to_env_existing_env_wins():
     assert entrypoint.options_to_env({"web_port": 9000}, {"TELLYBOX_WEB_PORT": "1"}) == {}
 

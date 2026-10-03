@@ -20,6 +20,7 @@ from tellybox import db, library
 from tellybox.clock import Clock, SystemClock
 from tellybox.config import Config
 from tellybox.media_urls import verify
+from tellybox.oidc import OidcClient
 from tellybox.ytdlp import YtDlp
 from tellybox.web import api, kid
 from tellybox.web.admin import mount_admin
@@ -53,9 +54,11 @@ def create_app(
     *,
     static_dir: Path | None = None,
     ytdlp=None,
+    oidc=None,
 ) -> FastAPI:
     """`cast` is a CastClient-like object (tests pass a fake); by default one for the configured cast service.
     `ytdlp` is a YtDlp-like object for admin previews; by default the updatable install in the data dir.
+    `oidc` is an OidcClient-like object for admin sign-in (AD-6); by default one for `config.oidc`, if set.
     """
     if conn is None:
         db.open_db(config.db_path).close()  # migrate once
@@ -65,6 +68,9 @@ def create_app(
     cast = cast if cast is not None else CastClient.from_config(config)
     static_dir = static_dir or STATIC_DIR
     ytdlp = ytdlp if ytdlp is not None else YtDlp(config.data_dir / "tools" / "yt-dlp")
+    owns_oidc = oidc is None and config.oidc is not None
+    if owns_oidc:
+        oidc = OidcClient(config.oidc)
     hub = KidHub(cast, partial(kid.kid_state, conn))
     # HA-3: the same relay, reduced to the admin API's state; refreshed so jobs, disk and names keep up.
     counts = api.Counts(conn, config.media_dir)
@@ -87,6 +93,8 @@ def create_app(
             await hub.stop()
             if owns_cast:
                 await cast.aclose()
+            if owns_oidc:
+                await oidc.aclose()
 
     app = FastAPI(title="Tellybox", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.hub = hub
@@ -145,7 +153,7 @@ def create_app(
         return static_file("manifest.webmanifest", media_type="application/manifest+json")
 
     # Admin pages (AD-1..AD-5); nothing in the kid app links here.
-    mount_admin(app, AdminContext(config=config, conn=conn, clock=clock, cast=cast, ytdlp=ytdlp))
+    mount_admin(app, AdminContext(config=config, conn=conn, clock=clock, cast=cast, ytdlp=ytdlp, oidc=oidc))
 
     # Revalidated on every load, so a deploy reaches open browsers without a forced refresh.
     app.mount("/static", NoCacheStaticFiles(directory=static_dir, check_dir=False), name="static")

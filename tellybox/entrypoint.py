@@ -35,6 +35,12 @@ OPTION_ENV = {
     "cast_api_port": "TELLYBOX_CAST_API_PORT",
     "media_base_url": "TELLYBOX_MEDIA_BASE_URL",
     "admin_password": "TELLYBOX_ADMIN_PASSWORD",
+    # Admin sign-in with OIDC (AD-6)
+    "oidc_issuer": "TELLYBOX_OIDC_ISSUER",
+    "oidc_client_id": "TELLYBOX_OIDC_CLIENT_ID",
+    "oidc_client_secret": "TELLYBOX_OIDC_CLIENT_SECRET",
+    "oidc_redirect_uri": "TELLYBOX_OIDC_REDIRECT_URI",
+    "oidc_admin_group": "TELLYBOX_OIDC_ADMIN_GROUP",
 }
 
 

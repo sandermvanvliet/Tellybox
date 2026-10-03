@@ -102,6 +102,7 @@ table.list th { font-size: .85rem; color: var(--muted); font-weight: 600; }
 }
 
 .muted { color: var(--muted); font-size: .9rem; }
+.or { text-align: center; margin: 0 0 .75rem; }  /* between "Sign in with OIDC" and the password form (AD-6) */
 .badge { display: inline-block; padding: .05rem .5rem; border-radius: 999px; font-size: .8rem; font-weight: 600;
   background: #E8EAF2; color: var(--ink); }
 .badge.ok { background: #DDF3E6; color: var(--ok); }

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% set signed_in = false %}
+{% block title %}{{ _("Sign in") }}{% endblock %}
+{% block head %}<meta http-equiv="refresh" content="0;url={{ next }}">{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _("Signed in. Continuing…") }}</h1>
+  <p><a class="btn primary" href="{{ next }}">{{ _("Continue") }}</a></p>
+</section>
+{% endblock %}

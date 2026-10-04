@@ -350,7 +350,7 @@ def check(conn: sqlite3.Connection, lister: ChannelLister, subscription_id: int,
             message = f"{type(exc).__name__}: {exc}"
             log.exception("check of subscription %d failed", sub.id)
         conn.execute(
-            """UPDATE subscription SET last_checked_at = ?, last_error = ?,
+            """UPDATE subscription SET last_checked_at = ?, last_error = ?, check_requested_at = NULL,
                  failing_since = COALESCE(failing_since, ?) WHERE id = ?""",
             (to_db(now), message, to_db(now), sub.id),
         )
@@ -370,13 +370,37 @@ def check(conn: sqlite3.Connection, lister: ChannelLister, subscription_id: int,
             [(sub.id, vid) for vid in mark_seen],
         )
         conn.execute(
-            """UPDATE subscription SET last_checked_at = ?, last_ok_at = ?, last_error = NULL, failing_since = NULL
-               WHERE id = ?""",
+            """UPDATE subscription SET last_checked_at = ?, last_ok_at = ?, last_error = NULL, failing_since = NULL,
+                 check_requested_at = NULL WHERE id = ?""",
             (to_db(now), to_db(now), sub.id),
         )
     if new_ids:
         log.info("subscription %d (%s): %d new videos in the inbox", sub.id, sub.channel_name, len(new_ids))
     return CheckResult(new_item_ids=new_ids, skipped_live=skipped_live)
+
+
+def request_check(conn: sqlite3.Connection, subscription_id: int | None, *, now: datetime) -> int:
+    """"Check now" (CS-2): ask the worker to check one subscription, or every unpaused one (None). Returns how many."""
+    if subscription_id is None:
+        cur = conn.execute("UPDATE subscription SET check_requested_at = ? WHERE paused = 0", (to_db(now),))
+    else:
+        _must_exist(conn, subscription_id)
+        cur = conn.execute("UPDATE subscription SET check_requested_at = ? WHERE id = ?", (to_db(now), subscription_id))
+    return cur.rowcount
+
+
+def due_subscriptions(conn: sqlite3.Connection, now: datetime) -> list[int]:
+    """Ids the worker should check now: requested ones (even if paused), and unpaused ones whose last check is older
+    than the global interval or that were never checked (CS-2)."""
+    cutoff = to_db(now - timedelta(hours=get_check_hours(conn)))
+    rows = conn.execute(
+        """SELECT id FROM subscription
+           WHERE check_requested_at IS NOT NULL
+              OR (paused = 0 AND (last_checked_at IS NULL OR last_checked_at <= ?))
+           ORDER BY COALESCE(check_requested_at, last_checked_at, created_at), id""",
+        (cutoff,),
+    ).fetchall()
+    return [r["id"] for r in rows]
 
 
 # --------------------------------------------------------------------------- decisions

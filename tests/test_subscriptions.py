@@ -521,3 +521,37 @@ def test_check_interval_defaults_to_six_hours_and_has_a_one_hour_minimum(conn):
         with pytest.raises(ValueError):
             subscriptions.set_check_hours(conn, bad)
     assert subscriptions.get_check_hours(conn) == 1
+
+
+def test_a_new_subscription_is_due_at_once_and_again_after_the_interval(conn, lister, clock, sub):
+    assert subscriptions.due_subscriptions(conn, clock.now()) == [sub.id]
+    subscriptions.check(conn, lister, sub.id, now=clock.now())
+    assert subscriptions.due_subscriptions(conn, clock.now()) == []
+    clock.advance(hours=5)
+    assert subscriptions.due_subscriptions(conn, clock.now()) == []
+    clock.advance(hours=1)
+    assert subscriptions.due_subscriptions(conn, clock.now()) == [sub.id]
+
+
+def test_a_paused_subscription_is_not_due_unless_checked_now(conn, lister, clock, sub):
+    subscriptions.pause(conn, sub.id)
+    assert subscriptions.due_subscriptions(conn, clock.now()) == []
+    assert subscriptions.request_check(conn, None, now=clock.now()) == 0  # "check all" skips paused ones
+    assert subscriptions.request_check(conn, sub.id, now=clock.now()) == 1
+    assert subscriptions.due_subscriptions(conn, clock.now()) == [sub.id]
+    subscriptions.check(conn, lister, sub.id, now=clock.now())
+    assert subscriptions.due_subscriptions(conn, clock.now()) == []  # the request is cleared by the check
+
+
+def test_a_failed_check_also_clears_the_request(conn, lister, clock, sub):
+    subscriptions.check(conn, lister, sub.id, now=clock.now())
+    subscriptions.request_check(conn, sub.id, now=clock.now())
+    lister.fail = RuntimeError("down")
+    result = subscriptions.check(conn, lister, sub.id, now=clock.now())
+    assert not result.ok
+    assert subscriptions.due_subscriptions(conn, clock.now()) == []  # retried on the schedule, not in a loop
+
+
+def test_request_check_for_an_unknown_subscription_raises(conn, clock):
+    with pytest.raises(KeyError):
+        subscriptions.request_check(conn, 99, now=clock.now())

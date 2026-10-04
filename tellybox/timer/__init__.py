@@ -12,7 +12,7 @@ from .models import (
     TimerSettings,
     TimeUpReason,
 )
-from .watch_timer import WatchTimer
+from .watch_timer import TV, WatchTimer
 
 __all__ = [
     "Action",
@@ -23,6 +23,7 @@ __all__ = [
     "ProfilePolicy",
     "ProfileStatus",
     "TimeUpReason",
+    "TV",
     "TimerSettings",
     "WatchTimer",
     "day_for",

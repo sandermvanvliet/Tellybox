@@ -33,3 +33,27 @@ Kids can only watch on the TV via Chromecast. #31 adds in-app playback on a phon
 - Unit: timer tests with a fake clock and fake devices (heartbeat gaps, 30 s/5 min thresholds, grace, stop-now/block, the finished-mark gate, profile replacement across targets). `tests/test_i18n.py` must pass.
 - Run the app (`run` skill) and drive the kid app in a browser (Playwright): toggle, play, fullscreen, end, time's-up.
 - Owner-in-the-loop checks at the end of each PR: real Chromecast, iPhone Safari and an Android phone, including screen lock and Wi-Fi loss.
+
+## Slicing of the browser player (refines "PR 2")
+- **2a cast service** (`step17c-device-sessions`): device sessions in the controller, `/device/*` cast API, scoped media URL helpers, `watch_session.target`/`device_label`, per-playback decisions. No web or UI.
+- **2b web backend + admin**: kid API (`play` with a target, heartbeat/stop proxies, `sessions` in KidState), media route for scoped URLs, `profile.watch_in_app` (AD-7) with its admin switch, sessions on the dashboard/admin API, history target (AD-4).
+- **2c kid app**: toggle (KA-13), player view (KA-14), error and time's-up screens.
+- Each is its own PR, built in this order. The controller keeps `current` for the TV; device sessions live beside it.
+
+## Contract between the slices
+Timer keys: `TV` ("tv") and `"device:<device_id>"`. `device_id` is a random id the browser keeps in localStorage (letters, digits, `-`, `_`, 8..64 chars).
+
+**Cast API (localhost, `docs/cast-api.md`)**
+- `POST /device/play {device_id, label, episode_id, profile_ids}` -> 200 `{session: Session, url: "/media/<episode_id>/<expires_at>/<sig>.mp4?s=<watch_session_id>", start_s}`; 404 no such episode; 422 unknown profile or bad device_id; 409 `{error:"time_up", reason}`. `label` is a short browser label ("iPhone Safari"), at most 40 chars. Replaces any session of the same device (REPLACED) and any session of the profiles on other targets (PB-8; their next heartbeat answers `stop` with reason `replaced`). Does not need a Chromecast.
+- `POST /device/heartbeat {device_id, state: "playing"|"paused"|"buffering"|"ended"|"error", position_s, duration_s?}` -> `{action: "continue"|"stop"|"next", reason: null|"time_up"|"blocked"|"stop_now"|"replaced"|"disconnected"|"error"|"finished"|"unknown_session", time_up: bool, grace_deadline: iso|null, next?: {session, url, start_s}}`. `ended` finishes the episode and, when autoplay is allowed (PB-3, WT-4), answers `next` with the next episode's session and URL; otherwise `stop` with reason `finished` or `time_up`. `error` ends the session (LOAD_FAILED) without counting time. Unknown device or no open session: `stop` / `unknown_session` (200, not an error).
+- `POST /device/stop {device_id}` -> 200 state; ends the device's session (STOPPED), saves the position. Unknown device is a no-op.
+- State (`GET /state`, SSE) gains `sessions: [Session]`; `now_playing`/`device` stay the TV exactly as today. `Session = {key, target: "tv"|"device", label|null, device_id|null, episode_id, show_id, title, state: "loading"|"playing"|"paused"|"buffering", position_s, duration_s, profile_ids}`; the TV session appears with `key:"tv"`, `target:"tv"`, label = the TV name. `timer.profiles[].watching` is true for any session.
+- `pause`/`resume`/`stop` (existing, TV-only) are unchanged. `override stop_now`, `block` and time-up end every affected session; block and stop-now immediately, time-up through the per-key decision with grace.
+
+**Timing (WT-10, WT-11)**: a heartbeat sets the activity of `device:<id>`. No heartbeat for 30 s -> activity STOPPED (stops counting); 5 min -> session ends DISCONNECTED, position kept up to the last heartbeat. Per-key decisions drive STOP_NOW / FINISH_THEN_STOP (grace deadline in the heartbeat answer; the server answers `stop` once the decision is STOP_NOW). Heartbeats from a tab that reports `playing` while nothing advances are not detectable server-side; accepted (A-29).
+
+**Finished (PB-8)**: a device episode is marked finished only at >=95% position and accumulated PLAYING time >= 50% of its duration; `ended` after a seek with less played time saves the position but not the finished mark.
+
+**Media URLs**: `media_urls.media_path(secret, episode_id, expires_at, session_id=None)`; the signature covers `episode:expires[:session]`. A URL with `?s=` is valid only while that `watch_session` row is open (`ended_at IS NULL`, target `device`); the web media route checks it in the shared DB, so stop-now/block/time-up revoke it. TTL stays 24 h. `episode_id_from_url` still works.
+
+**DB**: migration `016_watch_session_target.sql`: `watch_session.target TEXT NOT NULL DEFAULT 'tv'`, `watch_session.device_label TEXT`. Restart recovery only re-attaches `target = 'tv'`; open device sessions are closed with RESTART at start.

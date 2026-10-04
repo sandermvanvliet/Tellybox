@@ -198,14 +198,18 @@ class OpenSession:
     last_heartbeat_at: datetime | None
     cast_session_id: str | None
     profile_ids: list[int]
+    target: str = "tv"  # PB-8: 'tv' or 'device'
+    device_label: str | None = None
 
 
 def open_watch_session(
-    conn: sqlite3.Connection, episode_id: int, profiles: list[int], now: datetime, cast_session_id: str | None = None
+    conn: sqlite3.Connection, episode_id: int, profiles: list[int], now: datetime, cast_session_id: str | None = None,
+    target: str = "tv", device_label: str | None = None,
 ) -> int:
     cur = conn.execute(
-        "INSERT INTO watch_session (episode_id, started_at, last_heartbeat_at, cast_session_id) VALUES (?, ?, ?, ?)",
-        (episode_id, to_db(now), to_db(now), cast_session_id),
+        """INSERT INTO watch_session (episode_id, started_at, last_heartbeat_at, cast_session_id, target, device_label)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (episode_id, to_db(now), to_db(now), cast_session_id, target, device_label),
     )
     session_id = cur.lastrowid
     conn.executemany(
@@ -236,8 +240,12 @@ def close_watch_session(
     )
 
 
-def open_watch_sessions(conn: sqlite3.Connection) -> list[OpenSession]:
-    rows = conn.execute("SELECT * FROM watch_session WHERE ended_at IS NULL ORDER BY started_at, id").fetchall()
+def open_watch_sessions(conn: sqlite3.Connection, target: str | None = None) -> list[OpenSession]:
+    """Sessions not yet ended; ``target`` keeps only 'tv' or 'device' ones (restart recovery re-attaches 'tv' only)."""
+    rows = conn.execute(
+        "SELECT * FROM watch_session WHERE ended_at IS NULL AND (? IS NULL OR target = ?) ORDER BY started_at, id",
+        (target, target),
+    ).fetchall()
     result = []
     for r in rows:
         profiles = [p[0] for p in conn.execute(
@@ -250,6 +258,8 @@ def open_watch_sessions(conn: sqlite3.Connection) -> list[OpenSession]:
             last_heartbeat_at=from_db(r["last_heartbeat_at"]),
             cast_session_id=r["cast_session_id"],
             profile_ids=profiles,
+            target=r["target"],
+            device_label=r["device_label"],
         ))
     return result
 

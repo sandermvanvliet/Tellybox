@@ -37,11 +37,22 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
         "can_start": true,                   // v2: could this profile start a pick on its own?
         "reason": null | "allowance" | "session_max" | "blocked",   // v2: why not
         "session_elapsed_s": null | 1800,    // v2.1: this profile's open viewing session (WT-3, A-13); null = none
-        "watching": true                     // v2: one of the current episode's profiles (now_playing.profile_ids);
+        "watching": true                     // v2: one of the profiles of any session (sessions[].profile_ids);
                                              // false when nothing plays, even though the timer keeps the last group
       }
     ]
   },
+  "sessions": [                              // step 17 (PB-8, WT-12): every active session, the TV first
+    {
+      "key": "tv" | "device:<device_id>", "target": "tv" | "device",
+      "label": "Living Room TV" | "iPhone Safari",   // the TV's name, or the device's short browser label
+      "device_id": null | "…",               // null for the TV
+      "episode_id": 4, "show_id": 2, "title": "Alongside",
+      "state": "loading" | "playing" | "paused" | "buffering",
+      "position_s": 312, "duration_s": 420 | null,
+      "profile_ids": [1, 3]
+    }
+  ],
   "time_up": false,                          // = not timer.can_start (the watchers' KA-9)
   "receiver": {                              // v7 (CR-6)
     "kind": "tellybox" | "default",          // what the next pick will use (or the current one uses)
@@ -69,6 +80,25 @@ The `cast` service listens on `127.0.0.1` only; the `web` service is its only cl
 | POST | `/overrides` | `{"kind": "extra_minutes" \| "unlimited" \| "block" \| "stop_now" \| "clear", "value": int \| null, "profile_ids": [int] \| null, "profile_id": int \| null, "source": str \| null}` | 200 state; 422 bad kind or value, unknown profile ids, or both `profile_ids` and `profile_id`. **v2.1:** `profile_ids` (1–20 ids) replaces `profile_id`, which is still accepted; neither = every profile. `clear` sets unlimited and blocked back to false (extra minutes stay), logging one `clear` row per profile. `source` (≤ 64 chars) is written to `override_log.source`: the API token's name, or null for the admin pages (HA-7). Blocking a profile that isn't watching doesn't stop playback. |
 | GET | `/devices` | none | `{"selected": uuid \| null, "devices": [...]}` |
 | POST | `/devices/select` | `{"uuid": "..."}` | 200 state; 404 unknown device |
+
+## Device sessions (step 17: PB-7..PB-9, WT-10..WT-12)
+
+A kid app can play an episode on the device itself instead of on the TV. These endpoints need no Chromecast. `now_playing`, `device`, `time_up` and `timer` keep describing the TV; device sessions appear in `sessions` only. A device is named by `device_id`, a random id the browser keeps (letters, digits, `-`, `_`; 8-64 characters). Each device session is its own timer playback, keyed `device:<device_id>` (PB-8).
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| POST | `/device/play` | `{"device_id": "…", "label": "iPhone Safari", "episode_id": 4, "profile_ids": [1, 3]}`: `label` at most 40 characters, 1–20 profile ids. | 200 `{"session": Session, "url": "/media/4/<expires_at>/<sig>.mp4?s=<watch_session_id>", "start_s": 0}`. `start_s` is the group's saved position (PB-4). The URL is relative, signed over `episode:expires:session` and valid for 24 h, but the web app serves it only while that watch session is open (WT-11). 404 no such episode. 409 `{"detail": {"error": "time_up", "reason": ...}}` when the group may not start (nothing changes). 422 unknown profile, empty or too many ids, bad `device_id` or `label`. |
+| POST | `/device/heartbeat` | `{"device_id": "…", "state": "playing" \| "paused" \| "buffering" \| "ended" \| "error", "position_s": 12.5, "duration_s": 420 \| null}` | 200 `{"action": "continue" \| "stop" \| "next", "reason": null \| "time_up" \| "blocked" \| "stop_now" \| "replaced" \| "disconnected" \| "error" \| "finished" \| "unknown_session", "time_up": false, "grace_deadline": null \| "ISO-8601 UTC", "next": {"session": Session, "url": "…", "start_s": 0}}` (`next` only with `action: "next"`). 422 invalid body. |
+| POST | `/device/stop` | `{"device_id": "…"}` | 200 state. Ends the device's session as `stopped` and saves the position; an unknown device is a no-op. |
+
+Behaviour:
+
+- **Replacing (PB-8).** `/device/play` ends the device's own session as `replaced`, and the sessions of its profiles on other targets: a TV session stops the Chromecast like any stop, a device session just ends (a group's session ends together). Conversely, `/play` for a profile in a device session ends that session. The device finds out on its next heartbeat (`stop` / `replaced`).
+- **Timing (WT-10).** Time counts from a `playing` or `buffering` heartbeat onwards, and a `paused` heartbeat is a pause. After 30 s without a heartbeat counting stops, at that moment; after 5 min the session ends as `disconnected`, with the position kept up to the last heartbeat. A heartbeat credits at most 30 s of played time.
+- **Limits (WT-11).** When the group's allowance or maximum session length runs out while the episode plays, the answer is `continue` with `time_up: true` and the `grace_deadline`; once the grace is over, or at once for a block or stop now, the session ends and the answer is `stop` with `time_up`, `blocked` or `stop_now`. A heartbeat from a session that ended earlier is answered with the reason it ended (remembered for an hour), else `unknown_session`. The `stop_now` and `block` overrides act on device sessions too (WT-12).
+- **`ended`** finishes the episode and, if autoplay is on for the show and allowed (PB-3, WT-4), answers `next` with a new session (same device and profiles); otherwise `stop` with `finished`, `time_up` or `blocked`. **`error`** ends the session as `load_failed` (PB-9).
+- **Finished (PB-8).** An episode is marked finished only at 95% of its length with at least half of it actually played (accumulated playing time), however it ended; otherwise only the position is saved.
+- **Restart (NF-7).** Open device sessions are closed as `restart` at start-up; only the TV session is re-attached. The history row (`watch_session`) records `target` (`tv` or `device`) and `device_label` (migration 016).
 
 ## Receiver resilience (CR-6)
 

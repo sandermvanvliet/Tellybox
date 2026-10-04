@@ -511,6 +511,11 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - **Tests:** 35 setting tests cover modes round-trip to the DB, validation of custom numbers, default settings, page rendering.
 - **Open:** real-device checks on the owner's home server (set one profile unlimited and one custom, play on the Chromecast, confirm sky and dashboard badge).
 
+### 17. Watching in the app (v9, issue #31), planned
+- PRD updated 2026-10-04: KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7, A-29, A-30; KA-5, KA-6 and PB-6 amended. Plan: `docs/plans/step17-in-app-playback.md`.
+- Two PRs: (1) the cast controller handles several sessions, no visible change; (2) the browser player, toggle, admin switch and heartbeat API.
+- Open: real-device checks on the Chromecast, an iPhone and an Android phone (screen lock, Wi-Fi loss).
+
 ### Then
 11. Channel subscriptions (v4).
 

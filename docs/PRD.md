@@ -70,14 +70,16 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | KA-2 | No text is required to use the app: navigation uses thumbnails, show artwork and icons only. The short episode and show titles of KA-10 are an aid for adults; nothing depends on reading them. This is the default for every profile; KA-11 is the only exception. | Must | v1 |
 | KA-3 | Home screen shows a "continue watching" row, then one tile per show (channel). Tapping a show opens its episode grid in episode order. | Must | v1 |
 | KA-4 | Only approved episodes are visible. The kid app has no search, URL entry, or link to the admin page. | Must | v1 |
-| KA-5 | Tapping an episode casts it to the TV. If something is already playing, the new pick replaces it. | Must | v1 |
-| KA-6 | A now-playing bar shows the current episode thumbnail and a single pause/resume button. No seek, volume or skip controls. | Must | v1 |
+| KA-5 | Tapping an episode plays it on the TV, or on the device itself when the profile may watch in the app and the device's toggle (KA-13) is set to the device (PB-7). If the profile is already playing something, the new pick replaces it. | Must | v1 |
+| KA-6 | A now-playing bar shows the current episode thumbnail and a single pause/resume button. No seek, volume or skip controls. This applies to the TV; in-app playback uses the browser's own video controls, including seeking (KA-14). | Must | v1 |
 | KA-7 | All open kid pages reflect the TV's current state live (playing, paused, time's up) within 2 seconds. | Should | v1 |
 | KA-8 | Remaining time is shown visually (e.g. a shrinking bar or icons), with a visible change in the last 5 minutes. | Could | v1 |
 | KA-9 | When the allowance is used up, the app shows a friendly "time's up" screen and picks are disabled until tomorrow or a parent override. | Must | v1 |
 | KA-10 | Episode tiles (episode grid and continue watching) show the episode title in small print below the thumbnail, and show tiles show the show's name below the artwork, cut off after two lines. It helps a parent find the video a kid is describing. The picture stays the main element. The admin shortens a long title by renaming the episode or show (LM-1). | Should | v1 |
 | KA-11 | Reader UI, opt-in per profile. The admin can set a profile's kid app style to "text" (default "icons", which is the KA-2 app, unchanged). With "text", the app also shows episode and show titles at full size, the now-playing title and state, the time left today, the name of the TV it plays on, and text on the controls. A device in group mode shows the reader UI only when every selected profile is a reader; otherwise it shows the icon UI, so a child who can't read never gets a text-dependent screen. The picture language stays; text is added, never required. | Should | v8 |
 | KA-12 | In the reader UI, a search box on the home screen filters the visible shows and episodes by title. It searches only approved content (KA-4). | Could | v8 |
+| KA-13 | A profile the admin has allowed to watch in the app (AD-7) gets a TV/device toggle, a large picture of a TV and of a phone, so it needs no reading. The choice is stored on the device, defaults to the TV, and applies to the next pick. The toggle is hidden when no selected profile may watch in the app; in a group, it is shown only when every selected profile may. | Must | v9 |
+| KA-14 | Playing on the device: a pick starts the video full screen with the browser's video controls, seeking included. When the video ends, the next episode of the show plays (PB-3); after the last episode, or when time is up, the library is shown. Leaving full screen returns to the library and ends the session. A video that fails to load shows an error picture and a way back to the library; it does not fall back to the TV. | Must | v9 |
 
 ### Playback and casting
 
@@ -88,7 +90,10 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | PB-3 | When an episode ends, the next episode of the same show plays automatically, unless time has run out or autoplay is turned off for that show. | Must | v1 |
 | PB-4 | Playback position is saved per profile, so "continue watching" resumes where the kid left off. An episode counts as finished at 95% played. | Should | v1 |
 | PB-5 | If the Chromecast disconnects or another app takes over, the server records the session as ended and the kid page shows the stopped state. | Must | v1 |
-| PB-6 | Each profile can have a default TV (one of the known Chromecasts); without one it uses the globally selected device (PB-1). A pick plays on the picking profile's TV; in a group, the first selected profile's TV. When that differs from the TV in use, what plays there is stopped first, then the pick plays on the new TV (one session at a time). A refused pick (PR-4) never moves playback. The kid app only shows which TV it plays on; it has no TV picker. | Should | v8 |
+| PB-6 | Each profile can have a default TV (one of the known Chromecasts); without one it uses the globally selected device (PB-1). A pick plays on the picking profile's TV; in a group, the first selected profile's TV. When that differs from the TV in use, what plays there is stopped first, then the pick plays on the new TV (one session at a time). A refused pick (PR-4) never moves playback. The kid app only shows which TV it plays on; it has no TV picker. The only choice it offers is TV or this device (KA-13). | Should | v8 |
+| PB-7 | A profile that may watch in the app (AD-7) can play an episode in the kid app itself instead of on the TV (KA-13). The server serves the same MP4 file over a signed, short-lived URL tied to the playing session (NF-3); the browser loads it from the same origin as the page. | Must | v9 |
+| PB-8 | Sessions: there is at most one TV session, and each device playing in the app has one session for its selected profiles. A profile is in at most one session. Starting playback for a profile ends its other session, and a session also ends for the others in its group. Different profiles may watch at the same time. Position is saved per profile and resumes on either target (PB-4); an episode counts as finished only at 95% of its length with at least half of its length actually played, so dragging to the end does not finish it. | Must | v9 |
+| PB-9 | A playback error in the browser ends the session without counting time, and it is reported to the server. | Should | v9 |
 
 ### Watch timer
 
@@ -103,6 +108,9 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | WT-7 | Parent overrides from the admin page: grant extra minutes today, set unlimited for today, block viewing for today, and stop playback now. | Must | v1 |
 | WT-8 | Timer state survives server restarts; usage is persisted at least every 30 seconds. | Must | v1 |
 | WT-9 | Only playback started through Tellybox is timed and controlled; other casts to the Chromecast are ignored. | Must | v1 |
+| WT-10 | In-app playback is timed by the server from heartbeats the browser sends about every 10 seconds with its state and position. Time counts only for the interval between heartbeats while the state is playing, and the credit for one heartbeat is capped. After 30 seconds without a heartbeat, time stops counting. After 5 minutes the session ends, and the position is kept up to the last heartbeat. A reported pause is a pause (WT-3's 15-minute rule applies). | Must | v9 |
+| WT-11 | In-app playback follows the same limits as the TV: allowance, maximum session length, finish-the-episode grace (WT-4, WT-5), unlimited today, block and stop now. The server enforces them by answering heartbeats and by revoking the session's media URL, so a client that ignores them loses the stream; block and stop now take effect at once. The device shows a time's-up picture (KA-9). | Must | v9 |
+| WT-12 | Parent overrides (WT-7) and the admin API (HA-8) act on in-app sessions too, through the cast service. The dashboard and the admin state list every active session with its target (the TV, or the device by a short browser label), and history records the target (AD-4). | Must | v9 |
 
 ### Tellybox receiver on the TV
 
@@ -193,6 +201,7 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | AD-4 | Viewing history per profile: episode, start and end time, minutes counted, and overrides applied. | Must | v1 |
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
 | AD-6 | Optionally, the admin signs in with an OpenID Connect provider instead of the password; only members of one configured group are admitted, and the password stays available. | Should | — |
+| AD-7 | Per profile, the admin can allow watching in the app (default off). When off, the profile only plays on the TV and the toggle (KA-13) is hidden. | Must | v9 |
 
 ### Admin API (Home Assistant)
 
@@ -276,7 +285,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| Profile | name, picture, daily allowance (inherit/custom/unlimited), maximum session length (inherit/custom/unlimited), counting mode, UI mode (icons or text, KA-11), default TV (PB-6) | v1 has one household profile; limits per-profile from v2 (A-23); UI mode defaults to icons, default TV to none (the global device) |
+| Profile | name, picture, daily allowance (inherit/custom/unlimited), maximum session length (inherit/custom/unlimited), counting mode, UI mode (icons or text, KA-11), default TV (PB-6), may watch in the app (AD-7) | v1 has one household profile; limits per-profile from v2 (A-23); UI mode defaults to icons, default TV to none (the global device) |
 | Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories not set = the global setting, none = SponsorBlock off for the show (SB-2) |
 | SourceVideo | YouTube ID, channel, title, duration, file path, status, removed segments, SponsorBlock re-check until | The downloaded original; may be deleted after splitting |
 | Episode | show, source video, start/end offset, title, thumbnail, file path, order, hidden | What kids see and play |
@@ -303,6 +312,7 @@ v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-
 | v5 · Manual splitting | Scrub player, cut marking, chapter import, review screen, frame-accurate cutting (ES-1, ES-2, ES-7, ES-8, SB-6) | Real-device checks pass |
 | v6 · Smart splitting | Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection for new compilations (ES-3..6, ES-9, ES-10) | Detection accepted on 2 shows |
 | v7 · Tellybox receiver | Own Cast receiver: time left on the TV, time's-up screen, loading and idle screens, up-next card, automatic fallback to the Default Media Receiver (CR-1..8) | Real-device checks pass on the 1st-gen Chromecast |
+| v9 · Watching in the app | Play in the kid app on the device itself: TV/device toggle, full screen, heartbeat-timed with server-enforced limits, several sessions at once (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7) | Real-device checks pass on the Chromecast, an iPhone and an Android phone |
 
 ### v1 build order
 
@@ -327,6 +337,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 14. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection. (Renumbered from 12 when the admin API was inserted as step 9 and the receiver kept 13, 2026-09-29.)
 15. **Easier installation.** Versioned multi-arch images, a release compose file, no manual prep, a first-run password, a single container, an install script, a Home Assistant add-on and platform templates (DP-1..DP-8). (Added by the owner, 2026-10-02, and built before 11. Plan: `docs/plans/step15-installation.md`.)
 16. **Reader UI and per-profile TV (v8).** A text-rich kid app that the admin switches on per profile (KA-11, KA-12), and a default TV per profile (PB-6). The no-text app stays the default (KA-2). (Added from GitHub issue #29, 2026-10-02.)
+17. **Watching in the app (v9).** Play episodes in the kid app on the device itself, with a per-device TV/device toggle and an admin switch per profile (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7). Two PRs: first the cast controller handles several sessions with no visible change, then the browser player. (Added from GitHub issue #31, 2026-10-04; plan: `docs/plans/step17-in-app-playback.md`.)
 
 ## Risks, assumptions and open questions
 
@@ -382,6 +393,8 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-26 | Only members of one group (`TELLYBOX_OIDC_ADMIN_GROUP`) are admitted, and the group is the single admin. OIDC configured without a group stops the services from starting, rather than letting every account at the provider in (owner, 2026-10-02). |
 | A-27 | OIDC is configured through environment variables only, including an explicit redirect URI; nothing is in the settings page. The sign-in page shows one "Sign in with OIDC" button, without a provider name or logo (owner, 2026-10-02). |
 | A-28 | An OIDC sign-in creates the same admin session as the password (AD-1): 30 days sliding, ended by sign-out or a changed environment password. Sign-out is local; there is no sign-out at the provider. A sign-in only completes in the browser that started it. API tokens are unaffected (A-16) (owner, 2026-10-02). |
+| A-29 | In-app playback (step 17, issue #31): the server cannot see the browser, so it trusts heartbeats within caps and revokes the media URL when a limit is reached. A kid who blocks heartbeats loses the stream at the end of the URL's lifetime. Seeking is allowed; it cannot create free time, and it cannot finish an episode (PB-8). Autoplay applies as on the TV (owner, 2026-10-04). |
+| A-30 | A profile playing on a device and on the TV at once is impossible by design (PB-8); two profiles may play at once, one per target. A group's session ends together (owner, 2026-10-04). |
 
 ### Open questions
 

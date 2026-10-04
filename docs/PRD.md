@@ -1,6 +1,6 @@
 # Tellybox — Product Requirements
 
-_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered; Sep 30, 2026: receiver app published, CR-1)_
+_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered; Sep 30, 2026: receiver app published, CR-1; Oct 4, 2026: channel subscriptions CS-1..9, inbox sensor HA-9)_
 
 ## Overview
 
@@ -160,10 +160,15 @@ Sponsor segments are cut out of the file when it's downloaded, using the communi
 
 | ID | Requirement | Priority | Release |
 | --- | --- | --- | --- |
-| CS-1 | Admin pastes a YouTube channel URL to subscribe. Existing uploads are listed for selection; they are not downloaded automatically. | Must | v4 |
-| CS-2 | The server checks subscribed channels for new uploads on a schedule (default every 6 hours). | Must | v4 |
-| CS-3 | New uploads go to an approval inbox showing thumbnail, title and duration. Only approved items are downloaded. There is no automatic approval, not even per channel (A-9). | Must | v4 |
-| CS-4 | Subscriptions can be paused or removed without deleting downloaded content. | Should | v4 |
+| CS-1 | Admin pastes a YouTube channel URL to subscribe. The subscription watches the channel's Videos tab; finished livestreams count, Shorts only if the subscription's "include Shorts" toggle is on (off by default). The existing uploads are listed for selection, paged 30 at a time with "load more"; they are not downloaded automatically. Selected ones go straight to download; unselected ones never become inbox items. The moment of subscribing is a baseline: only later uploads are new (A-31, A-32). | Must | v4 |
+| CS-2 | The server checks subscribed channels for new uploads on a schedule: one global interval in the settings, default every 6 hours, minimum 1 hour. "Check now" runs a check for one subscription or for all. A check lists the channel's newest 30 uploads and stops at the baseline or the first known video; if all 30 are new it pages on, up to 100, and logs a warning if that cap is reached. | Must | v4 |
+| CS-3 | New uploads go to an approval inbox showing thumbnail, title and duration. Only approved items are downloaded. Approving is the one decision: the video downloads and is published when ready, with no second "hold" step (A-33). There is no automatic approval, not even per channel (A-9). A compilation that automatic detection picks up stays hidden as in A-22. | Must | v4 |
+| CS-4 | Subscriptions can be paused or removed without deleting downloaded content. Pausing keeps the inbox visible and actionable; on resume, uploads made during the pause are found. Removing deletes the subscription's pending items, keeps rejection records, and leaves the show and its episodes in place (A-6); subscribing again starts from a fresh baseline. | Should | v4 |
+| CS-5 | A check skips a video silently when it is already in the library, already pending or already rejected (by YouTube ID). An upcoming premiere or live stream makes no item until it is a normal video. A members-only or age-restricted video makes an item marked "may not be downloadable"; if approved, its download job fails visibly and can be retried (CI-3). Same-title re-uploads are not detected. | Must | v4 |
+| CS-6 | An inbox item is pending, approved or rejected. There is no snooze and nothing expires. Rejections are remembered and can be undone from a "Rejected" tab. The inbox supports multi-select with bulk approve and bulk reject, and "reject all remaining" (A-34). | Must | v4 |
+| CS-7 | Each subscription shows when it was last checked and its last error. A failed check retries on the normal schedule, without limit, and never affects existing content. After 7 days of consecutive failures the subscription shows a warning badge. There are no push alerts (A-35). | Should | v4 |
+| CS-8 | "Subscriptions" and "Inbox" are separate admin pages; the Inbox nav entry carries the pending count, updated live. The inbox lists newest first, with a channel filter. Each card shows thumbnail, title, duration, channel, published date and an "Open on YouTube" link; there is no embedded player. | Must | v4 |
+| CS-9 | Approved uploads join the channel's show (CI-4), or the existing show the admin chose when subscribing. The subscription keeps a reference to that show, so renaming or merging it is followed. There are no duration or title filters; the admin judges every upload. | Must | v4 |
 
 ### Library management
 
@@ -217,6 +222,7 @@ A token-authenticated JSON API lets a home-automation system (first Home Assista
 | HA-6 | Each installation has a stable instance id; an unauthenticated info endpoint gives the instance id, version and capabilities. | Must | v2.1 |
 | HA-7 | Overrides applied through the API are recorded with the token's name, and the history shows it. | Should | v2.1 |
 | HA-8 | Every API action goes through Tellybox's cast service; the API offers no way to cast directly or to start playback when time is up. | Must | v2.1 |
+| HA-9 | The admin state carries an inbox object: `pending` (items waiting in the subscription inbox, paused subscriptions included), `unhealthy` (subscriptions with the 7-day failure warning of CS-7) and `latest_received_at` (when the newest inbox item arrived, null if none, so an automation can fire on every new upload). `/api/info` lists an `inbox` capability. It is read-only, filled by the web service from the database without the cast service, and outside HA-8 (A-36). | Must | v4 |
 
 ### Installation
 
@@ -292,8 +298,8 @@ The cast controller is the single owner of the Chromecast connection and the tim
 | SplitProfile | reference frames, compare region, match threshold, length hint, snap window | One per show |
 | SplitProposal | source video, proposed cuts, status | Waits for admin review |
 | Job | type, target, status, progress, error, attempts | Download, encode, detect, cut |
-| Subscription | channel ID, last checked, paused | v4 |
-| InboxItem | subscription, YouTube ID, metadata, decision | v4 approval inbox |
+| Subscription | channel ID, channel name, show, include Shorts, paused, baseline, last checked, last error, failing since | v4; the check interval is a global setting |
+| InboxItem | subscription (kept empty after removal), YouTube ID, metadata, published date, warning, status (pending, approved, rejected), received, decided | v4 approval inbox; rejected rows outlive their subscription (A-34) |
 | WatchSession | profiles, episode, started, ended, seconds counted | History; purged after 21 days |
 | DailyUsage | profile, date, seconds used, extra minutes, blocked | Timer state |
 | PlaybackPosition | profile, episode, position, finished | Continue watching |
@@ -331,7 +337,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 8. **Kid profiles (v2).** Profile management, "who's watching" screen, per-profile timer and history, watching together.
 9. **Admin API for Home Assistant (v2.1).** API tokens, the admin state and its event stream, override endpoints, instance id and `/api/info` (HA-1..HA-8). Phase 0 of the owner's Home Assistant integration plan; the integration itself lives in separate repositories. (Inserted by the owner, 2026-09-29. Plan: `docs/plans/step9-ha-api.md`.)
 10. **SponsorBlock (v3).** Cutting at download, settings and per-show categories, the 7-day re-check with position adjustment, removed-segment overview.
-11. **Channel subscriptions (v4).** Subscribe, list existing uploads, scheduled checks, approval inbox, pause and remove.
+11. **Channel subscriptions (v4).** Subscribe, list existing uploads, scheduled checks, approval inbox, pause and remove, and a Home Assistant inbox sensor (CS-1..9, HA-9). (Plan: `docs/plans/step11-subscriptions.md`.)
 12. **Manual splitting (v5).** Scrub player, cut marking, chapter import, review screen, frame-accurate cutting.
 13. **Tellybox receiver (v7).** It starts with a spike on the real 1st-gen Chromecast: registration, where the receiver is hosted, and overlay performance. Then come the fallback, the time-left sky, the time's-up screen, the loading screens and the up-next card. (Moved ahead of SponsorBlock, subscriptions and splitting by the owner, 2026-09-29: the TV is where the kids look. Plan: `docs/plans/step13-receiver.md`.)
 14. **Smart splitting (v6).** Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection. (Renumbered from 12 when the admin API was inserted as step 9 and the receiver kept 13, 2026-09-29.)
@@ -395,6 +401,12 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-28 | An OIDC sign-in creates the same admin session as the password (AD-1): 30 days sliding, ended by sign-out or a changed environment password. Sign-out is local; there is no sign-out at the provider. A sign-in only completes in the browser that started it. API tokens are unaffected (A-16) (owner, 2026-10-02). |
 | A-29 | In-app playback (step 17, issue #31): the server cannot see the browser, so it trusts heartbeats within caps and revokes the media URL when a limit is reached. A kid who blocks heartbeats loses the stream at the end of the URL's lifetime. Seeking is allowed; it cannot create free time, and it cannot finish an episode (PB-8). Autoplay applies as on the TV (owner, 2026-10-04). |
 | A-30 | A profile playing on a device and on the TV at once is impossible by design (PB-8); two profiles may play at once, one per target. A group's session ends together (owner, 2026-10-04). |
+| A-31 | A subscription watches a channel's Videos tab. Shorts are included only when the subscription's toggle is on (off by default). Livestreams count once they have finished (owner, 2026-10-04). |
+| A-32 | A subscription has a baseline from the moment it is created. Only uploads after it become inbox items; backlog videos the admin doesn't select at subscribe time never do. Subscribing again starts a fresh baseline (owner, 2026-10-04). |
+| A-33 | Approving an inbox item downloads it and publishes it when ready. Unlike playlists (CI-7), there is no second "held" step (owner, 2026-10-04). |
+| A-34 | Rejected videos are remembered by YouTube ID, so a check never proposes them again, also after the subscription is removed and added again. A rejection can be undone from the inbox's "Rejected" tab. Inbox items never expire (owner, 2026-10-04). |
+| A-35 | A failing subscription keeps retrying on the normal schedule and is never paused automatically. It shows its last error, and a warning after 7 days of failures. There are no push alerts (owner, 2026-10-04). |
+| A-36 | The inbox sensor (HA-9) is read-only: no approve or reject through the API. It is filled by the web service, not the cast service, so HA-8 doesn't cover it and it still answers when the cast service is down (owner, 2026-10-04). |
 
 ### Open questions
 

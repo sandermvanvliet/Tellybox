@@ -869,3 +869,29 @@ def test_recover_removes_a_leftover_backup(conn, clock, runner, media):  # NF-7
     (media / "shows" / "1" / "x.mp4.old").write_bytes(b"old")
     runner.recover()
     assert not list(media.glob("shows/*/*.old"))
+
+
+def test_forced_show_wins_over_the_channel_show(conn, clock, runner):  # CS-9
+    channel_show = library.create_show(conn, "Kids Channel", now=clock.now(), youtube_channel_id="UCkids")
+    chosen = library.create_show(conn, "Chosen", now=clock.now())
+    source_id, _ = ingest.add(conn, info(), publish=True, now=clock.now(), show_id=chosen)
+    assert source(conn, source_id)["show_id"] == chosen  # recorded before the download
+    run_next(runner, clock)
+    assert source(conn, source_id)["show_id"] == chosen
+    assert [e.title for e in library.list_episodes(conn, chosen)] == ["Episode one"]
+    assert library.list_episodes(conn, channel_show) == []
+
+
+def test_without_a_forced_show_the_channel_show_is_used(conn, clock, runner):  # unchanged behaviour
+    channel_show = library.create_show(conn, "Kids Channel", now=clock.now(), youtube_channel_id="UCkids")
+    ingest.add(conn, info(), publish=True, now=clock.now())
+    run_next(runner, clock)
+    assert len(library.list_episodes(conn, channel_show)) == 1
+
+
+def test_add_joins_an_open_transaction(conn, clock):
+    conn.execute("BEGIN IMMEDIATE")
+    ingest.add(conn, info(), publish=True, now=clock.now())
+    assert conn.in_transaction
+    conn.execute("ROLLBACK")
+    assert conn.execute("SELECT COUNT(*) FROM source_video").fetchone()[0] == 0

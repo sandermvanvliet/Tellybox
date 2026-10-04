@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Older videos") }}{% endblock %}
+{% block content %}
+<section class="card playlist-preview">
+  <h1>{{ _("Older videos of %(channel)s", channel=sub.channel_name) }}</h1>
+  <p class="muted">{{ _("Tick the ones you want now. They download and show up when ready. The others are left out for good; only uploads from now on reach the inbox.") }}</p>
+  {% if sub.include_shorts %}
+  <div class="row">
+    <a class="btn small{% if tab == 'videos' %} primary{% endif %}" href="?tab=videos">{{ _("Videos") }}</a>
+    <a class="btn small{% if tab == 'shorts' %} primary{% endif %}" href="?tab=shorts">{{ _("Shorts") }}</a>
+  </div>
+  {% endif %}
+  <form method="post" action="/admin/subscriptions/{{ sub.id }}/backlog" id="backlog-form">
+    <div class="row select-tools" hidden>
+      <button class="btn small" type="button" data-select="all">{{ _("Select all") }}</button>
+      <button class="btn small" type="button" data-select="none">{{ _("Select none") }}</button>
+    </div>
+    <ul class="pick-list" id="backlog-list">{% include "_backlog_items.html" %}</ul>
+    {% if not page.entries %}<p class="muted">{{ _("Nothing to show here.") }}</p>{% endif %}
+    {% if page.next_offset is not none %}
+    <p><a class="btn" id="load-more" href="?offset={{ page.next_offset }}&amp;tab={{ tab }}">{{ _("Load more") }}</a></p>
+    {% endif %}
+    <div class="pick-footer row">
+      <button class="btn primary" type="submit" id="backlog-submit" disabled>{{ ngettext("Add %(num)d video", "Add %(num)d videos", 0) }}</button>
+      <a class="btn" href="/admin/subscriptions">{{ _("Done") }}</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/admin/static/backlog.js"></script>
+{% endblock %}

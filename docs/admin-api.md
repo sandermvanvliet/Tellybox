@@ -74,7 +74,10 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   ],
   "jobs": {"queued": 1, "running": 1, "failed": 0,  // running = downloading + processing
            "held_ready": 3},                        // held downloads ready to publish (waiting for approval)
-  "disk": {"media_bytes": 48213000000, "free_bytes": 120000000000}
+  "disk": {"media_bytes": 48213000000, "free_bytes": 120000000000},
+  "inbox": {"pending": 4,                // HA-9: subscription uploads waiting for approval (paused subscriptions included)
+            "unhealthy": 0,              // subscriptions failing for 7 days or more (CS-7)
+            "latest_received_at": "ISO-8601 UTC" | null}  // when the newest inbox item arrived; changes on every new upload
 }
 ```
 
@@ -86,13 +89,14 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   - `profiles` comes from the DB, with `used_s`, `extra_s`, `remaining_s`, `can_start` and `reason` null, and `unlimited`, `blocked` and `watching` false;
   - `day.date` and `day.resets_at` are null.
   - The same holds for a profile the cast state doesn't list yet, such as one just added.
-- **Refreshing:** `jobs` and `disk` are refreshed at most every 10 s.
+- **Refreshing:** `jobs` and `disk` are refreshed at most every 10 s. `inbox` is read from the database by the web service and pushed when it changes.
+- **The inbox is read-only and independent of the cast service (HA-9):** it is filled from the database, so it stays accurate when `tv.connection` is `"unreachable"`. There is no way to approve or reject through this API, and HA-8 (playback and overrides go through the cast service) doesn't apply to it.
 
 ## Endpoints
 
 | Method | Path | Scope | Body | Response |
 |---|---|---|---|---|
-| GET | `/api/info` | none | | `{"instance_id", "version", "api": 1, "capabilities": ["state", "events", "overrides", "profiles"]}` (HA-6). Lets an integration identify the instance and check what it supports. |
+| GET | `/api/info` | none | | `{"instance_id", "version", "api": 1, "capabilities": ["state", "events", "overrides", "profiles", "inbox"]}` (HA-6). Lets an integration identify the instance and check what it supports. |
 | GET | `/api/admin/state` | read | | AdminState (HA-2) |
 | GET | `/api/admin/events` | read | | SSE (HA-3). The current AdminState right away, then one `data:` event per change, and `: keepalive` every 15 s. During playback, expect about one event per second (the position and time left). |
 | POST | `/api/admin/overrides/extra` | control | `{"minutes": 15, "profile_ids": [1]?}` | AdminState. `minutes` is 1..240 (A-17) and adds to the day's extra time (WT-7). |

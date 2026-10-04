@@ -1,0 +1,16 @@
+{% for e in page.entries %}
+<li>
+  <label class="pick">
+    <input type="checkbox" name="video" value="{{ e.youtube_id }}">
+    {% if e.thumbnail_url %}
+    <img class="thumb small" src="{{ e.thumbnail_url }}" referrerpolicy="no-referrer" loading="lazy" alt="">
+    {% else %}
+    <span class="thumb small" aria-hidden="true"></span>
+    {% endif %}
+    <span class="pick-text">
+      <span class="pick-title">{{ e.title }}</span>
+      <span class="muted">{{ e.duration_s | duration }}{% if e.approx_date %} · {{ format_date(e.approx_date, "medium") }}{% endif %}</span>
+    </span>
+  </label>
+</li>
+{% endfor %}

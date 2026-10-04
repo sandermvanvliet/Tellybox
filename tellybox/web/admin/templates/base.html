@@ -18,10 +18,11 @@
       {% for key, href, label in [
         ("dashboard", "/admin", _("Now")), ("add", "/admin/add", _("Add")), ("jobs", "/admin/jobs", _("Jobs")),
         ("library", "/admin/library", _("Library")), ("profiles", "/admin/profiles", _("Profiles")),
+        ("subscriptions", "/admin/subscriptions", _("Subscriptions")), ("inbox", "/admin/inbox", _("Inbox")),
         ("settings", "/admin/settings", _("Settings")),
         ("integrations", "/admin/integrations", _("Integrations")),
         ("history", "/admin/history", _("History"))] %}
-        <a href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ label }}</a>
+        <a href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ label }}{% if key == "inbox" %} <span class="badge nav-badge" id="inbox-badge"{% if not inbox_pending %} hidden{% endif %}>{{ inbox_pending }}</span>{% endif %}</a>
       {% endfor %}
       <form method="post" action="/admin/logout" class="inline"><button class="link">{{ _("Sign out") }}</button></form>
     </nav>
@@ -33,6 +34,7 @@
     {% block content %}{% endblock %}
   </main>
   <script type="application/json" id="i18n">{{ js_catalog() | tojson }}</script>
+  {% if signed_in is not defined or signed_in %}<script type="module" src="/admin/static/nav.js"></script>{% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

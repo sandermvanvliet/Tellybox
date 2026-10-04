@@ -12,7 +12,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from starlette.datastructures import FormData
 
-from tellybox import sponsorblock
+from tellybox import sponsorblock, subscriptions
 from tellybox.library import _transaction
 from tellybox.i18n import _
 from tellybox.timer.models import CountingMode
@@ -77,6 +77,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         values["receiver_app_id"] = s["receiver_app_id"] or ""
         values["default_allowance_min"] = str(s["default_allowance_min"])
         values["default_max_session_min"] = str(s["default_max_session_min"])
+        values["subscription_check_hours"] = str(subscriptions.get_check_hours(conn))
         return values
 
     def devices_context() -> dict:
@@ -173,6 +174,15 @@ def create_router(ctx: AdminContext) -> APIRouter:
         if err:
             errors["session_break_min"] = err
 
+        check_hours = None  # CS-2: absent from the form means "leave it"
+        if "subscription_check_hours" in form:
+            raw = str(form.get("subscription_check_hours")).strip()
+            if not raw.isdigit() or not (subscriptions.MIN_CHECK_HOURS <= int(raw) <= 168):
+                errors["subscription_check_hours"] = _("Enter a whole number of hours between %(lo)d and %(hi)d.") % {
+                    "lo": subscriptions.MIN_CHECK_HOURS, "hi": 168}
+            else:
+                check_hours = int(raw)
+
         receiver_app_id = (form.get("receiver_app_id") or "").strip().upper()
         if receiver_app_id and not _APP_ID.fullmatch(receiver_app_id):
             errors["receiver_app_id"] = _("Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it empty.")
@@ -197,6 +207,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
                  default_allowance, default_max_session),
             )
             conn.execute("UPDATE settings SET sponsorblock_categories = ? WHERE id = 1", (sponsorblock.to_csv(sb_chosen),))
+            if check_hours is not None:
+                subscriptions.set_check_hours(conn, check_hours)
         return see_other("/admin/settings", flash=_("Saved. The TV picks this up within 15 s."))
 
     @router.post("/admin/settings/devices/search")

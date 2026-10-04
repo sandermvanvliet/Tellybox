@@ -153,3 +153,12 @@ label.avatar-tile input { position: absolute; inset: 0; opacity: 0; margin: 0; w
 label.avatar-tile .pic { display: block; border: 3px solid transparent; }
 label.avatar-tile input:checked + .pic { border-color: var(--ink); box-shadow: 0 0 0 3px var(--yolk); }
 label.avatar-tile input:focus-visible + .pic { outline: 3px solid var(--yolk); outline-offset: 3px; }
+
+/* Subscriptions and the inbox (step 11, CS-1..CS-9). */
+.sub-list, .inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.sub-list li { border-top: 1px solid var(--line); padding-top: .75rem; }
+.sub-list li:first-child { border-top: 0; padding-top: 0; }
+.inbox-card { display: grid; gap: .5rem; padding: .75rem; }
+.nav-badge { background: var(--yolk); color: var(--ink); margin-left: .2rem; }
+header.top nav a[aria-current="page"] .nav-badge { background: var(--ink); color: var(--yolk); }
+.bulk-bar { position: sticky; top: 3.2rem; z-index: 5; background: var(--bg); padding: .4rem 0; }

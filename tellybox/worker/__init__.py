@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from tellybox import ingest, jobs
+from tellybox import ingest, jobs, subscriptions
 from tellybox import purge as purge_module
 from tellybox.clock import Clock
 from tellybox.db import from_db, to_db
@@ -19,6 +19,7 @@ from tellybox.timer import day_for
 log = logging.getLogger(__name__)
 
 POLL_S = 2.0
+CHECK_BACKOFF = timedelta(minutes=5)  # after an unexpected error in a subscription check
 UPDATE_AT = time(3, 0)  # local; before the 04:00 allowance reset
 
 
@@ -46,12 +47,16 @@ def _reset_time(conn: sqlite3.Connection) -> time:
 
 class Worker:
     def __init__(self, runner: JobRunner, tz: ZoneInfo, *, auto_update: bool = True, auto_purge: bool = True,
-                 auto_recheck: bool = True) -> None:
+                 auto_recheck: bool = True, auto_check: bool = True,
+                 lister: subscriptions.ChannelLister | None = None) -> None:
         self.runner = runner
+        self.lister = lister  # defaults to the runner's YtDlp (CS-2)
         self.tz = tz
         self.auto_update = auto_update
         self.auto_purge = auto_purge
         self.auto_recheck = auto_recheck
+        self.auto_check = auto_check
+        self._check_failed_at: dict[int, datetime] = {}  # in-memory: back off after an unexpected error
         self.stop = threading.Event()
         self._last_purge_day: date | None = None  # in-memory: at most one purge per slot-day
         self._last_recheck_day: date | None = None  # likewise for the SponsorBlock re-checks
@@ -73,12 +78,32 @@ class Worker:
             self._run_purge(now)
         if self.auto_recheck and self._recheck_due(now):
             self._enqueue_rechecks(now)
+        if self.auto_check:
+            self._check_one_subscription(now)
         job = jobs.claim_next(self.conn, now=now)
         if job is None:
             return False
         log.info("job %d (%s) started, attempt %d", job.id, job.type, job.attempts)
         self.runner.run(job)
         return True
+
+    def _check_one_subscription(self, now: datetime) -> None:
+        """CS-2: check the longest-waiting due subscription; one per step so downloads aren't starved.
+
+        `check` stores its own errors (A-35); the guard here is for the unexpected, which must never
+        stop the loop. Such a failure is retried after a few minutes, not on every poll.
+        """
+        due: list[int] = []
+        try:
+            due = [i for i in subscriptions.due_subscriptions(self.conn, now)
+                   if now - self._check_failed_at.get(i, datetime.min.replace(tzinfo=UTC)) >= CHECK_BACKOFF]
+            if not due:
+                return
+            subscriptions.check(self.conn, self.lister or self.runner.ytdlp, due[0], now=now)
+        except Exception:
+            log.exception("subscription check failed")
+            if due:
+                self._check_failed_at[due[0]] = now
 
     def _purge_due(self, now: datetime) -> bool:
         """AD-5: once per 03:00-to-03:00 day, and at startup (purging twice is harmless)."""

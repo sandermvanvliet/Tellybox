@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-03 08:55+0200\n"
+"POT-Creation-Date: 2026-10-04 20:42+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -177,143 +177,136 @@ msgstr "Opvulling of zijspoor"
 msgid "Non-music section"
 msgstr "Deel zonder muziek"
 
-#: tellybox/web/admin/__init__.py:88
+#: tellybox/web/admin/__init__.py:90
 msgid "This form must be sent from this page."
 msgstr "Dit formulier moet vanaf deze pagina verstuurd worden."
 
-#: tellybox/web/admin/__init__.py:94 tellybox/web/admin/__init__.py:135
+#: tellybox/web/admin/__init__.py:96 tellybox/web/admin/__init__.py:137
 #, python-format
 msgid "Too many attempts. Try again in %(seconds)d s."
 msgstr "Te veel pogingen. Probeer het over %(seconds)d s opnieuw."
 
-#: tellybox/web/admin/__init__.py:97
+#: tellybox/web/admin/__init__.py:99
 msgid "Wrong setup code."
 msgstr "Onjuiste installatiecode."
 
-#: tellybox/web/admin/__init__.py:99
+#: tellybox/web/admin/__init__.py:101
 #, python-format
 msgid "The password must be at least %(n)d characters."
 msgstr "Het wachtwoord moet minstens %(n)d tekens hebben."
 
-#: tellybox/web/admin/__init__.py:102
+#: tellybox/web/admin/__init__.py:104
 msgid "The two passwords are not the same."
 msgstr "De twee wachtwoorden zijn niet gelijk."
 
-#: tellybox/web/admin/__init__.py:129
+#: tellybox/web/admin/__init__.py:131
 msgid "This sign-in form must be sent from this page."
 msgstr "Dit inlogformulier moet vanaf deze pagina verstuurd worden."
 
-#: tellybox/web/admin/__init__.py:138
+#: tellybox/web/admin/__init__.py:140
 msgid "Wrong password."
 msgstr "Onjuist wachtwoord."
 
-#: tellybox/web/admin/__init__.py:169 tellybox/web/admin/__init__.py:195
+#: tellybox/web/admin/__init__.py:171 tellybox/web/admin/__init__.py:197
 msgid "Sign-in with OIDC failed. Try again."
 msgstr "Inloggen met OIDC is mislukt. Probeer het opnieuw."
 
-#: tellybox/web/admin/__init__.py:200
+#: tellybox/web/admin/__init__.py:202
 msgid "Your account may not use the Tellybox admin."
 msgstr "Je account mag het Tellybox-beheer niet gebruiken."
 
 #: tellybox/web/admin/add.py:25
-msgid ""
-"Channel URLs are for subscriptions, which come in a later version. Paste "
-"a video or playlist URL."
-msgstr ""
-"Kanaal-URL's zijn voor abonnementen, en die komen in een latere versie. "
-"Plak een URL van een video of afspeellijst."
-
-#: tellybox/web/admin/add.py:26
 msgid "That preview has expired; fetch it again."
 msgstr "Dat voorbeeld is verlopen; haal het opnieuw op."
 
-#: tellybox/web/admin/add.py:30
+#: tellybox/web/admin/add.py:29
 msgid "Private"
 msgstr "Privé"
 
-#: tellybox/web/admin/add.py:31
+#: tellybox/web/admin/add.py:30
 msgid "Deleted"
 msgstr "Verwijderd"
 
-#: tellybox/web/admin/add.py:32
+#: tellybox/web/admin/add.py:31
 msgid "Live stream"
 msgstr "Livestream"
 
-#: tellybox/web/admin/add.py:33
+#: tellybox/web/admin/add.py:32
 msgid "Not out yet"
 msgstr "Nog niet verschenen"
 
-#: tellybox/web/admin/add.py:34
+#: tellybox/web/admin/add.py:33
 msgid "Unavailable"
 msgstr "Niet beschikbaar"
 
-#: tellybox/web/admin/add.py:43
+#: tellybox/web/admin/add.py:42
 #, python-format
 msgid "Added %(num)d video (held), skipped %(skipped)d"
 msgid_plural "Added %(num)d videos (held), skipped %(skipped)d"
 msgstr[0] "%(num)d video toegevoegd (achtergehouden), %(skipped)d overgeslagen"
 msgstr[1] "%(num)d video's toegevoegd (achtergehouden), %(skipped)d overgeslagen"
 
-#: tellybox/web/admin/add.py:46
+#: tellybox/web/admin/add.py:45
 #, python-format
 msgid "Added %(num)d video (held)"
 msgid_plural "Added %(num)d videos (held)"
 msgstr[0] "%(num)d video toegevoegd (achtergehouden)"
 msgstr[1] "%(num)d video's toegevoegd (achtergehouden)"
 
-#: tellybox/web/admin/add.py:48
+#: tellybox/web/admin/add.py:47
 #, python-format
 msgid "Added %(num)d video, skipped %(skipped)d"
 msgid_plural "Added %(num)d videos, skipped %(skipped)d"
 msgstr[0] "%(num)d video toegevoegd, %(skipped)d overgeslagen"
 msgstr[1] "%(num)d video's toegevoegd, %(skipped)d overgeslagen"
 
-#: tellybox/web/admin/add.py:51
+#: tellybox/web/admin/add.py:50
 #, python-format
 msgid "Added %(num)d video"
 msgid_plural "Added %(num)d videos"
 msgstr[0] "%(num)d video toegevoegd"
 msgstr[1] "%(num)d video's toegevoegd"
 
-#: tellybox/web/admin/add.py:87 tellybox/web/admin/templates/add.html:46
-#: tellybox/web/admin/templates/add.html:106
+#: tellybox/web/admin/add.py:86 tellybox/web/admin/templates/add.html:54
+#: tellybox/web/admin/templates/add.html:114
+#: tellybox/web/admin/templates/inbox.html:51
 msgid "Unknown channel"
 msgstr "Onbekend kanaal"
 
-#: tellybox/web/admin/add.py:96
+#: tellybox/web/admin/add.py:95
 msgid "Already added"
 msgstr "Al toegevoegd"
 
-#: tellybox/web/admin/add.py:100
+#: tellybox/web/admin/add.py:99
 msgid "Listed twice"
 msgstr "Staat er dubbel in"
 
-#: tellybox/web/admin/add.py:123
+#: tellybox/web/admin/add.py:122
 msgid "Enter a video or playlist URL (http:// or https://)."
 msgstr "Vul de URL van een video of afspeellijst in (http:// of https://)."
 
-#: tellybox/web/admin/add.py:140
+#: tellybox/web/admin/add.py:139 tellybox/web/admin/subscription_pages.py:46
 #, python-format
 msgid "%(error)s It may work later."
 msgstr "%(error)s Misschien lukt het later wel."
 
-#: tellybox/web/admin/add.py:160
+#: tellybox/web/admin/add.py:159
 msgid "That video was already added."
 msgstr "Die video is al toegevoegd."
 
-#: tellybox/web/admin/add.py:163
+#: tellybox/web/admin/add.py:162
 msgid "Added"
 msgstr "Toegevoegd"
 
-#: tellybox/web/admin/add.py:163
+#: tellybox/web/admin/add.py:162
 msgid "Added and held"
 msgstr "Toegevoegd en achtergehouden"
 
-#: tellybox/web/admin/add.py:180 tellybox/web/admin/add.py:191
+#: tellybox/web/admin/add.py:179 tellybox/web/admin/add.py:190
 msgid "That selection doesn't match the preview; fetch it again."
 msgstr "Die selectie past niet bij het voorbeeld; haal het opnieuw op."
 
-#: tellybox/web/admin/add.py:185
+#: tellybox/web/admin/add.py:184
 msgid "Tick at least one video to add."
 msgstr "Vink minstens één video aan."
 
@@ -502,6 +495,7 @@ msgstr "laden…"
 
 #: tellybox/web/admin/js_strings.py:25
 #: tellybox/web/admin/templates/_labels.html:35
+#: tellybox/web/admin/templates/subscriptions.html:40
 msgid "paused"
 msgstr "gepauzeerd"
 
@@ -773,7 +767,8 @@ msgid "TB"
 msgstr "TB"
 
 #: tellybox/web/admin/js_strings.py:109
-#: tellybox/web/admin/templates/add.html:116
+#: tellybox/web/admin/templates/add.html:124
+#: tellybox/web/admin/templates/backlog.html:24
 #, python-format
 msgid "Add %(num)d video"
 msgid_plural "Add %(num)d videos"
@@ -830,7 +825,7 @@ msgstr ""
 "hoogte) die binnen het beeld passen."
 
 #: tellybox/web/admin/library_pages.py:162
-#: tellybox/web/admin/templates/add.html:73
+#: tellybox/web/admin/templates/add.html:81
 #: tellybox/web/admin/templates/library.html:121
 msgid "Playlist"
 msgstr "Afspeellijst"
@@ -1043,59 +1038,64 @@ msgstr "Vul een heel aantal minuten in."
 msgid "Enter a number between %(lo)d and %(hi)d."
 msgstr "Vul een getal tussen %(lo)d en %(hi)d in."
 
-#: tellybox/web/admin/settings_page.py:118
-#: tellybox/web/admin/settings_page.py:132
+#: tellybox/web/admin/settings_page.py:119
+#: tellybox/web/admin/settings_page.py:133
 msgid "Choose a mode."
 msgstr "Kies een modus."
 
-#: tellybox/web/admin/settings_page.py:128
+#: tellybox/web/admin/settings_page.py:129
 msgid "Choose a counting mode."
 msgstr "Kies hoe er geteld wordt."
 
-#: tellybox/web/admin/settings_page.py:143
+#: tellybox/web/admin/settings_page.py:144
 msgid "Choose a kid app style."
 msgstr "Kies een stijl voor de kinderapp."
 
-#: tellybox/web/admin/settings_page.py:146
+#: tellybox/web/admin/settings_page.py:147
 msgid "Choose one of the known TVs, or the default."
 msgstr "Kies een van de bekende tv's, of de standaard."
 
-#: tellybox/web/admin/settings_page.py:168
+#: tellybox/web/admin/settings_page.py:169
 msgid "Enter a time as HH:MM."
 msgstr "Vul een tijd in als UU:MM."
 
-#: tellybox/web/admin/settings_page.py:178
+#: tellybox/web/admin/settings_page.py:181
+#, python-format
+msgid "Enter a whole number of hours between %(lo)d and %(hi)d."
+msgstr "Vul een heel aantal uren in tussen %(lo)d en %(hi)d."
+
+#: tellybox/web/admin/settings_page.py:188
 msgid ""
 "Enter the 8 letters and digits (0-9, A-F) of the app ID, or leave it "
 "empty."
 msgstr "Vul de 8 tekens (0-9, A-F) van de app-ID in, of laat het leeg."
 
-#: tellybox/web/admin/settings_page.py:200
+#: tellybox/web/admin/settings_page.py:212
 msgid "Saved. The TV picks this up within 15 s."
 msgstr "Opgeslagen. De tv neemt dit binnen 15 s over."
 
-#: tellybox/web/admin/settings_page.py:207
+#: tellybox/web/admin/settings_page.py:219
 msgid "Cast service unreachable; couldn't search for devices."
 msgstr "Castservice onbereikbaar; zoeken naar apparaten lukte niet."
 
-#: tellybox/web/admin/settings_page.py:210
+#: tellybox/web/admin/settings_page.py:222
 msgid "No Chromecasts found."
 msgstr "Geen Chromecasts gevonden."
 
-#: tellybox/web/admin/settings_page.py:212
+#: tellybox/web/admin/settings_page.py:224
 #, python-format
 msgid "Found: %(names)s."
 msgstr "Gevonden: %(names)s."
 
-#: tellybox/web/admin/settings_page.py:219
+#: tellybox/web/admin/settings_page.py:231
 msgid "Unknown device; search again."
 msgstr "Onbekend apparaat; zoek opnieuw."
 
-#: tellybox/web/admin/settings_page.py:221
+#: tellybox/web/admin/settings_page.py:233
 msgid "Cast service unreachable; nothing was changed."
 msgstr "Castservice onbereikbaar; er is niets gewijzigd."
 
-#: tellybox/web/admin/settings_page.py:222
+#: tellybox/web/admin/settings_page.py:234
 msgid "Chromecast selected."
 msgstr "Chromecast gekozen."
 
@@ -1133,6 +1133,118 @@ msgstr "Het opknippen staat in de wachtrij. De delen verschijnen als het klaar i
 msgid "Split plan discarded."
 msgstr "Knipplan weggegooid."
 
+#: tellybox/web/admin/subscription_pages.py:69
+msgid "Choose one of the existing shows."
+msgstr "Kies een van de bestaande series."
+
+#: tellybox/web/admin/subscription_pages.py:73
+msgid "You are already subscribed to that channel."
+msgstr "Je bent al geabonneerd op dat kanaal."
+
+#: tellybox/web/admin/subscription_pages.py:77
+#, python-format
+msgid "Subscribed to %(channel)s. Pick any older videos you want now."
+msgstr "Geabonneerd op %(channel)s. Kies de oudere video's die je nu wilt hebben."
+
+#: tellybox/web/admin/subscription_pages.py:92
+#: tellybox/web/admin/subscription_pages.py:111
+#: tellybox/web/admin/subscription_pages.py:138
+msgid "That subscription no longer exists."
+msgstr "Dat abonnement bestaat niet meer."
+
+#: tellybox/web/admin/subscription_pages.py:115
+msgid "That selection doesn't match the list; try again."
+msgstr "Die selectie past niet bij de lijst; probeer het opnieuw."
+
+#: tellybox/web/admin/subscription_pages.py:144
+#, python-format
+msgid "Checking %(num)d subscription now."
+msgid_plural "Checking %(num)d subscriptions now."
+msgstr[0] "%(num)d abonnement wordt nu gecontroleerd."
+msgstr[1] "%(num)d abonnementen worden nu gecontroleerd."
+
+#: tellybox/web/admin/subscription_pages.py:150
+msgid "Checking now. New videos show up in the inbox."
+msgstr "Wordt nu gecontroleerd. Nieuwe video's verschijnen in de inbox."
+
+#: tellybox/web/admin/subscription_pages.py:157
+msgid "Paused. The inbox stays as it is."
+msgstr "Gepauzeerd. De inbox blijft zoals hij is."
+
+#: tellybox/web/admin/subscription_pages.py:164
+msgid "Resumed."
+msgstr "Hervat."
+
+#: tellybox/web/admin/subscription_pages.py:173
+msgid "Subscription removed. The show and its episodes stay."
+msgstr "Abonnement verwijderd. De serie en haar afleveringen blijven staan."
+
+#: tellybox/web/admin/subscription_pages.py:207
+#, python-format
+msgid "Approved %(num)d video. It downloads now and shows up when it is ready."
+msgid_plural ""
+"Approved %(num)d videos. They download now and show up when they are "
+"ready."
+msgstr[0] ""
+"%(num)d video goedgekeurd. Hij wordt nu gedownload en verschijnt als hij "
+"klaar is."
+msgstr[1] ""
+"%(num)d video's goedgekeurd. Ze worden nu gedownload en verschijnen als "
+"ze klaar zijn."
+
+#: tellybox/web/admin/subscription_pages.py:211
+#, python-format
+msgid "%(num)d was skipped."
+msgid_plural "%(num)d were skipped."
+msgstr[0] "%(num)d is overgeslagen."
+msgstr[1] "%(num)d zijn overgeslagen."
+
+#: tellybox/web/admin/subscription_pages.py:219
+#: tellybox/web/admin/subscription_pages.py:231
+#: tellybox/web/admin/subscription_pages.py:241
+msgid "That video is no longer in the inbox."
+msgstr "Die video staat niet meer in de inbox."
+
+#: tellybox/web/admin/subscription_pages.py:221
+#: tellybox/web/admin/subscription_pages.py:233
+msgid "That video was already decided."
+msgstr "Over die video is al besloten."
+
+#: tellybox/web/admin/subscription_pages.py:223
+msgid "That video is already in the library."
+msgstr "Die video staat al in de bibliotheek."
+
+#: tellybox/web/admin/subscription_pages.py:234
+msgid "Rejected. You can undo this on the Rejected tab."
+msgstr "Afgewezen. Je kunt dit ongedaan maken op het tabblad Afgewezen."
+
+#: tellybox/web/admin/subscription_pages.py:243
+msgid "That video is not rejected."
+msgstr "Die video is niet afgewezen."
+
+#: tellybox/web/admin/subscription_pages.py:244
+msgid "Back in the inbox."
+msgstr "Terug in de inbox."
+
+#: tellybox/web/admin/subscription_pages.py:252
+msgid "Choose what to do with the selection."
+msgstr "Kies wat er met de selectie moet gebeuren."
+
+#: tellybox/web/admin/subscription_pages.py:254
+msgid "Tick at least one video first."
+msgstr "Vink eerst minstens één video aan."
+
+#: tellybox/web/admin/subscription_pages.py:259
+#, python-format
+msgid "Rejected %(num)d video. You can undo this on the Rejected tab."
+msgid_plural "Rejected %(num)d videos. You can undo this on the Rejected tab."
+msgstr[0] ""
+"%(num)d video afgewezen. Je kunt dit ongedaan maken op het tabblad "
+"Afgewezen."
+msgstr[1] ""
+"%(num)d video's afgewezen. Je kunt dit ongedaan maken op het tabblad "
+"Afgewezen."
+
 #: tellybox/web/admin/templates/_labels.html:23
 msgid "draft"
 msgstr "concept"
@@ -1150,7 +1262,7 @@ msgid "done"
 msgstr "klaar"
 
 #: tellybox/web/admin/templates/add.html:3
-#: tellybox/web/admin/templates/add.html:63
+#: tellybox/web/admin/templates/add.html:71
 #: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/profiles.html:65
 msgid "Add"
@@ -1169,7 +1281,8 @@ msgid "Fetch preview"
 msgstr "Voorbeeld ophalen"
 
 #: tellybox/web/admin/templates/add.html:13
-#: tellybox/web/admin/templates/add.html:33
+#: tellybox/web/admin/templates/add.html:41
+#: tellybox/web/admin/templates/subscriptions.html:20
 msgid "Fetching…"
 msgstr "Ophalen…"
 
@@ -1200,53 +1313,69 @@ msgid "Library"
 msgstr "Bibliotheek"
 
 #: tellybox/web/admin/templates/add.html:27
+msgid "This is a channel"
+msgstr "Dit is een kanaal"
+
+#: tellybox/web/admin/templates/add.html:28
+msgid ""
+"A channel is followed with a subscription: its new videos wait in the "
+"inbox until you approve them."
+msgstr ""
+"Een kanaal volg je met een abonnement: de nieuwe video's wachten in de "
+"inbox tot je ze goedkeurt."
+
+#: tellybox/web/admin/templates/add.html:29
+msgid "Subscribe to this channel"
+msgstr "Abonneer op dit kanaal"
+
+#: tellybox/web/admin/templates/add.html:35
 msgid "Video or playlist?"
 msgstr "Video of afspeellijst?"
 
-#: tellybox/web/admin/templates/add.html:28
+#: tellybox/web/admin/templates/add.html:36
 msgid "This link is a video inside a playlist. What do you want to add?"
 msgstr "Deze link is een video in een afspeellijst. Wat wil je toevoegen?"
 
-#: tellybox/web/admin/templates/add.html:31
+#: tellybox/web/admin/templates/add.html:39
 msgid "Just this video"
 msgstr "Alleen deze video"
 
-#: tellybox/web/admin/templates/add.html:32
+#: tellybox/web/admin/templates/add.html:40
 msgid "Whole playlist"
 msgstr "Hele afspeellijst"
 
-#: tellybox/web/admin/templates/add.html:48
+#: tellybox/web/admin/templates/add.html:56
 #, python-format
 msgid "Goes to: %(show)s"
 msgstr "Komt in: %(show)s"
 
-#: tellybox/web/admin/templates/add.html:49
+#: tellybox/web/admin/templates/add.html:57
 #, python-format
 msgid "Goes to: new show: %(show)s"
 msgstr "Komt in nieuwe serie: %(show)s"
 
-#: tellybox/web/admin/templates/add.html:53
+#: tellybox/web/admin/templates/add.html:61
 #, python-format
 msgid "%(num)d chapter"
 msgid_plural "%(num)d chapters"
 msgstr[0] "%(num)d hoofdstuk"
 msgstr[1] "%(num)d hoofdstukken"
 
-#: tellybox/web/admin/templates/add.html:64
+#: tellybox/web/admin/templates/add.html:72
 msgid "Add and hold"
 msgstr "Toevoegen en achterhouden"
 
-#: tellybox/web/admin/templates/add.html:73
+#: tellybox/web/admin/templates/add.html:81
 #, python-format
 msgid "Playlist by %(channel)s"
 msgstr "Afspeellijst van %(channel)s"
 
-#: tellybox/web/admin/templates/add.html:76
+#: tellybox/web/admin/templates/add.html:84
 #, python-format
 msgid "showing the first %(shown)s of %(total)s videos"
 msgstr "de eerste %(shown)s van %(total)s video's"
 
-#: tellybox/web/admin/templates/add.html:78
+#: tellybox/web/admin/templates/add.html:86
 #: tellybox/web/admin/templates/library.html:128
 #, python-format
 msgid "%(num)d video"
@@ -1254,7 +1383,7 @@ msgid_plural "%(num)d videos"
 msgstr[0] "%(num)d video"
 msgstr[1] "%(num)d video's"
 
-#: tellybox/web/admin/templates/add.html:82
+#: tellybox/web/admin/templates/add.html:90
 msgid ""
 "Add the rest later by adding the playlist again; videos already added are"
 " skipped."
@@ -1262,21 +1391,64 @@ msgstr ""
 "Voeg de rest later toe door de afspeellijst opnieuw toe te voegen; "
 "video's die er al zijn worden overgeslagen."
 
-#: tellybox/web/admin/templates/add.html:84
+#: tellybox/web/admin/templates/add.html:92
 msgid "Each video goes to its own channel's show."
 msgstr "Elke video komt in de serie van zijn eigen kanaal."
 
-#: tellybox/web/admin/templates/add.html:89
+#: tellybox/web/admin/templates/add.html:97
+#: tellybox/web/admin/templates/backlog.html:15
+#: tellybox/web/admin/templates/inbox.html:30
 msgid "Select all"
 msgstr "Alles kiezen"
 
-#: tellybox/web/admin/templates/add.html:90
+#: tellybox/web/admin/templates/add.html:98
+#: tellybox/web/admin/templates/backlog.html:16
+#: tellybox/web/admin/templates/inbox.html:31
 msgid "Select none"
 msgstr "Niets kiezen"
 
-#: tellybox/web/admin/templates/add.html:114
+#: tellybox/web/admin/templates/add.html:122
 msgid "Hold for approval"
 msgstr "Achterhouden tot vrijgave"
+
+#: tellybox/web/admin/templates/backlog.html:2
+#: tellybox/web/admin/templates/subscriptions.html:63
+msgid "Older videos"
+msgstr "Oudere video's"
+
+#: tellybox/web/admin/templates/backlog.html:5
+#, python-format
+msgid "Older videos of %(channel)s"
+msgstr "Oudere video's van %(channel)s"
+
+#: tellybox/web/admin/templates/backlog.html:6
+msgid ""
+"Tick the ones you want now. They download and show up when ready. The "
+"others are left out for good; only uploads from now on reach the inbox."
+msgstr ""
+"Vink aan welke je nu wilt hebben. Ze worden gedownload en verschijnen als"
+" ze klaar zijn. De rest laten we voorgoed weg; alleen uploads vanaf nu "
+"komen in de inbox."
+
+#: tellybox/web/admin/templates/backlog.html:9
+msgid "Videos"
+msgstr "Video's"
+
+#: tellybox/web/admin/templates/backlog.html:10
+msgid "Shorts"
+msgstr "Shorts"
+
+#: tellybox/web/admin/templates/backlog.html:19
+msgid "Nothing to show here."
+msgstr "Hier is niets te zien."
+
+#: tellybox/web/admin/templates/backlog.html:21
+msgid "Load more"
+msgstr "Meer laden"
+
+#: tellybox/web/admin/templates/backlog.html:25
+msgid "Done"
+msgstr "Klaar"
 
 #: tellybox/web/admin/templates/base.html:7
 msgid "Admin"
@@ -1294,24 +1466,38 @@ msgid "Profiles"
 msgstr "Profielen"
 
 #: tellybox/web/admin/templates/base.html:21
+#: tellybox/web/admin/templates/inbox.html:2
+#: tellybox/web/admin/templates/inbox.html:5
+#: tellybox/web/admin/templates/subscriptions.html:64
+msgid "Inbox"
+msgstr "Inbox"
+
+#: tellybox/web/admin/templates/base.html:21
+#: tellybox/web/admin/templates/settings.html:162
+#: tellybox/web/admin/templates/subscriptions.html:2
+#: tellybox/web/admin/templates/subscriptions.html:27
+msgid "Subscriptions"
+msgstr "Abonnementen"
+
+#: tellybox/web/admin/templates/base.html:22
 #: tellybox/web/admin/templates/settings.html:3
 #: tellybox/web/admin/templates/settings.html:5
 msgid "Settings"
 msgstr "Instellingen"
 
-#: tellybox/web/admin/templates/base.html:22
+#: tellybox/web/admin/templates/base.html:23
 #: tellybox/web/admin/templates/integrations.html:2
 #: tellybox/web/admin/templates/integrations.html:4
 msgid "Integrations"
 msgstr "Integraties"
 
-#: tellybox/web/admin/templates/base.html:23
+#: tellybox/web/admin/templates/base.html:24
 #: tellybox/web/admin/templates/history.html:3
 #: tellybox/web/admin/templates/history.html:5
 msgid "History"
 msgstr "Geschiedenis"
 
-#: tellybox/web/admin/templates/base.html:26
+#: tellybox/web/admin/templates/base.html:27
 msgid "Sign out"
 msgstr "Uitloggen"
 
@@ -1501,10 +1687,12 @@ msgstr "De laatste 21 dagen."
 #: tellybox/web/admin/templates/history.html:10
 #: tellybox/web/admin/templates/history.html:31
 #: tellybox/web/admin/templates/show.html:9
+#: tellybox/web/admin/templates/subscriptions.html:11
 msgid "Show"
 msgstr "Serie"
 
 #: tellybox/web/admin/templates/history.html:16
+#: tellybox/web/admin/templates/inbox.html:18
 msgid "Filter"
 msgstr "Filteren"
 
@@ -1544,6 +1732,72 @@ msgstr "uit"
 #, python-format
 msgid "via %(name)s"
 msgstr "via %(name)s"
+
+#: tellybox/web/admin/templates/inbox.html:7
+msgid "Waiting"
+msgstr "Wachtend"
+
+#: tellybox/web/admin/templates/inbox.html:8
+msgid "Rejected"
+msgstr "Afgewezen"
+
+#: tellybox/web/admin/templates/inbox.html:12
+msgid "Channel"
+msgstr "Kanaal"
+
+#: tellybox/web/admin/templates/inbox.html:14
+msgid "All channels"
+msgstr "Alle kanalen"
+
+#: tellybox/web/admin/templates/inbox.html:33
+msgid "Approve selected"
+msgstr "Geselecteerde goedkeuren"
+
+#: tellybox/web/admin/templates/inbox.html:34
+msgid "Reject selected"
+msgstr "Geselecteerde afwijzen"
+
+#: tellybox/web/admin/templates/inbox.html:36
+msgid "Reject every video waiting here? You can undo this on the Rejected tab."
+msgstr ""
+"Elke video die hier wacht afwijzen? Je kunt dit ongedaan maken op het "
+"tabblad Afgewezen."
+
+#: tellybox/web/admin/templates/inbox.html:36
+msgid "Reject all remaining"
+msgstr "Alle resterende afwijzen"
+
+#: tellybox/web/admin/templates/inbox.html:43
+msgid "Select"
+msgstr "Selecteren"
+
+#: tellybox/web/admin/templates/inbox.html:53
+msgid "may not be downloadable"
+msgstr "is misschien niet te downloaden"
+
+#: tellybox/web/admin/templates/inbox.html:55
+msgid "Open on YouTube"
+msgstr "Openen op YouTube"
+
+#: tellybox/web/admin/templates/inbox.html:60
+msgid "Approve"
+msgstr "Goedkeuren"
+
+#: tellybox/web/admin/templates/inbox.html:61
+msgid "Reject"
+msgstr "Afwijzen"
+
+#: tellybox/web/admin/templates/inbox.html:63
+msgid "Undo"
+msgstr "Ongedaan maken"
+
+#: tellybox/web/admin/templates/inbox.html:71
+msgid "Nothing is waiting for approval."
+msgstr "Er wacht niets op goedkeuring."
+
+#: tellybox/web/admin/templates/inbox.html:71
+msgid "No rejected videos."
+msgstr "Geen afgewezen video's."
 
 #: tellybox/web/admin/templates/integrations.html:5
 msgid ""
@@ -1858,7 +2112,7 @@ msgid "No picture"
 msgstr "Geen plaatje"
 
 #: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:162
+#: tellybox/web/admin/templates/settings.html:173
 #: tellybox/web/admin/templates/show.html:60
 #: tellybox/web/admin/templates/show.html:117
 msgid "Save"
@@ -2012,27 +2266,40 @@ msgstr ""
 "binnen hun hercontrole van 7 dagen vallen. Elke serie kan dit "
 "overschrijven."
 
-#: tellybox/web/admin/templates/settings.html:170
+#: tellybox/web/admin/templates/settings.html:164
+msgid "Check channels every (hours, at least 1)"
+msgstr "Kanalen controleren elke (uren, minimaal 1)"
+
+#: tellybox/web/admin/templates/settings.html:168
+msgid ""
+"How often the server looks for new uploads on the channels you subscribed"
+" to. \"Check now\" on the Subscriptions page does not wait for this."
+msgstr ""
+"Hoe vaak de server zoekt naar nieuwe uploads op de kanalen waarop je "
+"geabonneerd bent. \"Nu controleren\" op de pagina Abonnementen wacht hier"
+" niet op."
+
+#: tellybox/web/admin/templates/settings.html:181
 msgid "Device"
 msgstr "Apparaat"
 
-#: tellybox/web/admin/templates/settings.html:170
+#: tellybox/web/admin/templates/settings.html:181
 msgid "Address"
 msgstr "Adres"
 
-#: tellybox/web/admin/templates/settings.html:174
+#: tellybox/web/admin/templates/settings.html:185
 msgid "selected"
 msgstr "gekozen"
 
-#: tellybox/web/admin/templates/settings.html:180
+#: tellybox/web/admin/templates/settings.html:191
 msgid "Use this one"
 msgstr "Deze gebruiken"
 
-#: tellybox/web/admin/templates/settings.html:189
+#: tellybox/web/admin/templates/settings.html:200
 msgid "No Chromecasts known yet."
 msgstr "Nog geen Chromecasts bekend."
 
-#: tellybox/web/admin/templates/settings.html:192
+#: tellybox/web/admin/templates/settings.html:203
 msgid "Search"
 msgstr "Zoeken"
 
@@ -2157,6 +2424,7 @@ msgstr ""
 " naar de knippagina en kies “Markeren als titelkaart”."
 
 #: tellybox/web/admin/templates/show.html:79
+#: tellybox/web/admin/templates/subscriptions.html:67
 msgid "Remove"
 msgstr "Verwijderen"
 
@@ -2483,6 +2751,93 @@ msgstr "Dit knipplan weggooien?"
 msgid "Discard plan"
 msgstr "Plan weggooien"
 
+#: tellybox/web/admin/templates/subscriptions.html:5
+msgid "Subscribe to a channel"
+msgstr "Abonneren op een kanaal"
+
+#: tellybox/web/admin/templates/subscriptions.html:6
+msgid ""
+"New uploads wait in the inbox until you approve them. Nothing reaches the"
+" kids before that."
+msgstr ""
+"Nieuwe uploads wachten in de inbox tot je ze goedkeurt. Tot dan komt er "
+"niets bij de kinderen."
+
+#: tellybox/web/admin/templates/subscriptions.html:8
+msgid "Channel URL"
+msgstr "Kanaal-URL"
+
+#: tellybox/web/admin/templates/subscriptions.html:13
+msgid "The channel's own show"
+msgstr "De eigen serie van het kanaal"
+
+#: tellybox/web/admin/templates/subscriptions.html:17
+msgid "Include Shorts"
+msgstr "Shorts meenemen"
+
+#: tellybox/web/admin/templates/subscriptions.html:19
+msgid "Subscribe"
+msgstr "Abonneren"
+
+#: tellybox/web/admin/templates/subscriptions.html:30
+msgid "Check all now"
+msgstr "Alles nu controleren"
+
+#: tellybox/web/admin/templates/subscriptions.html:41
+msgid "with Shorts"
+msgstr "met Shorts"
+
+#: tellybox/web/admin/templates/subscriptions.html:42
+msgid "Failing for 7 days or more"
+msgstr "Mislukt al 7 dagen of langer"
+
+#: tellybox/web/admin/templates/subscriptions.html:45
+#, python-format
+msgid "Show: %(show)s"
+msgstr "Serie: %(show)s"
+
+#: tellybox/web/admin/templates/subscriptions.html:45
+msgid "the channel's own show"
+msgstr "de eigen serie van het kanaal"
+
+#: tellybox/web/admin/templates/subscriptions.html:46
+#, python-format
+msgid "Last checked: %(time)s"
+msgstr "Laatst gecontroleerd: %(time)s"
+
+#: tellybox/web/admin/templates/subscriptions.html:47
+msgid "Not checked yet"
+msgstr "Nog niet gecontroleerd"
+
+#: tellybox/web/admin/templates/subscriptions.html:49
+#, python-format
+msgid "Last error: %(error)s"
+msgstr "Laatste fout: %(error)s"
+
+#: tellybox/web/admin/templates/subscriptions.html:52
+msgid "Check now"
+msgstr "Nu controleren"
+
+#: tellybox/web/admin/templates/subscriptions.html:56
+msgid "Resume"
+msgstr "Hervatten"
+
+#: tellybox/web/admin/templates/subscriptions.html:60
+msgid "Pause"
+msgstr "Pauzeren"
+
+#: tellybox/web/admin/templates/subscriptions.html:66
+msgid ""
+"Remove this subscription? Videos waiting in its inbox are dropped; the "
+"show and its episodes stay."
+msgstr ""
+"Dit abonnement verwijderen? Video's die in de inbox wachten verdwijnen; "
+"de serie en haar afleveringen blijven staan."
+
+#: tellybox/web/admin/templates/subscriptions.html:74
+msgid "No subscriptions yet."
+msgstr "Nog geen abonnementen."
+
 #~ msgid "%(h)d h %(m)02d min"
 #~ msgstr ""
 
@@ -2503,4 +2858,14 @@ msgstr "Plan weggooien"
 
 #~ msgid "Admin is locked: set %(variable)s"
 #~ msgstr "Beheer is vergrendeld: stel %(variable)s in"
+
+#~ msgid ""
+#~ "Channel URLs are for subscriptions, "
+#~ "which come in a later version. "
+#~ "Paste a video or playlist URL."
+#~ msgstr ""
+#~ "Kanaal-URL's zijn voor abonnementen, en"
+#~ " die komen in een latere versie. "
+#~ "Plak een URL van een video of "
+#~ "afspeellijst."
 

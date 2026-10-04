@@ -517,8 +517,14 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Open: real-device checks on the Chromecast, an iPhone and an Android phone (screen lock, Wi-Fi loss).
 - Slice 2a (cast service, branch `step17d-device-sessions-cast`): migration 016 (`watch_session.target`, `device_label`), session-scoped media URLs (`media_urls`), device sessions in the controller (`tellybox/cast/device_sessions.py`), `/device/play|heartbeat|stop` and `sessions` in the state (`docs/cast-api.md`). No web or UI changes yet (2b, 2c).
 
+### 11. Channel subscriptions (v4), built; device checks open (branch `step11-subscriptions`)
+- Grilled with the owner on 2026-10-04. PRD: CS-1..CS-9, HA-9, A-31..A-36. Plan: `docs/plans/step11-subscriptions.md`; briefs: `docs/plans/step11-handoff.md`.
+- Spike on real channels: flat listings have no exact dates, so the baseline is a set of seen YouTube IDs; Shorts are a separate `/shorts` listing; a per-video call confirms live status and availability before an item is queued.
+- Built: migrations 017 and 018 (main took 016 for step 17); `tellybox/subscriptions.py` (subscribe, check, inbox decisions, counts, check-now requests); yt-dlp channel listing and video status; `ingest.add(show_id=)`; the worker checks one due subscription per step; Subscriptions and Inbox admin pages with a pending badge, paged backlog and bulk actions; the check interval in settings; `AdminState.inbox` and the `"inbox"` capability (read-only, HA-9); nl and de translations.
+- **Open:** real-device checks (subscribe on the phone, approve, play on the TV, the Home Assistant automation on `latest_received_at`); how a terminated channel's error reads (untested).
+
 ### Then
-11. Channel subscriptions (v4).
+(none planned after step 11)
 
 ## Open decisions / follow-ups
 

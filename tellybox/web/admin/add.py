@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Form, Request
 
@@ -22,7 +22,6 @@ from tellybox.ytdlp import PlaylistInfo, VideoInfo, YtDlpError
 PREVIEW_TTL = timedelta(minutes=30)
 PREVIEW_CAP = 50  # small size cap on the in-memory preview store
 
-CHANNEL_REFUSAL = N_("Channel URLs are for subscriptions, which come in a later version. Paste a video or playlist URL.")
 EXPIRED = N_("That preview has expired; fetch it again.")
 
 # PlaylistEntry.unavailable_reason -> label shown next to the greyed-out row
@@ -123,7 +122,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
                          error=_("Enter a video or playlist URL (http:// or https://)."))
         kind = ytdlp_module.classify_url(url)
         if kind == "channel":
-            return render(request, "add.html", status_code=422, nav="add", url=url, error=_(CHANNEL_REFUSAL))
+            return render(request, "add.html", nav="add", url=url, channel_url=url)  # CS-1: subscribe instead
         if kind == "both":
             if mode not in ("video", "playlist"):
                 return render(request, "add.html", nav="add", url=url, choose=True)

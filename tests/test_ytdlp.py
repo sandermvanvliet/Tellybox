@@ -456,3 +456,147 @@ def test_default_installer_uses_pip_target(tools, monkeypatch):
     [pip] = pips
     assert pip[:4] == [sys.executable, "-m", "pip", "install"]
     assert {"--no-cache-dir", "--upgrade"} <= set(pip) and pip[-1] == "yt-dlp[default,deno]"
+
+
+# --- channels (CS-1, CS-2, CS-5) --------------------------------------------
+
+
+def channel_data(**kw):  # modelled on the spike: entries have no upload_date; the top level has the channel id
+    return {
+        "_type": "playlist", "id": "UCkids", "channel_id": "UCkids", "channel": "Kids Fun", "uploader_id": "@kidsfun",
+        "entries": [
+            {"_type": "url", "ie_key": "Youtube", "id": "vid00000001", "url": "https://www.youtube.com/watch?v=vid00000001",
+             "title": "Episode 1", "duration": 661, "timestamp": 1788220800,
+             "thumbnails": [{"url": "https://i.ytimg.com/a.jpg", "width": 168, "height": 94},
+                            {"url": "https://i.ytimg.com/b.jpg", "width": 336, "height": 188}],
+             "live_status": None, "availability": None},
+            {"_type": "url", "id": "vid00000002", "url": "https://www.youtube.com/shorts/vid00000002", "title": "Short",
+             "duration": None, "timestamp": None},
+            {"_type": "url", "id": "vid00000003", "url": "https://www.youtube.com/watch?v=vid00000003", "title": "A 3 s clip",
+             "duration": 3, "live_status": "is_upcoming"},
+            {"id": None}, "junk",
+        ],
+        **kw,
+    }
+
+
+def test_parse_channel_listing():
+    listing = ytdlp.parse_channel_listing(channel_data())
+    assert (listing.channel_id, listing.channel_name) == ("UCkids", "Kids Fun")
+    first, short, clip = listing.entries
+    assert first.youtube_id == "vid00000001" and first.url == "https://www.youtube.com/watch?v=vid00000001"
+    assert first.duration_s == 661 and first.thumbnail_url == "https://i.ytimg.com/b.jpg" and not first.is_short
+    assert first.approx_date is not None and first.approx_date.tzinfo is not None and first.approx_date.year == 2026
+    assert short.is_short and short.duration_s is None and short.approx_date is None  # a Short is known by its URL
+    assert not clip.is_short and clip.duration_s == 3 and clip.live_status == "is_upcoming"  # never by duration
+
+
+def test_parse_channel_listing_fallbacks_and_errors():
+    data = channel_data()
+    del data["channel"]
+    assert ytdlp.parse_channel_listing(data).channel_name == "UCkids"
+    assert ytdlp.parse_channel_listing({**channel_data(), "entries": None}).entries == []
+    for bad in ({"_type": "video"}, {"_type": "playlist", "entries": []}):
+        with pytest.raises(YtDlpError) as e:
+            ytdlp.parse_channel_listing(bad)
+        assert e.value.retryable is False
+
+
+def test_parse_video_status():
+    s = ytdlp.parse_video_status({"timestamp": 1788220800, "live_status": "not_live", "availability": "public",
+                                  "channel_id": "UCkids"})
+    assert (s.published_at.isoformat(), s.live_status, s.availability, s.channel_id) == (
+        "2026-09-01T00:00:00+00:00", "not_live", "public", "UCkids")
+    assert ytdlp.parse_video_status({"upload_date": "20260901"}).published_at.day == 1  # no timestamp
+    assert ytdlp.parse_video_status({}).published_at is None
+
+
+@pytest.mark.parametrize("url, expected", [
+    ("https://www.youtube.com/@kidsfun", "https://www.youtube.com/@kidsfun/videos"),
+    ("https://www.youtube.com/@kidsfun/", "https://www.youtube.com/@kidsfun/videos"),
+    ("https://www.youtube.com/@kidsfun/streams", "https://www.youtube.com/@kidsfun/videos"),
+    ("youtube.com/channel/UCkids/shorts", "https://www.youtube.com/channel/UCkids/videos"),
+])
+def test_channel_tab_url(url, expected):
+    assert ytdlp.channel_tab_url(url, "videos") == expected
+
+
+def test_list_channel_command(yt, monkeypatch):
+    calls = []
+
+    def run(args, timeout):
+        calls.append(args)
+        return json.dumps(channel_data())
+
+    monkeypatch.setattr(yt, "_run", run)
+    listing = yt.list_channel("https://www.youtube.com/@kidsfun", "shorts", 30, 30)
+    assert listing.channel_id == "UCkids"
+    (args,) = calls
+    assert args == ["-J", "--flat-playlist", "--skip-download", "--extractor-retries", "1",
+                    "--extractor-args", "youtubetab:approximate_date", "--playlist-items", "31:60",
+                    "--", "https://www.youtube.com/@kidsfun/shorts"]
+
+
+def test_list_channel_rejects_other_urls_and_tabs(yt, monkeypatch):
+    monkeypatch.setattr(yt, "_run", lambda *a: pytest.fail("yt-dlp should not run"))
+    with pytest.raises(YtDlpError) as e:
+        yt.list_channel("https://www.youtube.com/watch?v=abc", "videos", 0, 30)
+    assert e.value.retryable is False
+    with pytest.raises(ValueError):
+        yt.list_channel("https://www.youtube.com/@kidsfun", "streams", 0, 30)
+
+
+@pytest.mark.parametrize("stderr", [
+    "ERROR: [youtube:tab] @nobody: HTTP Error 404: Not Found",
+    "ERROR: [youtube:tab] UCx: This channel does not exist.",
+])
+def test_list_channel_not_found_is_a_clear_permanent_error(yt, monkeypatch, stderr):
+    def run(args, timeout):
+        ytdlp._raise_for(stderr, 1)
+
+    monkeypatch.setattr(yt, "_run", run)
+    with pytest.raises(YtDlpError) as e:
+        yt.list_channel("https://www.youtube.com/@nobody", "videos", 0, 30)
+    assert e.value.retryable is False and e.value.message.startswith("Channel not found")
+
+
+def test_list_channel_without_a_shorts_tab_is_empty_and_other_errors_pass(yt, monkeypatch):
+    monkeypatch.setattr(yt, "_run", lambda a, t: ytdlp._raise_for("ERROR: This channel does not have a shorts tab", 1))
+    assert yt.list_channel("https://www.youtube.com/@kidsfun", "shorts", 0, 30).entries == []
+    with pytest.raises(YtDlpError):
+        yt.list_channel("https://www.youtube.com/@kidsfun", "videos", 0, 30)  # a missing videos tab is an error
+
+    monkeypatch.setattr(yt, "_run", lambda a, t: ytdlp._raise_for("ERROR: HTTP Error 503", 1))
+    with pytest.raises(YtDlpError) as e:
+        yt.list_channel("https://www.youtube.com/@kidsfun", "videos", 0, 30)
+    assert e.value.retryable is True
+
+
+def test_video_status_command_and_result(yt, monkeypatch):
+    calls = []
+
+    def run(args, timeout):
+        calls.append(args)
+        return json.dumps({"timestamp": 1788220800, "live_status": "not_live", "availability": "public"})
+
+    monkeypatch.setattr(yt, "_run", run)
+    s = yt.video_status("abc123XYZ_-")
+    assert s.live_status == "not_live" and s.availability == "public"
+    assert calls == [["-J", "--no-playlist", "--skip-download", "--", "https://www.youtube.com/watch?v=abc123XYZ_-"]]
+
+
+@pytest.mark.parametrize("stderr, live, availability", [
+    ("ERROR: [youtube] x: Premieres in 2 days", "is_upcoming", None),
+    ("ERROR: [youtube] x: Join this channel to get access to members-only content", None, "subscriber_only"),
+    ("ERROR: [youtube] x: Sign in to confirm your age. This video may be inappropriate", None, "needs_auth"),
+])
+def test_video_status_reads_the_refusal_when_yt_dlp_cant_describe_the_video(yt, monkeypatch, stderr, live, availability):
+    monkeypatch.setattr(yt, "_run", lambda a, t: ytdlp._raise_for(stderr, 1))
+    s = yt.video_status("x")
+    assert (s.live_status, s.availability, s.published_at) == (live, availability, None)
+
+
+def test_video_status_other_errors_raise(yt, monkeypatch):
+    monkeypatch.setattr(yt, "_run", lambda a, t: ytdlp._raise_for("ERROR: Video unavailable", 1))
+    with pytest.raises(YtDlpError):
+        yt.video_status("x")

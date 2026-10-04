@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Subscriptions") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ _("Subscribe to a channel") }}</h1>
+  <p class="muted">{{ _("New uploads wait in the inbox until you approve them. Nothing reaches the kids before that.") }}</p>
+  <form method="post" action="/admin/subscriptions" class="stack fetch-form">
+    <label>{{ _("Channel URL") }}
+      <input type="url" name="url" required value="{{ url or '' }}" placeholder="https://www.youtube.com/@channel">
+    </label>
+    <label>{{ _("Show") }}
+      <select name="show_id">
+        <option value="">{{ _("The channel's own show") }}</option>
+        {% for s in shows %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="shorts" value="1"> {{ _("Include Shorts") }}</label>
+    <div class="row">
+      <button class="btn primary" type="submit">{{ _("Subscribe") }}</button>
+      <p class="muted fetching" hidden>{{ _("Fetching…") }}</p>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content: space-between;">
+    <h2>{{ _("Subscriptions") }}</h2>
+    {% if subs %}
+    <form method="post" action="/admin/subscriptions/check-all" class="inline">
+      <button class="btn small">{{ _("Check all now") }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if subs %}
+  <ul class="sub-list">
+    {% for s in subs %}
+    <li>
+      <div class="row">
+        <strong><a href="{{ s.channel_url }}" rel="noreferrer noopener" target="_blank">{{ s.channel_name }}</a></strong>
+        {% if s.paused %}<span class="badge">{{ _("paused") }}</span>{% endif %}
+        {% if s.include_shorts %}<span class="badge">{{ _("with Shorts") }}</span>{% endif %}
+        {% if s.unhealthy %}<span class="badge bad">{{ _("Failing for 7 days or more") }}</span>{% endif %}
+      </div>
+      <p class="muted">
+        {{ _("Show: %(show)s", show=show_names.get(s.show_id) or _("the channel's own show")) }} ·
+        {% if s.last_checked_at %}{{ _("Last checked: %(time)s", time=s.last_checked_at.astimezone(tz).strftime("%Y-%m-%d %H:%M")) }}
+        {% else %}{{ _("Not checked yet") }}{% endif %}
+      </p>
+      {% if s.last_error %}<p class="muted">{{ _("Last error: %(error)s", error=s.last_error) }}</p>{% endif %}
+      <div class="row">
+        <form method="post" action="/admin/subscriptions/{{ s.id }}/check" class="inline">
+          <button class="btn small">{{ _("Check now") }}</button>
+        </form>
+        {% if s.paused %}
+        <form method="post" action="/admin/subscriptions/{{ s.id }}/resume" class="inline">
+          <button class="btn small">{{ _("Resume") }}</button>
+        </form>
+        {% else %}
+        <form method="post" action="/admin/subscriptions/{{ s.id }}/pause" class="inline">
+          <button class="btn small">{{ _("Pause") }}</button>
+        </form>
+        {% endif %}
+        <a class="btn small" href="/admin/subscriptions/{{ s.id }}/backlog">{{ _("Older videos") }}</a>
+        <a class="btn small" href="/admin/inbox?channel={{ s.id }}">{{ _("Inbox") }}</a>
+        <form method="post" action="/admin/subscriptions/{{ s.id }}/remove" class="inline"
+              data-confirm="{{ _("Remove this subscription? Videos waiting in its inbox are dropped; the show and its episodes stay.") }}">
+          <button class="btn small danger">{{ _("Remove") }}</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ _("No subscriptions yet.") }}</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/admin/static/add.js"></script>
+{% endblock %}

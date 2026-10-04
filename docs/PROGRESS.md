@@ -518,7 +518,8 @@ Settings page and admin API: allowance and maximum session length per profile ar
 
 ### 11. Channel subscriptions (v4), planned (branch `step11-subscriptions`)
 - Grilled with the owner on 2026-10-04. PRD updated: CS-1..CS-9 (replacing CS-1..4), HA-9, A-31..A-36, the `Subscription` and `InboxItem` entities. `docs/admin-api.md` gains the read-only `inbox` object and the `"inbox"` capability. Plan: `docs/plans/step11-subscriptions.md`, waiting for approval.
-- Next: a yt-dlp spike on real channels (flat-listing dates, Shorts, premieres), then part 0 (migration `016_subscriptions.sql`, `tellybox/subscriptions.py`, the channel lister), then two subagents (worker and ingest; admin UI, API and sensor).
+- Spike done (2026-10-04): flat listings have no exact dates, so the baseline is a set of seen YouTube IDs; Shorts are a separate `/shorts` listing; a per-video call confirms live status and availability. Details in the plan.
+- Next: part 0 (migration `016_subscriptions.sql`, `tellybox/subscriptions.py`, the channel lister), then two subagents (worker and ingest; admin UI, API and sensor).
 - Open: real-device checks (subscribe on the phone, approve, play on the TV, the Home Assistant automation on `latest_received_at`).
 
 ### Then

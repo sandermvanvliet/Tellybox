@@ -1,6 +1,6 @@
 # Step 11: Channel subscriptions (v4, CS-1..CS-9, HA-9)
 
-Status: proposed, waiting for the owner's approval. Branch: `step11-subscriptions`.
+Status: proposed, spike done, waiting for the owner's approval to start part 0. Branch: `step11-subscriptions`.
 
 A parent subscribes to a YouTube channel. The server checks it on a schedule and puts new uploads in an approval inbox. Nothing is downloaded or shown to the kids until the admin approves it (A-9). A Home Assistant sensor reports how many items wait.
 
@@ -12,7 +12,7 @@ A parent subscribes to a YouTube channel. The server checks it on a schedule and
 - **Inbox states:** pending, approved, rejected. No snooze, no expiry. Rejections are remembered by YouTube ID and can be undone from a "Rejected" tab. Bulk select, bulk reject, and a pending-count badge in the admin nav (CS-6, A-34).
 - **Show:** the channel's show by default (CI-4), or an existing show chosen at subscribe time. The subscription keeps a show reference, so renames and merges are followed (CS-9).
 - **No rules:** no duration or title filters. A "long video" hint on a card is allowed; nothing is hidden or rejected automatically.
-- **Schedule:** one global interval in the settings, default 6 h, minimum 1 h. "Check now" per subscription and for all. The worker runs it. A check fetches the newest 30 entries flat and stops at the baseline or a known ID. If all 30 are new it pages on, to a cap of 100 and a logged warning (CS-2).
+- **Schedule:** one global interval in the settings, default 6 h, minimum 1 h. "Check now" per subscription and for all. The worker runs it. A check fetches the newest 30 entries flat and stops at the first seen ID (see the spike result). If all 30 are new it pages on, to a cap of 100 and a logged warning (CS-2).
 - **Failures:** each row shows "last checked" and the last error. Retries go on forever on the normal schedule. After 7 days of consecutive failures the row shows a warning badge. No push alerts. A failed check never touches existing content (CS-7, A-35).
 - **Candidates:** already in the library, pending or rejected: skipped silently, keyed on YouTube ID. An upcoming premiere or live stream makes no item until it is a normal video. Members-only and age-restricted videos get an item marked "may not be downloadable"; the download job fails visibly and can be retried (CI-3). Same-title re-uploads are not detected (CS-5).
 - **Pause and remove:**
@@ -34,14 +34,28 @@ These become PRD requirements CS-1..CS-9 and HA-9 and assumptions A-31..A-36 in 
 - **Migrations:** the last one is `015_admin_oidc.sql`, so this step takes `016_subscriptions.sql`.
 - **The PRD already lists** `Subscription` and `InboxItem` entities; part 0 fills them in.
 
-## Spike first (controller, before part 0 is final)
+## Spike result (yt-dlp 2026.08.19, 2026-10-04, three public kids' channels, nothing downloaded)
 
-Run yt-dlp for real against two or three channels, with the updatable install, and record what a flat listing of the Videos tab gives. The design depends on it:
-- whether entries carry `upload_date` or `timestamp`, or only an ID (flat extraction often has no date);
-- `duration`, `live_status` and `availability` per entry, and how Shorts and upcoming premieres show up;
-- how long a 30-entry page takes and whether paging past 30 works cheaply (`--playlist-items`).
+| Question | Finding |
+| --- | --- |
+| Flat listing of `/videos`, 30 entries | About 1 s. Entries have `id`, `url`, `title`, `duration` (always), thumbnails and `view_count`. They have **no** `upload_date`, `timestamp` or `channel_id`; `live_status` and `availability` are null on normal videos. |
+| Dates | `--extractor-args "youtubetab:approximate_date"` adds a `timestamp` for free, but it is midnight UTC, can be a day off and ties between videos. A per-video call (about 3.4 s) gives the exact date, `live_status`, `availability` and `channel_id`. |
+| Shorts | They are not in `/videos`. The `/shorts` tab is a separate listing: `/shorts/<id>` URLs, no duration, no date. |
+| Live and upcoming | The `/streams` tab shows `live_status` (`is_live` seen; `is_upcoming` and `was_live` not seen, none were available). Entries that are live have no duration. |
+| Paging | `--playlist-items 31:60` works, about 1.5 s a page; it re-walks from the start. |
+| Channel ID | The listing's top level has the stable `channel_id` (UC…), the display name and the handle. Entries don't. |
+| Errors | A bad handle takes three 404 retries and then exits 1 with `HTTP Error 404`; a bad UC id says "This channel does not exist". A terminated channel was not tested. |
 
-If dates are missing from flat entries, the baseline becomes a stored set of seen IDs (the newest 100 at subscribe time) instead of a timestamp, and the check stops at the first known ID. The result goes into this plan's "Spike result" section before the subagents start.
+Consequences for the design:
+- **The baseline is a set of seen video IDs, not a date.** At subscribe time the newest 100 IDs (`/videos`, plus `/shorts` when the toggle is on) are stored in `subscription_seen`. A check lists the first page, treats unseen IDs as new, and pages on while all of a page is unseen (the cap of 100 stays). `baseline_at` is kept only for display. This replaces "stop at the baseline date" in the decisions above.
+- **Dates are for display only.** The listing uses `approximate_date` for sorting and the "published" date on a card. For a candidate that becomes an inbox item, one metadata call (about 3.4 s, only for new IDs) gives the exact date.
+- **A candidate is checked before it is queued:** one metadata call must show `live_status == "not_live"` and `availability == "public"`. Live and upcoming candidates are not marked seen, so a later check picks them up once they are normal videos (CS-5). Members-only and age-restricted videos still get their "may not be downloadable" item.
+- **Shorts need a second listing:** with the toggle on, a check also lists `/shorts` and treats it the same way. A Short is recognised by its `/shorts/` URL, never by duration (Bluey has 3 s clips in `/videos`).
+- **Errors:**
+  - The channel URL is resolved to its `channel_id` at subscribe time and that is the key; the handle is for display.
+  - A bad handle at subscribe time is rejected with a clear message, with the 404 retry delay capped.
+  - A channel that disappears later is an ordinary failing subscription (A-35); the 7-day warning applies. The spike did not recommend a different rule and the owner's decision stands.
+- **Still open:** the exact error text for a terminated channel; the implementation will test with a real example if one turns up and otherwise treat any non-zero exit as a failed check.
 
 ## Part 0: contract (controller, before the subagents)
 
@@ -49,11 +63,11 @@ If dates are missing from flat entries, the baseline becomes a stored set of see
 2. **Migration `016_subscriptions.sql`:**
    - `subscription(id, channel_id UNIQUE, channel_name, channel_url, show_id NULL REFERENCES show ON DELETE SET NULL, include_shorts, paused, baseline_at, last_checked_at, last_ok_at, last_error, failing_since, created_at)`;
    - `inbox_item(id, subscription_id NULL REFERENCES subscription ON DELETE SET NULL, youtube_id UNIQUE, url, title, channel_name, duration_s, thumbnail_url, published_at, status CHECK (pending|approved|rejected), warning, received_at, decided_at)`: rejected rows outlive their subscription;
-   - the baseline IDs, if the spike needs them: `subscription_seen(subscription_id, youtube_id)`;
+   - the baseline: `subscription_seen(subscription_id, youtube_id)`, filled at subscribe time with the newest 100 IDs and extended as checks see more; `baseline_at` is for display only;
    - `settings.subscription_check_hours INTEGER NOT NULL DEFAULT 6`;
    - `source_video.show_id NULL`: a forced show, which the publish step prefers over the channel lookup.
 3. **`tellybox/subscriptions.py`**, written in full with tests, because parts A and B both use it: create, list, pause, resume, remove; `record_candidates`, `approve`, `reject`, `undo_reject`; `inbox_counts` (pending, unhealthy, latest_received_at); the dedupe rules of CS-5. It takes a `ChannelLister` interface, so tests use a fake listing.
-4. **`ChannelLister` and the yt-dlp implementation:** `list_channel(url, include_shorts, offset, limit)` returning entries with ID, title, duration, thumbnail, date (if any) and a status flag. A `FakeChannelLister` for tests.
+4. **`ChannelLister` and the yt-dlp implementation:** `list_channel(url, tab, offset, limit)` for the `videos` and `shorts` tabs, returning entries with ID, title, duration, thumbnail, approximate date and the top-level `channel_id`; plus `video_status(id)`, the one-video metadata call for the live and availability check and the exact date. A `FakeChannelLister` for tests.
 5. **Docs:** `docs/admin-api.md` (the `inbox` object, the `"inbox"` capability, the HA-8 note) and `docs/PROGRESS.md` (step 11 planned). Done in the planning commit.
 
 ## Part A: worker and ingest (subagent A)
@@ -109,5 +123,4 @@ If dates are missing from flat entries, the baseline becomes a stored set of see
 ## Open details for the implementation
 
 - Whether `source_video.show_id` or a different seam is the cleanest way to force a show; the publish step decides.
-- Whether the "include Shorts" toggle can be told from the flat listing, or needs the `/shorts` tab as a second listing (the spike answers this).
 - The exact wording of the "may not be downloadable" and "long video" hints. English text is the message id (NF-13).

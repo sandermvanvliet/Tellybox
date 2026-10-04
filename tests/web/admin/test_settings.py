@@ -342,3 +342,40 @@ def test_bad_ui_mode_or_tv_is_rejected_and_nothing_written(admin, admin_env, fie
         "SELECT daily_allowance_min, ui_mode, cast_device_uuid FROM profile WHERE id = ?", (PROFILE,)
     ).fetchone()
     assert (row["daily_allowance_min"], row["ui_mode"], row["cast_device_uuid"]) == (60, "icons", None)
+
+
+def _watch_in_app(conn) -> int:
+    return conn.execute("SELECT watch_in_app FROM profile WHERE id = ?", (PROFILE,)).fetchone()["watch_in_app"]
+
+
+def test_settings_page_has_the_watch_in_app_checkbox(admin, admin_env):  # AD-7
+    html = admin.get("/admin/settings").text
+    assert f'name="profile_{PROFILE}_watch_in_app"' in html and "Allow watching in the app" in html
+    assert f'name="profile_{PROFILE}_watch_in_app" value="1"\n               checked' not in html
+    admin_env.conn.execute("UPDATE profile SET watch_in_app = 1")
+    assert "checked" in admin.get("/admin/settings").text.split("Allow watching in the app")[0].rsplit("<label", 1)[1]
+
+
+def test_watch_in_app_round_trip(admin, admin_env):  # AD-7, KA-13
+    assert _watch_in_app(admin_env.conn) == 0
+    # A browser sends the hidden "0" and, when ticked, the checkbox's "1".
+    form = {**VALID_FORM, f"profile_{PROFILE}_watch_in_app": ["0", "1"]}
+    assert admin.post("/admin/settings", data=form, follow_redirects=False).status_code == 303
+    assert _watch_in_app(admin_env.conn) == 1
+    assert admin_env.conn.execute("SELECT 1 FROM profile WHERE id = ? AND watch_in_app = 1", (PROFILE,)).fetchone()
+    form = {**VALID_FORM, f"profile_{PROFILE}_watch_in_app": ["0"]}
+    assert admin.post("/admin/settings", data=form, follow_redirects=False).status_code == 303
+    assert _watch_in_app(admin_env.conn) == 0
+
+
+def test_a_form_without_the_watch_in_app_field_leaves_it(admin, admin_env):
+    admin_env.conn.execute("UPDATE profile SET watch_in_app = 1")
+    assert admin.post("/admin/settings", data=VALID_FORM, follow_redirects=False).status_code == 303
+    assert _watch_in_app(admin_env.conn) == 1
+
+
+def test_watch_in_app_reaches_the_kid_api(admin, admin_env):
+    form = {**VALID_FORM, f"profile_{PROFILE}_watch_in_app": ["0", "1"]}
+    admin.post("/admin/settings", data=form, follow_redirects=False)
+    profiles = admin.get("/api/kid/profiles").json()
+    assert profiles[0]["watch_in_app"] is True

@@ -48,6 +48,11 @@
       <p class="muted">{{ _("Nothing is playing.") }}</p>
     {% endif %}
   </div>
+  <ul id="sessions" class="sessions"{% if not sessions %} hidden{% endif %}>
+    {% for x in sessions %}
+    <li><span class="badge">{{ labels.session_target(x.target) }}</span> {{ x.label }}{% if x.watcher_names %} &middot; {{ x.watcher_names | join(", ") }}{% endif %} &middot; {{ x.title }} ({{ labels.player_state(x.state) }})</li>
+    {% endfor %}
+  </ul>
 </section>
 
 <script type="application/json" id="profiles-data">{{ profiles | tojson }}</script>

@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 
-from tellybox import db, library
+from tellybox import db, library, store
 from tellybox.clock import FakeClock
 from tellybox.config import Config
 from tellybox.media_urls import media_path
@@ -145,3 +145,70 @@ def test_opens_db_from_config_when_no_conn(tmp_path):
     with TestClient(app) as client:
         assert client.get("/healthz").status_code == 200
     assert config.db_path.exists()
+
+
+# --------------------------------------------------------------------------- in-app URLs (PB-7, WT-11)
+
+
+def device_session(conn, ep: int, target: str = "device") -> int:
+    return store.open_watch_session(conn, ep, [1], NOW, target=target, device_label="iPhone Safari")
+
+
+def scoped_url(ep: int, session_id: int, expires: datetime = NOW + timedelta(hours=1)) -> str:
+    return media_path(SECRET, ep, int(expires.timestamp()), session_id)
+
+
+def test_scoped_url_is_served_while_the_session_is_open(env):
+    client, conn, _, _, ep = env
+    r = client.get(scoped_url(ep, device_session(conn, ep)))
+    assert r.status_code == 200 and r.content == PAYLOAD
+
+
+def test_scoped_url_supports_range_requests(env):
+    client, conn, _, _, ep = env
+    r = client.get(scoped_url(ep, device_session(conn, ep)), headers={"Range": "bytes=100-199"})
+    assert r.status_code == 206
+    assert r.content == PAYLOAD[100:200]
+    assert r.headers["content-range"] == f"bytes 100-199/{len(PAYLOAD)}"
+
+
+def test_scoped_url_dies_with_its_session(env):
+    client, conn, _, _, ep = env
+    session_id = device_session(conn, ep)
+    store.close_watch_session(conn, session_id, "stopped", NOW)
+    assert client.get(scoped_url(ep, session_id)).status_code == 403
+
+
+def test_scoped_url_for_another_episode_is_refused(env):
+    client, conn, _, sid, ep = env
+    other = library.add_episode(conn, sid, "Ep 2", "show/ep1.mp4", now=NOW)
+    session_id = device_session(conn, other)
+    assert client.get(scoped_url(ep, session_id)).status_code == 403
+
+
+def test_scoped_url_needs_a_device_session(env):
+    client, conn, _, _, ep = env
+    assert client.get(scoped_url(ep, device_session(conn, ep, target="tv"))).status_code == 403
+    assert client.get(scoped_url(ep, 9999)).status_code == 403  # no such session
+
+
+def test_scoped_url_with_a_forged_session_id_is_refused(env):
+    client, conn, _, _, ep = env
+    session_id = device_session(conn, ep)
+    other = device_session(conn, ep)
+    assert client.get(url_for(ep) + f"?s={session_id}").status_code == 403  # unscoped signature
+    forged = scoped_url(ep, session_id).replace(f"?s={session_id}", f"?s={other}")
+    assert client.get(forged).status_code == 403
+    assert client.get(url_for(ep) + "?s=abc").status_code == 403
+
+
+def test_expired_scoped_url_is_refused(env):
+    client, conn, _, _, ep = env
+    session_id = device_session(conn, ep)
+    assert client.get(scoped_url(ep, session_id, NOW - timedelta(seconds=1))).status_code == 403
+
+
+def test_url_without_s_is_unchanged_by_open_sessions(env):
+    client, conn, _, _, ep = env
+    device_session(conn, ep)
+    assert client.get(url_for(ep)).status_code == 200

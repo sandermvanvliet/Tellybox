@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_labels.html" as labels %}
 {% import "_profile.html" as pf %}
 {% block title %}{{ _("History") }}{% endblock %}
 {% block content %}
@@ -28,13 +29,14 @@
 
     {% if day.episodes %}
     <table class="list">
-      <thead><tr><th>{{ _("Episode") }}</th><th>{{ _("Show") }}</th><th>{{ _("Who") }}</th><th>{{ _("Start") }}</th><th>{{ _("End") }}</th><th>{{ _("Minutes") }}</th><th>{{ _("Ended") }}</th></tr></thead>
+      <thead><tr><th>{{ _("Episode") }}</th><th>{{ _("Show") }}</th><th>{{ _("Who") }}</th><th>{{ _("Where") }}</th><th>{{ _("Start") }}</th><th>{{ _("End") }}</th><th>{{ _("Minutes") }}</th><th>{{ _("Ended") }}</th></tr></thead>
       <tbody>
         {% for ep in day.episodes %}
         <tr>
           <td>{{ ep.title }}</td>
           <td>{{ ep.show_name or "–" }}</td>
           <td class="who">{% for p in ep.profiles %}<span class="who-one">{{ pf.picture(p, 24) }} {{ p.name }}</span> {% endfor %}</td>
+          <td>{% if ep.target == "device" %}{{ labels.session_target("device") }}{% if ep.device_label %}: {{ ep.device_label }}{% endif %}{% else %}{{ labels.session_target("tv") }}{% endif %}</td>
           <td>{{ ep.started_at.astimezone(tz).strftime("%H:%M") }}</td>
           <td>{{ ep.ended_at.astimezone(tz).strftime("%H:%M") if ep.ended_at else "–" }}</td>
           <td>{{ _("%(minutes)s min", minutes=ep.minutes) }}</td>

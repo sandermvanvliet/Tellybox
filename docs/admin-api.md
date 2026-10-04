@@ -43,6 +43,13 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
     "position_s": 312, "duration_s": 660,
     "profile_ids": [1, 3]                // who's watching this episode
   },
+  "sessions": [                          // step 17 (PB-7, WT-12): every active playback, the TV first
+    {"key": "tv" | "device:<id>", "target": "tv" | "device",
+     "label": "Living Room TV" | "iPhone Safari",   // the TV's name, or the browser label the server derived
+     "device_id": null | "…", "episode_id": 4, "show_id": 2, "title": "…",
+     "state": "loading" | "playing" | "paused" | "buffering",
+     "position_s": 312, "duration_s": 660 | null, "profile_ids": [1, 3]}
+  ],
   "group": {                             // the current watchers, as the cast state's timer describes them
     "remaining_s": 1234 | null,          // null = all unlimited
     "time_up": false,                    // the watchers may not pick again (KA-9)
@@ -68,7 +75,7 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
       "session_elapsed_s": 1200 | null,  // this profile's open viewing session (A-13)
       "can_start": true,
       "reason": null | "allowance" | "session_max" | "blocked",
-      "watching": true,                  // in the current episode
+      "watching": true,                  // in the current episode, on the TV or in the app (step 17)
       "last_five": false
     }
   ],

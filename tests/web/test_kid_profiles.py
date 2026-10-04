@@ -41,11 +41,11 @@ def test_profiles_in_admin_order_with_picture_rules(env, mkstate):
     r = client.get("/api/kid/profiles")
     assert r.status_code == 200
     assert r.json() == [
-        {"profile_id": 1, "name": "Mila", "picture": None, "avatar": "fox", "ui_mode": "icons",
+        {"profile_id": 1, "name": "Mila", "picture": None, "avatar": "fox", "ui_mode": "icons", "watch_in_app": False,
          "time_up": False, "fraction_left": 0.25, "last_five": False, "unlimited": False},
-        {"profile_id": 3, "name": "Sam", "picture": "/img/profile/3.jpg", "avatar": None, "ui_mode": "icons",
+        {"profile_id": 3, "name": "Sam", "picture": "/img/profile/3.jpg", "avatar": None, "ui_mode": "icons", "watch_in_app": False,
          "time_up": False, "fraction_left": None, "last_five": False, "unlimited": True},
-        {"profile_id": 2, "name": "Noor", "picture": None, "avatar": "owl", "ui_mode": "icons",
+        {"profile_id": 2, "name": "Noor", "picture": None, "avatar": "owl", "ui_mode": "icons", "watch_in_app": False,
          "time_up": True, "fraction_left": 0.0, "last_five": True, "unlimited": False},
     ]
 

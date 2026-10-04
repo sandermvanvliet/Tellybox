@@ -25,12 +25,13 @@ INITIAL_STATE: dict = {
     "watching": [],
     "profiles": {},
     "day": None,
+    "sessions": [],  # PB-7, WT-12
 }
 
 
 def unreachable(state: dict) -> dict:
-    """The TV can't be reached: keep the last known sky and time_up, drop now playing."""
-    return {**state, "tv": "unreachable", "now_playing": None}
+    """The TV can't be reached: keep the last known sky and time_up, drop now playing and the sessions."""
+    return {**state, "tv": "unreachable", "now_playing": None, "sessions": []}
 
 
 _kid_unreachable = unreachable  # KidHub's `unreachable` parameter shadows the name

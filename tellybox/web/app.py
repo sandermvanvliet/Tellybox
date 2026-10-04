@@ -12,14 +12,14 @@ from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from tellybox import db, library
 from tellybox.clock import Clock, SystemClock
 from tellybox.config import Config
-from tellybox.media_urls import verify
+from tellybox.media_urls import session_id_from_query, verify
 from tellybox.oidc import OidcClient
 from tellybox.ytdlp import YtDlp
 from tellybox.web import api, kid
@@ -113,8 +113,19 @@ def create_app(
     # NF-3: the Chromecast can't authenticate, so the URL itself is the credential.
     # FileResponse handles Range (206) requests, which the Chromecast uses when seeking.
     @app.api_route("/media/{episode_id}/{expires_at}/{sig}.mp4", methods=["GET", "HEAD"])
-    def media(episode_id: int, expires_at: int, sig: str) -> FileResponse:
-        if not verify(config.secret, episode_id, expires_at, sig, clock.now()):
+    def media(request: Request, episode_id: int, expires_at: int, sig: str) -> FileResponse:
+        if "s" in request.query_params:
+            # PB-7, WT-11: an in-app URL is scoped to its watch session and dies with it, so stop now,
+            # block and time-up revoke it.
+            session_id = session_id_from_query(request.url.query)
+            if session_id is None or not verify(config.secret, episode_id, expires_at, sig, clock.now(), session_id):
+                raise HTTPException(status_code=403)
+            open_session = conn.execute(
+                "SELECT 1 FROM watch_session WHERE id = ? AND ended_at IS NULL AND target = 'device'"
+                " AND episode_id = ?", (session_id, episode_id)).fetchone()
+            if open_session is None:
+                raise HTTPException(status_code=403)
+        elif not verify(config.secret, episode_id, expires_at, sig, clock.now()):
             raise HTTPException(status_code=404)
         episode = library.get_episode(conn, episode_id)
         if episode is None:

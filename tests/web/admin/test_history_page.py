@@ -93,6 +93,18 @@ def test_history_override_via_label(admin, admin_env):
     assert "via Home &lt;b&gt;Assistant&lt;/b&gt;" in r.text
 
 
+def test_history_shows_where_each_session_played(admin, admin_env):  # AD-4, PB-8
+    conn = admin_env.conn
+    tv = store.open_watch_session(conn, admin_env.ids.b1, [PROFILE], NOW)
+    store.close_watch_session(conn, tv, EndReason.FINISHED, NOW, 300.0)
+    phone = store.open_watch_session(conn, admin_env.ids.b2, [PROFILE], NOW, target="device",
+                                     device_label="iPhone Safari")
+    store.close_watch_session(conn, phone, EndReason.STOPPED, NOW, 120.0)
+    html = admin.get("/admin/history").text
+    assert "<th>Where</th>" in html
+    assert "On the TV" in html and "In the app: iPhone Safari" in html
+
+
 def test_history_override_without_source_has_no_via(admin, admin_env):
     store.log_override(admin_env.conn, PROFILE, NOW.date(), "extra_minutes", 15, NOW)
     assert "via " not in admin.get("/admin/history").text

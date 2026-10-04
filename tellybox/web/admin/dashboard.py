@@ -41,6 +41,14 @@ def _now_playing_context(conn: sqlite3.Connection, now_playing: dict | None) -> 
     return {**now_playing, "show_name": row["name"] if row else None, "watcher_names": names}
 
 
+def _sessions_context(conn: sqlite3.Connection, state: dict | None) -> list[dict]:
+    """WT-12, AD-4: every active playback with who watches and where; the TV first."""
+    names = {r["id"]: r["name"] for r in conn.execute("SELECT id, name FROM profile ORDER BY sort_order, id")}
+    result = [{**x, "watcher_names": [names[i] for i in names if i in set(x.get("profile_ids") or [])]}
+              for x in (state or {}).get("sessions") or []]
+    return sorted(result, key=lambda x: x.get("target") != "tv")
+
+
 def _profiles_context(conn: sqlite3.Connection, state: dict | None) -> list[dict]:
     """Dashboard profile context, resolving per-profile allowance limits (A-23).
 
@@ -50,6 +58,8 @@ def _profiles_context(conn: sqlite3.Connection, state: dict | None) -> list[dict
         "SELECT id, name, avatar, picture_path FROM profile ORDER BY sort_order, id"
     ).fetchall()
     watchers = set(((state or {}).get("now_playing") or {}).get("profile_ids") or [])
+    for x in (state or {}).get("sessions") or []:  # WT-12: watching in the app counts too
+        watchers.update(x.get("profile_ids") or [])
     timers = {p["profile_id"]: p for p in ((state or {}).get("timer") or {}).get("profiles", [])}
     result = []
     for r in rows:
@@ -126,6 +136,7 @@ def _page_context(ctx: AdminContext, state: dict | None, unreachable: bool) -> d
         "connection": (state or {}).get("connection"),
         "device": (state or {}).get("device"),
         "now_playing": _now_playing_context(ctx.conn, (state or {}).get("now_playing")),
+        "sessions": _sessions_context(ctx.conn, state),
         "timer": timer,
         "time_up": bool((state or {}).get("time_up")),
         "receiver": _receiver_context(ctx, state),

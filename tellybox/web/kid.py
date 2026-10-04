@@ -12,12 +12,15 @@ import sqlite3
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from tellybox import library, store
 from tellybox.config import Config
+from tellybox.web.browser_label import browser_label
 from tellybox.web.cast_client import CastNotFound, CastUnavailable, TimeUp
 from tellybox.web.hub import KidHub, sse_stream, unreachable
 
@@ -44,7 +47,7 @@ def profile_order(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     Note: does not include allowance info; use store.effective_allowance_s() for resolved allowances (A-23).
     """
     return conn.execute(
-        "SELECT id, name, picture_path, avatar, ui_mode FROM profile ORDER BY sort_order, id"
+        "SELECT id, name, picture_path, avatar, ui_mode, watch_in_app FROM profile ORDER BY sort_order, id"
     ).fetchall()
 
 
@@ -294,6 +297,14 @@ def _fraction_left(conn: sqlite3.Connection, timer: dict, remaining_s: float) ->
     return _clamp_fraction(remaining_s, first_allow) if first_allow is not None else 0.0
 
 
+def _session(session: dict) -> dict:
+    """One playback of the cast state's `sessions`, without titles: the kid app filters by its own group."""
+    return {"key": session.get("key"), "target": session.get("target"), "label": session.get("label"),
+            "device_id": session.get("device_id"), "episode_id": session.get("episode_id"),
+            "show_id": session.get("show_id"), "profile_ids": sorted(session.get("profile_ids") or []),
+            "state": session.get("state") if session.get("state") in PLAYER_STATES else "loading"}
+
+
 def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
     """Reduce the cast service's state to what the kid screen shows. The only device detail is the TV's
     name (KA-11); the reader UI shows it, the icon UI ignores it."""
@@ -325,15 +336,32 @@ def kid_state(conn: sqlite3.Connection, cast: dict) -> dict:
         "profiles": {str(r["id"]): _profile_state(entries.get(r["id"]), allowances[r["id"]])
                      for r in profiles_row},
         "day": days[0] if days else None,
+        "sessions": [_session(x) for x in cast.get("sessions") or []],  # PB-7, WT-12: the TV and browsers
     }
 
 
 # --------------------------------------------------------------------------- routes
 
 
+DEVICE_ID_PATTERN = r"^[A-Za-z0-9_-]{8,64}$"  # as in the cast service (PB-8)
+
+
 class PlayRequest(BaseModel):
     episode_id: int
     profile_ids: list[int] | None = None  # omitted = the first profile
+    target: Literal["tv", "device"] = "tv"  # PB-7: "device" plays in this browser
+    device_id: str | None = Field(default=None, pattern=DEVICE_ID_PATTERN)  # required for "device"
+
+
+class HeartbeatRequest(BaseModel):  # WT-10
+    device_id: str = Field(pattern=DEVICE_ID_PATTERN)
+    state: Literal["playing", "paused", "buffering", "ended", "error"]
+    position_s: float = Field(ge=0, allow_inf_nan=False)
+    duration_s: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+
+
+class DeviceStopRequest(BaseModel):
+    device_id: str = Field(pattern=DEVICE_ID_PATTERN)
 
 
 def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
@@ -365,7 +393,8 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
         blank = {"fraction_left": None, "last_five": False, "unlimited": False, "time_up": False}
         return [{"profile_id": r["id"], "name": r["name"],
                  "picture": f"/img/profile/{r['id']}.jpg" if r["picture_path"] else None,
-                 "avatar": r["avatar"], "ui_mode": r["ui_mode"], **(reduced.get(str(r["id"])) or blank)}
+                 "avatar": r["avatar"], "ui_mode": r["ui_mode"], "watch_in_app": bool(r["watch_in_app"]),
+                 **(reduced.get(str(r["id"])) or blank)}
                 for r in profile_order(conn)]
 
     @router.get("/api/kid/home")
@@ -394,14 +423,55 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
                                  headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @router.post("/api/kid/play")
-    async def play(req: PlayRequest) -> JSONResponse:  # KA-5, PR-2
+    async def play(req: PlayRequest, request: Request) -> JSONResponse:  # KA-5, PR-2
         group = parse_group(conn, req.profile_ids)
+        if req.target == "device":
+            return await play_on_device(req, group, request)
         if not episode_is_visible(conn, req.episode_id):
             raise not_found()
         try:
             return await command("play", lambda: cast.play(req.episode_id, group))
         except CastNotFound:
             raise not_found() from None
+
+    async def play_on_device(req: PlayRequest, group: list[int], request: Request) -> JSONResponse:
+        """PB-7, KA-13: play in the browser. Every profile of the group must be allowed (AD-7)."""
+        if req.device_id is None:
+            raise HTTPException(422, "device_id_required")
+        allowed = conn.execute(f"SELECT COUNT(*) FROM profile WHERE watch_in_app = 1 AND id IN ({_marks(group)})",
+                               group).fetchone()[0]
+        if allowed != len(group):
+            return JSONResponse({"error": "not_allowed"}, status_code=403)
+        if not episode_is_visible(conn, req.episode_id):
+            raise not_found()
+        label = browser_label(request.headers.get("user-agent"))  # never from the client
+        try:
+            started = await cast.device_play(req.device_id, label, req.episode_id, group)
+            return JSONResponse({"url": started["url"], "start_s": started["start_s"],
+                                 "session": started["session"], "state": kid_state(conn, await cast.state())})
+        except TimeUp as exc:  # KA-9
+            return reduce(exc.state, 409)
+        except CastNotFound:
+            raise not_found() from None
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        except CastUnavailable as exc:
+            log.warning("kid device play: cast service unreachable: %s", exc)
+            return JSONResponse(unreachable(hub.state), status_code=503)
+
+    @router.post("/api/kid/device/heartbeat")
+    async def device_heartbeat(req: HeartbeatRequest) -> JSONResponse:  # WT-10, WT-11
+        try:
+            return JSONResponse(await cast.device_heartbeat(req.device_id, req.state, req.position_s, req.duration_s))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        except CastUnavailable as exc:
+            log.warning("kid device heartbeat: cast service unreachable: %s", exc)
+            return JSONResponse({"error": "unavailable"}, status_code=503)
+
+    @router.post("/api/kid/device/stop")
+    async def device_stop(req: DeviceStopRequest) -> JSONResponse:  # PB-7
+        return await command("device stop", lambda: cast.device_stop(req.device_id))
 
     @router.post("/api/kid/pause")
     async def pause() -> JSONResponse:  # KA-6

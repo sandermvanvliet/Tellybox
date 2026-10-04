@@ -5,7 +5,7 @@ from __future__ import annotations
 from tellybox import api_tokens, jobs, library
 from tellybox.jobs import JobStatus
 from tellybox.web.api.state import LAST_FIVE_S
-from tests.web.conftest import NOW, cast_state, playing
+from tests.web.conftest import NOW, cast_state, device_session, playing
 
 STATE = "/api/admin/state"
 
@@ -19,6 +19,23 @@ def profile_state(pid, *, used_s=600, extra_s=0, remaining_s=1200, unlimited=Fal
 
 def two_profiles(api, **first):
     api.cast.current = cast_state(profiles=[profile_state(1, **first), profile_state(2, remaining_s=250, used_s=1550)])
+
+
+def test_state_lists_sessions_with_their_target(client, api, reader):  # WT-12, AD-4
+    assert client.get(STATE, headers=reader).json()["sessions"] == []
+    tv = {"key": "tv", "target": "tv", "label": "Living Room TV", "device_id": None, "episode_id": api.ids.b1,
+          "show_id": api.ids.bravo, "title": "Bravo one", "state": "playing", "position_s": 3, "duration_s": 600,
+          "profile_ids": [1]}
+    phone = device_session(episode_id=api.ids.a1, show_id=api.ids.alpha, profile_ids=[2], title="Alpha one")
+    api.cast.current = cast_state(sessions=[phone, tv])
+    body = client.get(STATE, headers=reader).json()
+    assert [s["key"] for s in body["sessions"]] == ["tv", "device:device-aaaa1111"]  # the TV first
+    assert body["sessions"][1] == {
+        "key": "device:device-aaaa1111", "target": "device", "label": "iPhone Safari", "device_id": "device-aaaa1111",
+        "episode_id": api.ids.a1, "show_id": api.ids.alpha, "title": "Alpha one", "state": "playing",
+        "position_s": 5, "duration_s": 600, "profile_ids": [2]}
+    assert body["now_playing"] is None  # still the TV only
+    assert [p["watching"] for p in body["profiles"]] == [True, True]  # profile 1 on the TV, 2 in the app
 
 
 def test_state_shape_and_absolute_units(client, api, reader):

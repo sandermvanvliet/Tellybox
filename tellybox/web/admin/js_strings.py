@@ -25,6 +25,8 @@ STRINGS: list[str] = [
     N_("paused"),
     N_("unknown"),
     N_("Nothing is playing."),
+    N_("On the TV"),
+    N_("In the app"),
     N_("Stop"),
     N_("Watching: %(names)s"),
     N_("%(time)s used"),

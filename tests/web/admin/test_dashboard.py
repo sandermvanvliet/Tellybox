@@ -8,7 +8,7 @@ from tellybox import jobs
 from tellybox.jobs import JobStatus, JobType
 from tellybox.web.cast_client import CastUnavailable
 
-from tests.web.conftest import PROFILE
+from tests.web.conftest import PROFILE, device_session
 
 
 def test_dashboard_renders_with_cast_up(admin, admin_env):
@@ -198,6 +198,26 @@ def test_dashboard_profile_data_is_safe_to_embed(admin, admin_env):
     text = admin.get("/admin").text
     data = text[text.index('id="profiles-data"'):].split("</script>")[0]
     assert "<b>" not in data and "\\u003c" in data
+
+
+def test_dashboard_lists_every_session_with_its_target(admin, admin_env, mkstate, mkplaying):  # WT-12, AD-4
+    tv = {"key": "tv", "target": "tv", "label": "Living Room TV", "device_id": None, "episode_id": admin_env.ids.b1,
+          "show_id": admin_env.ids.bravo, "title": "Hospital", "state": "playing", "position_s": 1, "duration_s": 600,
+          "profile_ids": [PROFILE]}
+    phone = device_session(episode_id=admin_env.ids.a1, show_id=admin_env.ids.alpha, label="Android Chrome",
+                           profile_ids=[PROFILE], title="Cartoon", state="paused")
+    admin_env.cast.current = mkstate(now_playing=mkplaying(admin_env.ids.b1, admin_env.ids.bravo),
+                                     sessions=[phone, tv])  # the TV is listed first whatever the order
+    html = admin.get("/admin").text
+    sessions = html.split('id="sessions"')[1].split("</ul>")[0]
+    assert sessions.index("On the TV") < sessions.index("In the app")
+    assert "Living Room TV" in sessions and "Android Chrome" in sessions and "Cartoon" in sessions
+    assert "hidden" not in html.split('id="sessions"')[1].split(">")[0]
+
+
+def test_dashboard_hides_the_sessions_list_when_there_are_none(admin, admin_env):
+    html = admin.get("/admin").text
+    assert 'id="sessions" class="sessions" hidden' in html
 
 
 def test_dashboard_js_escapes_names():

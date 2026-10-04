@@ -34,3 +34,8 @@
 {{ {"loading": _("loading"), "playing": _("playing"), "buffering": _("buffering"),
     "paused": _("paused")}.get(value, value) }}
 {%- endmacro %}
+
+{#- A session's target (PB-7, WT-12): the cast state's sessions[].target is tv or device. -#}
+{% macro session_target(value) -%}
+{{ {"tv": _("On the TV"), "device": _("In the app")}.get(value, value) }}
+{%- endmacro %}

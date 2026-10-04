@@ -89,6 +89,14 @@
         <p class="flash error">{{ errors['profile_' ~ p.id ~ '_ui_mode'] }}</p>
       {% endif %}
 
+      <label class="check">
+        <input type="hidden" name="profile_{{ p.id }}_watch_in_app" value="0">
+        <input type="checkbox" name="profile_{{ p.id }}_watch_in_app" value="1"
+               {% if values['profile_' ~ p.id ~ '_watch_in_app'] == '1' %}checked{% endif %}>
+        {{ _("Allow watching in the app") }}
+      </label>
+      <p class="muted">{{ _("The video plays on the phone or tablet instead of the TV. The same time limits apply.") }}</p>
+
       <label>{{ _("TV") }}
         <select name="profile_{{ p.id }}_cast_device">
           {% set chosen = values['profile_' ~ p.id ~ '_cast_device'] %}

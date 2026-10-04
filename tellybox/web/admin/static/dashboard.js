@@ -158,10 +158,25 @@ function updateNowPlaying(state) {
     <form method="post" action="/admin/stop" class="inline"><button class="btn danger">${esc(t("Stop"))}</button></form>`;
 }
 
+// The sessions list (PB-7, WT-12): one line per playback, the TV first; the same line as dashboard.html.
+function updateSessions(state) {
+  const list = document.getElementById("sessions");
+  if (!list) return;
+  const sessions = ((state && state.sessions) || []).slice().sort((a, b) => (a.target !== "tv") - (b.target !== "tv"));
+  list.hidden = sessions.length === 0;
+  list.innerHTML = sessions.map((x) => {
+    const ids = new Set(x.profile_ids || []);
+    const names = profilesMeta().filter((m) => ids.has(m.id)).map((m) => m.name);
+    return `<li><span class="badge">${esc(x.target === "tv" ? t("On the TV") : t("In the app"))}</span> ${esc(x.label)}` +
+      `${names.length ? ` · ${esc(names.join(", "))}` : ""} · ${esc(x.title)} (${esc(PLAYER_STATE_LABELS[x.state] ?? x.state)})</li>`;
+  }).join("");
+}
+
 function updateProfiles(state) {
   const timers = {};
   for (const p of (state && state.timer && state.timer.profiles) || []) timers[p.profile_id] = p;
   const watching = new Set((state && state.now_playing && state.now_playing.profile_ids) || []);
+  for (const x of (state && state.sessions) || []) for (const id of x.profile_ids || []) watching.add(id);  // WT-12
   for (const m of profilesMeta()) {
     const row = document.getElementById(`profile-${m.id}`);
     if (!row) continue;
@@ -200,6 +215,7 @@ function connectEvents() {
     updateConnection(state);
     updateReceiver(state);
     updateNowPlaying(state);
+    updateSessions(state);
     updateProfiles(state);
   };
 }

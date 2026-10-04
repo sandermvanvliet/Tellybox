@@ -70,6 +70,31 @@ class CastClient:
             raise CastNotFound(episode_id)
         return self._json(r)
 
+    async def device_play(self, device_id: str, label: str, episode_id: int, profile_ids: list[int]) -> dict:
+        """PB-7: start an episode in a browser (no Chromecast needed); `{session, url, start_s}`.
+        A 409 means someone in the group is out of time (PR-4); a 422 (unknown profile, bad id) raises ValueError."""
+        r = await self._request("POST", "/device/play", json={
+            "device_id": device_id, "label": label, "episode_id": episode_id, "profile_ids": list(profile_ids)})
+        if r.status_code == 409:
+            raise TimeUp(await self.state())
+        if r.status_code == 404:
+            raise CastNotFound(episode_id)
+        if r.status_code == 422:
+            raise ValueError(self._detail(r))
+        return self._json(r)
+
+    async def device_heartbeat(self, device_id: str, state: str, position_s: float, duration_s: float | None) -> dict:
+        """WT-10: a browser's heartbeat; the answer says whether to continue, stop or go to the next episode."""
+        r = await self._request("POST", "/device/heartbeat", json={
+            "device_id": device_id, "state": state, "position_s": position_s, "duration_s": duration_s})
+        if r.status_code == 422:
+            raise ValueError(self._detail(r))
+        return self._json(r)
+
+    async def device_stop(self, device_id: str) -> dict:
+        """PB-7: the browser leaves the player; ends its session and returns the cast state."""
+        return self._json(await self._request("POST", "/device/stop", json={"device_id": device_id}))
+
     async def pause(self) -> dict:
         return self._json(await self._request("POST", "/pause"))
 

@@ -43,6 +43,7 @@ def cast_state(
     now_playing: dict | None = None,
     profiles: list[dict] | None = None,
     receiver: dict | None = None,
+    sessions: list[dict] | None = None,
 ) -> dict:
     """A cast service state snapshot, shaped like CastController.state()."""
     if profiles is None:
@@ -58,6 +59,7 @@ def cast_state(
                   "grace_deadline": None, "session_started_at": None, "session_elapsed_s": None,
                   "next_reset": "2026-09-29T02:00:00+00:00", "profiles": profiles},
         "time_up": time_up,
+        "sessions": sessions or [],  # docs/cast-api.md (step 17)
         # docs/cast-api.md (v7, CR-6)
         "receiver": receiver if receiver is not None else
         {"kind": "default", "configured": False, "fallback_until": None, "last_error": None},
@@ -70,6 +72,15 @@ def playing(episode_id: int, show_id: int, state: str = "playing", title: str = 
             "position_s": 12, "duration_s": 600, "profile_ids": [PROFILE] if profile_ids is None else profile_ids}
 
 
+def device_session(device_id: str = "device-aaaa1111", *, episode_id: int = 1, show_id: int = 1,
+                   label: str = "iPhone Safari", profile_ids: list[int] | None = None, state: str = "playing",
+                   title: str = "Ep") -> dict:
+    """One entry of the cast state's `sessions` for a browser (docs/cast-api.md, Device sessions)."""
+    return {"key": f"device:{device_id}", "target": "device", "label": label, "device_id": device_id,
+            "episode_id": episode_id, "show_id": show_id, "title": title, "state": state, "position_s": 5,
+            "duration_s": 600, "profile_ids": [PROFILE] if profile_ids is None else profile_ids}
+
+
 class FakeCast:
     """Stands in for CastClient. `mode` scripts the next command's outcome."""
 
@@ -80,6 +91,7 @@ class FakeCast:
         self.streams: list = []  # for events(): each item is a list of states or an exception
         self.events_calls = 0
         self.devices_result: dict | None = None  # scripted result for devices()
+        self.heartbeat_result: dict = {"action": "continue", "reason": None, "time_up": False, "grace_deadline": None}
 
     def _check(self) -> None:
         if self.mode == "down":
@@ -98,6 +110,31 @@ class FakeCast:
         if self.mode == "not_found":
             raise CastNotFound(episode_id)
         return cast_state(now_playing=playing(episode_id, 0, "loading", profile_ids=sorted(profile_ids)))
+
+    async def device_play(self, device_id: str, label: str, episode_id: int, profile_ids: list[int]) -> dict:
+        self.calls.append(("device_play", device_id, label, episode_id, list(profile_ids)))
+        self._check()
+        if self.mode == "time_up":
+            raise TimeUp(cast_state(remaining_s=0, used_s=3600, time_up=True))
+        if self.mode == "not_found":
+            raise CastNotFound(episode_id)
+        if self.mode == "invalid":
+            raise ValueError("unknown profile: 99")
+        session = device_session(device_id, episode_id=episode_id, label=label, profile_ids=sorted(profile_ids),
+                                 state="loading")
+        self.current = cast_state(sessions=[session])
+        return {"session": session, "url": f"/media/{episode_id}/1/sig.mp4?s=7", "start_s": 12.5}
+
+    async def device_heartbeat(self, device_id: str, state: str, position_s: float, duration_s: float | None) -> dict:
+        self.calls.append(("device_heartbeat", device_id, state, position_s, duration_s))
+        self._check()
+        return self.heartbeat_result
+
+    async def device_stop(self, device_id: str) -> dict:
+        self.calls.append(("device_stop", device_id))
+        self._check()
+        self.current = cast_state()
+        return self.current
 
     async def pause(self) -> dict:
         self.calls.append(("pause",))

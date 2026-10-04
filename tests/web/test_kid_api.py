@@ -179,6 +179,7 @@ def test_reduce_connected(lib, mkstate, mkplaying):
         "watching": [1],
         "profiles": {"1": {"fraction_left": 0.5, "last_five": False, "unlimited": False, "time_up": False}},
         "day": "2026-09-28",
+        "sessions": [],
     }
 
 
@@ -211,7 +212,7 @@ def test_reduce_player_states(lib, mkstate, mkplaying, cast, kid_state):
 def test_reduce_now_playing_leaks_nothing_else(lib, mkstate, mkplaying):
     conn, ids = lib
     s = kid.kid_state(conn, mkstate(now_playing=mkplaying(ids.a1, ids.alpha)))
-    assert set(s) == {"tv", "device_name", "now_playing", "sky", "time_up", "watching", "profiles", "day"}
+    assert set(s) == {"tv", "device_name", "now_playing", "sky", "time_up", "watching", "profiles", "day", "sessions"}
     assert set(s["now_playing"]) == {"episode_id", "show_id", "thumb", "title", "state"}
 
 

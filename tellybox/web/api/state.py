@@ -74,6 +74,16 @@ def _now_playing(conn: sqlite3.Connection, np: dict | None) -> dict | None:
             "duration_s": np.get("duration_s"), "profile_ids": list(np.get("profile_ids") or [])}
 
 
+def _sessions(cast_state: dict | None) -> list[dict]:
+    """WT-12, AD-4: every active playback with its target (the TV first, then browsers)."""
+    result = [{"key": x.get("key"), "target": x.get("target"), "label": x.get("label"),
+               "device_id": x.get("device_id"), "episode_id": x.get("episode_id"), "show_id": x.get("show_id"),
+               "title": x.get("title"), "state": x.get("state"), "position_s": x.get("position_s"),
+               "duration_s": x.get("duration_s"), "profile_ids": list(x.get("profile_ids") or [])}
+              for x in (cast_state or {}).get("sessions") or []]
+    return sorted(result, key=lambda x: x["target"] != "tv")  # stable: the TV session first
+
+
 def _group(cast_state: dict | None) -> dict:
     if not cast_state or not cast_state.get("timer"):
         return dict(_GROUP_BLANK)
@@ -94,7 +104,9 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
     """Profiles with resolved limits (A-23); *_source says whether each is inherit, custom or unlimited."""
     timers = {p["profile_id"]: p for p in ((cast_state or {}).get("timer") or {}).get("profiles", [])}
     policies = {p.profile_id: p for p in profile_policies(conn)}
-    playing = ((cast_state or {}).get("now_playing") or {}).get("profile_ids") or []
+    playing = set(((cast_state or {}).get("now_playing") or {}).get("profile_ids") or [])
+    for x in (cast_state or {}).get("sessions") or []:  # WT-12: watching in the app counts too
+        playing.update(x.get("profile_ids") or [])
     result = []
     for r in conn.execute("SELECT id, name, avatar, allowance_mode, max_session_mode FROM profile ORDER BY sort_order, id"):
         pol, t = policies[r["id"]], timers.get(r["id"])
@@ -139,6 +151,7 @@ def build_admin_state(conn: sqlite3.Connection, config: Config, cast_state: dict
         "tv": {"connection": connection, "reachable": connection == "CONNECTED",
                "device": device.get("name") if device else None},
         "now_playing": _now_playing(conn, cs.get("now_playing")),
+        "sessions": _sessions(cs),
         "group": _group(cast_state),
         "profiles": _profiles(conn, cast_state),
         "jobs": counts["jobs"],
@@ -153,6 +166,7 @@ def unreachable(state: dict) -> dict:
         **state,
         "tv": {**state["tv"], "connection": "unreachable", "reachable": False},
         "now_playing": None,
+        "sessions": [],
         "profiles": [{**p, "watching": False} for p in state["profiles"]],
     }
 

@@ -223,6 +223,7 @@ def merge_shows(conn: sqlite3.Connection, into_id: int, from_id: int, *, now: da
         conn.execute(
             "UPDATE source_video SET show_id = ?, updated_at = ? WHERE show_id = ?", (into_id, to_db(now), from_id)
         )
+        conn.execute("UPDATE subscription SET show_id = ? WHERE show_id = ?", (into_id, from_id))  # CS-9
         conn.execute("DELETE FROM show WHERE id = ?", (from_id,))
 
 

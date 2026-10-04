@@ -143,10 +143,22 @@ class AdminGuard:
 # --------------------------------------------------------------------------- responses
 
 
+def _inbox_pending(request: Request) -> int:
+    """The Inbox badge in the nav (CS-8); 0 where the app has no admin connection (or no table yet)."""
+    conn = getattr(request.app.state, "admin_conn", None)
+    if conn is None:
+        return 0
+    try:
+        return conn.execute("SELECT COUNT(*) FROM inbox_item WHERE status = 'pending'").fetchone()[0]
+    except sqlite3.Error:
+        return 0
+
+
 def render(request: Request, template: str, status_code: int = 200, **context) -> HTMLResponse:
     """Render an admin page. Templates extend base.html; `nav` names the active menu item."""
     flash = unquote(request.cookies.get(FLASH_COOKIE) or "") or None
-    response = templates.TemplateResponse(request, template, {"flash": flash, **context}, status_code=status_code)
+    context = {"flash": flash, "inbox_pending": _inbox_pending(request), **context}
+    response = templates.TemplateResponse(request, template, context, status_code=status_code)
     if flash:
         response.delete_cookie(FLASH_COOKIE, path="/admin")
     response.headers["Cache-Control"] = "no-store"

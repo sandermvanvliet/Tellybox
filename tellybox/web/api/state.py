@@ -6,14 +6,19 @@ cast service's state. Both are read on every reduction, so a renamed profile sho
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import shutil
 import sqlite3
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
-from tellybox import api_tokens, jobs, library
+from tellybox import api_tokens, jobs, library, subscriptions
 from tellybox.config import Config
 from tellybox.store import profile_policies
+
+log = logging.getLogger(__name__)
 
 API_VERSION = 1
 LAST_FIVE_S = 300  # KA-8: the kid app's "last five minutes"
@@ -127,8 +132,11 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
     return result
 
 
-def build_admin_state(conn: sqlite3.Connection, config: Config, cast_state: dict | None, counts: dict) -> dict:
-    """The AdminState for a cast state; `None` (never seen one) gives the cold-start shape."""
+def build_admin_state(conn: sqlite3.Connection, config: Config, cast_state: dict | None, counts: dict,
+                      now: datetime | None = None) -> dict:
+    """The AdminState for a cast state; `None` (never seen one) gives the cold-start shape.
+
+    `inbox` (HA-9) comes straight from the database, so it is right in every shape, cast service or not."""
     cs = cast_state or {}
     timer = cs.get("timer") or {}
     timer_profiles = timer.get("profiles") or []
@@ -148,6 +156,7 @@ def build_admin_state(conn: sqlite3.Connection, config: Config, cast_state: dict
         "profiles": _profiles(conn, cast_state),
         "jobs": counts["jobs"],
         "disk": counts["disk"],
+        "inbox": subscriptions.inbox_counts(conn, now or datetime.now(UTC)),
     }
 
 
@@ -160,3 +169,18 @@ def unreachable(state: dict) -> dict:
         "sessions": [],
         "profiles": [{**p, "watching": False} for p in state["profiles"]],
     }
+
+
+async def watch_inbox(conn: sqlite3.Connection, now, refresh, interval_s: float = 2.0) -> None:
+    """HA-9: tell the admin hub when the inbox changes, so the sensor and SSE listeners see it within a couple of
+    seconds. `now` is a callable giving the current time; `refresh` re-reduces and publishes the hub's state."""
+    last = subscriptions.inbox_counts(conn, now())
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            current = subscriptions.inbox_counts(conn, now())
+            if current != last:
+                last = current
+                refresh()
+        except Exception:
+            log.exception("inbox watcher failed")

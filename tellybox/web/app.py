@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import asyncio
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
@@ -34,6 +35,7 @@ log = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
 RECEIVER_DIR = Path(__file__).parent / "receiver"  # the Tellybox Cast receiver page (CR-1)
+INBOX_WATCH_S = 2.0  # an inbox change reaches the admin API's stream this quickly (HA-9)
 ADMIN_REFRESH_S = 10.0  # the admin hub re-reduces this often (jobs, disk, profile settings)
 
 
@@ -76,9 +78,9 @@ def create_app(
     counts = api.Counts(conn, config.media_dir)
     admin_hub = KidHub(
         cast,
-        lambda cast_state: api.build_admin_state(conn, config, cast_state, counts.get()),
+        lambda cast_state: api.build_admin_state(conn, config, cast_state, counts.get(), clock.now()),
         unreachable=api.unreachable,
-        initial=lambda: api.build_admin_state(conn, config, None, counts.get()),
+        initial=lambda: api.build_admin_state(conn, config, None, counts.get(), clock.now()),
         refresh_s=ADMIN_REFRESH_S,
     )
 
@@ -86,9 +88,13 @@ def create_app(
     async def lifespan(app: FastAPI):
         hub.start()  # KA-7: relay the cast service's live state to kid pages
         admin_hub.start()  # HA-3: and to the admin API's event stream
+        inbox_watcher = asyncio.create_task(
+            api.watch_inbox(conn, clock.now, admin_hub.refresh, INBOX_WATCH_S), name="inbox-watch")  # HA-9
         try:
             yield
         finally:
+            inbox_watcher.cancel()
+            await asyncio.gather(inbox_watcher, return_exceptions=True)
             await admin_hub.stop()
             await hub.stop()
             if owns_cast:

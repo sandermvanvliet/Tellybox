@@ -22,6 +22,14 @@
   {% endif %}
 </section>
 
+{% if channel_url %}
+<section class="card narrow">
+  <h2>{{ _("This is a channel") }}</h2>
+  <p>{{ _("A channel is followed with a subscription: its new videos wait in the inbox until you approve them.") }}</p>
+  <p><a class="btn primary" href="/admin/subscriptions?url={{ channel_url | urlencode }}">{{ _("Subscribe to this channel") }}</a></p>
+</section>
+{% endif %}
+
 {% if choose %}
 <section class="card narrow">
   <h2>{{ _("Video or playlist?") }}</h2>

@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, Response
 from tellybox import auth
 from tellybox.i18n import _
 from tellybox.oidc import BROWSER_COOKIE, LOGIN_TTL, OidcError, is_admin
-from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages
+from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages, subscription_pages
 from tellybox.web.admin.common import (
     STATIC_DIR,
     AdminContext,
@@ -30,7 +30,8 @@ from tellybox.web.static_files import NoCacheStaticFiles
 
 log = logging.getLogger(__name__)
 
-PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history, split_pages)
+PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history, split_pages,
+                subscription_pages)
 
 
 def _safe_next(target: str | None) -> str:
@@ -47,6 +48,7 @@ def set_session_cookie(response: Response, request: Request, token: str) -> None
 
 def mount_admin(app: FastAPI, ctx: AdminContext) -> None:
     conn, clock, oidc = ctx.conn, ctx.clock, ctx.oidc
+    app.state.admin_conn = conn  # for the Inbox badge in the nav (common.render)
     auth.install_password(conn, ctx.config.admin_password)
     if auth.is_locked(conn):  # DP-4: no password yet; a fresh code on every start
         code = auth.new_setup_code(conn, clock.now())

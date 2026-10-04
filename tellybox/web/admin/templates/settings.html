@@ -166,6 +166,17 @@
     <p class="muted">{{ _("Segments are cut from new downloads and from videos still inside their 7-day re-check. Each show can override this.") }}</p>
   </section>
 
+  <section class="card">
+    <h2>{{ _("Subscriptions") }}</h2>
+    <div class="stack">
+      <label>{{ _("Check channels every (hours, at least 1)") }}
+        <input type="number" name="subscription_check_hours" min="1" max="168" value="{{ values.subscription_check_hours }}">
+      </label>
+      {% if errors.get('subscription_check_hours') %}<p class="flash error">{{ errors.subscription_check_hours }}</p>{% endif %}
+      <p class="muted">{{ _("How often the server looks for new uploads on the channels you subscribed to. \"Check now\" on the Subscriptions page does not wait for this.") }}</p>
+    </div>
+  </section>
+
   <div class="row">
     <button class="btn primary" type="submit">{{ _("Save") }}</button>
   </div>

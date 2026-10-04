@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Inbox") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ _("Inbox") }}</h1>
+  <div class="row">
+    <a class="btn small{% if tab == 'pending' %} primary{% endif %}" href="/admin/inbox{% if channel %}?channel={{ channel }}{% endif %}">{{ _("Waiting") }} ({{ pending_total }})</a>
+    <a class="btn small{% if tab == 'rejected' %} primary{% endif %}" href="/admin/inbox?tab=rejected{% if channel %}&amp;channel={{ channel }}{% endif %}">{{ _("Rejected") }} ({{ rejected_total }})</a>
+    {% if subs %}
+    <form method="get" action="/admin/inbox" class="row inline" id="channel-filter">
+      {% if tab == 'rejected' %}<input type="hidden" name="tab" value="rejected">{% endif %}
+      <label class="row">{{ _("Channel") }}
+        <select name="channel" data-autosubmit>
+          <option value="">{{ _("All channels") }}</option>
+          {% for s in subs %}<option value="{{ s.id }}"{% if s.id == channel %} selected{% endif %}>{{ s.channel_name }}</option>{% endfor %}
+        </select>
+      </label>
+      <noscript><button class="btn small">{{ _("Filter") }}</button></noscript>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% if items %}
+<form method="post" action="/admin/inbox/bulk" id="inbox-form" class="stack">
+  <input type="hidden" name="channel" value="{{ channel if channel is not none else '' }}">
+  {% if tab == 'pending' %}
+  <div class="row bulk-bar">
+    <div class="row select-tools" hidden>
+      <button class="btn small" type="button" data-select="all">{{ _("Select all") }}</button>
+      <button class="btn small" type="button" data-select="none">{{ _("Select none") }}</button>
+    </div>
+    <button class="btn small primary" name="action" value="approve">{{ _("Approve selected") }}</button>
+    <button class="btn small" name="action" value="reject">{{ _("Reject selected") }}</button>
+    <button class="btn small danger" name="action" value="reject_all"
+            data-confirm="{{ _("Reject every video waiting here? You can undo this on the Rejected tab.") }}">{{ _("Reject all remaining") }}</button>
+  </div>
+  {% endif %}
+  <ul class="inbox-list">
+    {% for i in items %}
+    <li class="card inbox-card">
+      <div class="row" style="align-items: flex-start; flex-wrap: nowrap;">
+        {% if tab == 'pending' %}<input type="checkbox" name="item" value="{{ i.id }}" aria-label="{{ _("Select") }}">{% endif %}
+        {% if i.thumbnail_url %}
+        <img class="thumb small" src="{{ i.thumbnail_url }}" referrerpolicy="no-referrer" loading="lazy" alt="">
+        {% else %}
+        <span class="thumb small" aria-hidden="true"></span>
+        {% endif %}
+        <div class="pick-text">
+          <span class="pick-title">{{ i.title }}</span>
+          <span class="muted">{{ i.channel_name or _("Unknown channel") }} · {{ i.duration_s | duration }}{% if i.published_at %} · {{ format_date(i.published_at, "medium") }}{% endif %}</span>
+          {% if i.warning %}
+          <span class="badge warn">{% if i.warning == not_downloadable %}{{ _("may not be downloadable") }}{% else %}{{ i.warning }}{% endif %}</span>
+          {% endif %}
+          <a href="{{ i.url }}" rel="noreferrer noopener" target="_blank">{{ _("Open on YouTube") }}</a>
+        </div>
+      </div>
+      <div class="row">
+        {% if tab == 'pending' %}
+        <button class="btn small primary" formaction="/admin/inbox/{{ i.id }}/approve">{{ _("Approve") }}</button>
+        <button class="btn small" formaction="/admin/inbox/{{ i.id }}/reject">{{ _("Reject") }}</button>
+        {% else %}
+        <button class="btn small" formaction="/admin/inbox/{{ i.id }}/undo">{{ _("Undo") }}</button>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</form>
+{% else %}
+<section class="card"><p class="muted">{% if tab == 'pending' %}{{ _("Nothing is waiting for approval.") }}{% else %}{{ _("No rejected videos.") }}{% endif %}</p></section>
+{% endif %}
+{% endblock %}

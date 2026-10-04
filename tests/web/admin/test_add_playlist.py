@@ -88,10 +88,10 @@ def _add_existing(admin_env, youtube_id: str) -> None:
 # --------------------------------------------------------------------------- URL kinds
 
 
-def test_channel_url_is_refused(admin, ytdlp):
+def test_channel_url_links_to_subscriptions(admin, ytdlp):
     r = _preview(admin, CHANNEL_URL)
-    assert r.status_code == 422
-    assert "Channel URLs are for subscriptions" in r.text
+    assert r.status_code == 200
+    assert 'href="/admin/subscriptions?url=https%3A//www.youtube.com/%40KidsChannel"' in r.text
     assert ytdlp.calls == []
 
 

@@ -121,11 +121,15 @@ class KidHub:
             return self.state
         return self._unreachable(state) if self._down else state
 
+    def refresh(self) -> None:
+        """Re-reduce now and publish if anything changed (the inbox watcher, HA-9)."""
+        self.publish(self._current())
+
     async def _refresh_loop(self) -> None:
         while True:
             await asyncio.sleep(self.refresh_s)
             try:
-                self.publish(self._current())
+                self.refresh()
             except Exception:
                 log.exception("hub refresh failed")
 

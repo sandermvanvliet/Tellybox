@@ -13,7 +13,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from tellybox import api_tokens
+from tellybox import api_tokens, subscriptions
 from tellybox.clock import Clock
 from tellybox.config import Config
 from tellybox.web.api.guard import TokenGuard
@@ -26,7 +26,7 @@ from tellybox.web.overrides import apply_override
 log = logging.getLogger(__name__)
 
 SSE_KEEPALIVE_S = _DEFAULT_KEEPALIVE_S
-CAPABILITIES = ["state", "events", "overrides", "profiles"]
+CAPABILITIES = ["state", "events", "overrides", "profiles", "inbox"]
 
 
 class BadRequest(ValueError):
@@ -83,7 +83,7 @@ def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, 
     control = Depends(TokenGuard(conn, clock, api_tokens.CONTROL))
 
     def admin_state(cast_state: dict) -> dict:
-        return build_admin_state(conn, config, cast_state, counts.get())
+        return build_admin_state(conn, config, cast_state, counts.get(), clock.now())
 
     @router.get("/api/info")
     async def info() -> dict:  # HA-6: no auth, so an integration can identify the instance first
@@ -95,7 +95,8 @@ def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, 
         try:
             return admin_state(await cast.state())
         except CastUnavailable:
-            return unreachable(admin_hub.state)
+            # The inbox comes from the database (HA-9, A-36), so it is current even while the cast service is down.
+            return {**unreachable(admin_hub.state), "inbox": subscriptions.inbox_counts(conn, clock.now())}
 
     @router.get("/api/admin/events", dependencies=[read])
     async def events() -> StreamingResponse:

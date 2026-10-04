@@ -211,3 +211,26 @@ def test_override_carries_its_source(conn, profile_id):
     conn.execute("UPDATE override_log SET source = ? WHERE kind = ?", ("Home Assistant", "extra_minutes"))
     by_day = {d.day: d for d in history_days(conn, NOW, AMS, FOUR)}
     assert {o.kind: o.source for o in by_day[date(2026, 9, 28)].overrides} == {"block": None, "extra_minutes": "Home Assistant"}
+
+
+def test_history_rows_carry_the_target(conn, episode_id, profile_id):  # PB-8, AD-4
+    started = datetime(2026, 9, 28, 3, 0, tzinfo=UTC)
+    open_close(conn, episode_id, profile_id, started, started + timedelta(minutes=10))
+    dev = store.open_watch_session(
+        conn, episode_id, [profile_id], started + timedelta(minutes=20), target="device", device_label="iPhone Safari"
+    )
+    store.close_watch_session(conn, dev, EndReason.STOPPED, started + timedelta(minutes=30), 600)
+
+    tv_row, dev_row = next(d for d in history_days(conn, NOW, AMS, FOUR) if d.episodes).episodes
+    assert (tv_row.target, tv_row.device_label) == ("tv", None)
+    assert (dev_row.target, dev_row.device_label) == ("device", "iPhone Safari")
+    assert [s.target for s in store.open_watch_sessions(conn)] == []
+
+
+def test_open_watch_sessions_filter_by_target(conn, episode_id, profile_id):  # NF-7, PB-8
+    store.open_watch_session(conn, episode_id, [profile_id], NOW)
+    store.open_watch_session(conn, episode_id, [profile_id], NOW, target="device", device_label="Pixel Chrome")
+    assert [s.target for s in store.open_watch_sessions(conn)] == ["tv", "device"]
+    assert [s.target for s in store.open_watch_sessions(conn, target="tv")] == ["tv"]
+    (device,) = store.open_watch_sessions(conn, target="device")
+    assert device.device_label == "Pixel Chrome"

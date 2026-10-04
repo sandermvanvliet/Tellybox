@@ -4,7 +4,7 @@ Read first: `CLAUDE.md`, `docs/plans/step11-subscriptions.md` (decisions, spike 
 
 ## The contract (already committed; do not change its behaviour)
 
-- Migrations `016_subscriptions.sql` and `017_subscription_check_request.sql`.
+- Migrations `017_subscriptions.sql` and `018_subscription_check_request.sql`.
 - `tellybox/subscriptions.py`: `subscribe`, `list_backlog`, `pause`, `resume`, `remove`, `check`, `approve`, `reject`, `undo_reject`, `bulk_approve`, `bulk_reject`, `list_inbox`, `list_subscriptions`, `get_subscription`, `get_item`, `inbox_counts`, `get_check_hours`, `set_check_hours`, and for "Check now": `request_check(conn, subscription_id | None, *, now)` and `due_subscriptions(conn, now)`. `check` clears a pending request, also when it fails.
 - `tellybox/ytdlp.py`: `YtDlp.list_channel`, `YtDlp.video_status`, the `ChannelLister` protocol. Tests use `tests/channel_fakes.py` (`FakeChannelLister`).
 - `ingest.add(..., show_id=)` forces the show.

@@ -31,7 +31,7 @@ These become PRD requirements CS-1..CS-9 and HA-9 and assumptions A-31..A-36 in 
 - **Playlist listing:** `ytdlp.parse_playlist`, `PlaylistEntry` and `PLAYLIST_CAP` do flat listings. A channel listing is a variant with paging and a date cut-off.
 - **Worker:** `tellybox/worker` runs the job loop and the daily yt-dlp update at 03:00. The periodic check goes next to it.
 - **Hub and state:** `tellybox/web/api/state.py` builds `AdminState`, including `jobs.held_ready` (a count from `library.count_held_ready`). The admin hub caches jobs and disk for 10 s.
-- **Migrations:** the last one is `015_admin_oidc.sql`, so this step takes `016_subscriptions.sql`.
+- **Migrations:** the last one is `016_watch_session_target.sql`, so this step takes `017_subscriptions.sql` and `018_subscription_check_request.sql`.
 - **The PRD already lists** `Subscription` and `InboxItem` entities; part 0 fills them in.
 
 ## Spike result (yt-dlp 2026.08.19, 2026-10-04, three public kids' channels, nothing downloaded)
@@ -60,7 +60,7 @@ Consequences for the design:
 ## Part 0: contract (controller, before the subagents)
 
 1. **PRD:** CS-1..CS-9 (replacing the four rows), HA-9, the `Subscription` and `InboxItem` entities, A-31..A-36, the build-order text and the header line. Done in the planning commit, together with item 5.
-2. **Migration `016_subscriptions.sql`:**
+2. **Migration `017_subscriptions.sql`:**
    - `subscription(id, channel_id UNIQUE, channel_name, channel_url, show_id NULL REFERENCES show ON DELETE SET NULL, include_shorts, paused, baseline_at, last_checked_at, last_ok_at, last_error, failing_since, created_at)`;
    - `inbox_item(id, subscription_id NULL REFERENCES subscription ON DELETE SET NULL, youtube_id UNIQUE, url, title, channel_name, duration_s, thumbnail_url, published_at, status CHECK (pending|approved|rejected), warning, received_at, decided_at)`: rejected rows outlive their subscription;
    - the baseline: `subscription_seen(subscription_id, youtube_id)`, filled at subscribe time with the newest 100 IDs and extended as checks see more; `baseline_at` is for display only;

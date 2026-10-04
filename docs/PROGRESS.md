@@ -511,10 +511,13 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - **Tests:** 35 setting tests cover modes round-trip to the DB, validation of custom numbers, default settings, page rendering.
 - **Open:** real-device checks on the owner's home server (set one profile unlimited and one custom, play on the Chromecast, confirm sky and dashboard badge).
 
-### 17. Watching in the app (v9, issue #31), planned
+### 17. Watching in the app (v9, issue #31), built; device checks open
 - PRD updated 2026-10-04: KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7, A-29, A-30; KA-5, KA-6 and PB-6 amended. Plan: `docs/plans/step17-in-app-playback.md`.
-- Two PRs: (1) the cast controller handles several sessions, no visible change; (2) the browser player, toggle, admin switch and heartbeat API.
-- Open: real-device checks on the Chromecast, an iPhone and an Android phone (screen lock, Wi-Fi loss).
+- Delivered in PRs: PRD (#39), timer with concurrent playbacks (#41), cast device sessions (#42), web backend, `watch_in_app` switch and admin visibility (#44), and the kid app toggle and player (this one). The controller kept its single TV `current`; device sessions live beside it (`tellybox/cast/device_sessions.py`).
+- Checked in a headless Chrome on a local server with generated clips: toggle, playback from the scoped URL, heartbeats, counted time, autoplay at the end, the finished gate (seek to the end does not finish), stop now, block (night screen) and the exit icon.
+- Open: real-device checks on the Chromecast, an iPhone and an Android phone: iPhone fullscreen path (`webkitEnterFullscreen`, native scrubber), screen lock and Wi-Fi loss (30 s stops counting, 5 min ends), wake lock, `sendBeacon` on closing the tab, TV pick and phone pick for one profile replacing each other, two profiles watching at once (TV and phone).
+- Not looked at in a browser: the dashboard's live session list (`dashboard.js`) and the history "Where" column.
+- Known limits: a client that reports `playing` while nothing advances cannot be detected (A-29); a missing heartbeat can over-count by up to about a second beyond the 30 s limit.
 - Slice 2a (cast service, branch `step17d-device-sessions-cast`): migration 016 (`watch_session.target`, `device_label`), session-scoped media URLs (`media_urls`), device sessions in the controller (`tellybox/cast/device_sessions.py`), `/device/play|heartbeat|stop` and `sessions` in the state (`docs/cast-api.md`). No web or UI changes yet (2b, 2c).
 
 ### 11. Channel subscriptions (v4), built; device checks open (branch `step11-subscriptions`)

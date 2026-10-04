@@ -28,6 +28,10 @@ const LABELS = {
     "Search shows and episodes": "Search shows and episodes",
     "No matches": "No matches",
     "Change": "Change",
+    "Watch on the TV": "Watch on the TV",
+    "Watch on this device": "Watch on this device",
+    "Close video": "Close video",
+    "Video not working": "Video not working",
   },
   nl: {
     "Time left": "Tijd over",
@@ -52,6 +56,10 @@ const LABELS = {
     "Search shows and episodes": "Zoek series en afleveringen",
     "No matches": "Niets gevonden",
     "Change": "Wijzig",
+    "Watch on the TV": "Kijk op de tv",
+    "Watch on this device": "Kijk op dit apparaat",
+    "Close video": "Video sluiten",
+    "Video not working": "Video werkt niet",
   },
   de: {
     "Time left": "Verbleibende Zeit",
@@ -76,6 +84,10 @@ const LABELS = {
     "Search shows and episodes": "Sendungen und Folgen suchen",
     "No matches": "Keine Treffer",
     "Change": "Ändern",
+    "Watch on the TV": "Auf dem Fernseher schauen",
+    "Watch on this device": "Auf diesem Gerät schauen",
+    "Close video": "Video schließen",
+    "Video not working": "Video funktioniert nicht",
   },
 };
 

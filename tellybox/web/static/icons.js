@@ -27,6 +27,19 @@ export const icons = {
       `<path d="M14 25q3.5 3 7 0M27 25q3.5 3 7 0"/><path d="M16 42h16"/>`,
   ),
 
+  // Plain TV and phone: the two places a pick can play (KA-13).
+  tv: svg(`<path d="m16 5 8 7 8-7"/><rect x="5" y="12" width="38" height="27" rx="6"/><path d="M16 44h16"/>`),
+  phone: svg(`<rect x="12" y="4" width="24" height="40" rx="6"/><path d="M21 37h6"/>`),
+
+  // Cross: leave the in-app player.
+  close: svg(`<path d="m12 12 24 24M36 12 12 36"/>`),
+
+  // Sad cloud with a tear: the video can't play. No text (KA-2).
+  sadCloud: svg(
+    `<path d="M14 34a8 8 0 0 1-1-15.9A11 11 0 0 1 34 15a9.5 9.5 0 0 1 1 19Z"/>` +
+      `<path d="M19 27h.1M29 27h.1"/><path d="M19 31.5q5-3.5 10 0"/><path d="M33 38q-2.5 3 0 5.5t0-5.5Z" fill="currentColor"/>`,
+  ),
+
   // Big arrow for the "go" button on the who's-watching screen.
   go: svg(`<path d="M9 24h29"/><path d="m26 11 13 13-13 13"/>`),
 

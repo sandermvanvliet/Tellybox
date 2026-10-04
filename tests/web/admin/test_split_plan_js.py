@@ -14,6 +14,6 @@ ROOT = Path(__file__).resolve().parents[3]
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_split_plan_js():
     result = subprocess.run(
-        ["node", "--test", "tests/js/split_plan.test.mjs", "tests/js/split_mark.test.mjs", "tests/js/sdkload.test.mjs"], cwd=ROOT, capture_output=True, text=True, timeout=120
+        ["node", "--test", "tests/js/split_plan.test.mjs", "tests/js/split_mark.test.mjs", "tests/js/sdkload.test.mjs", "tests/js/player.test.mjs"], cwd=ROOT, capture_output=True, text=True, timeout=120
     )
     assert result.returncode == 0, result.stdout + result.stderr

@@ -9,7 +9,7 @@ from tellybox import db
 from tellybox.web.app import create_app
 
 
-@pytest.mark.parametrize("path", ["/static/app.js", "/static/app.css", "/admin/static/admin.css", "/admin/static/dashboard.js"])
+@pytest.mark.parametrize("path", ["/static/app.js", "/static/player.js", "/static/app.css", "/admin/static/admin.css", "/admin/static/dashboard.js"])
 def test_static_files_are_revalidated(config, fake_cast, path):
     client = TestClient(create_app(config, conn=db.open_db(config.db_path), cast=fake_cast))
     r = client.get(path)

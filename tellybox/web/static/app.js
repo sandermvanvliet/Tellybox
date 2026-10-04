@@ -1,7 +1,8 @@
 // Tellybox kid app (KA-1..KA-10). Vanilla ES modules, no build step.
 // Routes: #/ (home), #/show/{id} and #/who (who is watching, PR-2). Live state via SSE; the sky is the timer.
 
-import { api, subscribe, HttpError } from "./api.js";
+import { api, subscribe, postJSON, HttpError } from "./api.js";
+import { createPlayer, getDeviceId, readTarget, writeTarget, targetAllowed } from "./player.js";
 import { icons, placeholderTv } from "./icons.js";
 import { applySky } from "./sky.js";
 import { label as tr, translatePage } from "./i18n.js";
@@ -33,6 +34,7 @@ let picker = null; // the who's-watching screen while it is showing
 let lastTouch = 0;
 let streamDown = false; // SSE errored and no event since: treat the TV as unreachable
 let playBusy = false; // one pick request in flight
+let activePlayer = null; // the in-app player while a video plays on this device (KA-14)
 let toggleBusy = false; // one pause/resume request in flight
 let route = null;
 let reader = false; // KA-11: the reader UI (text added) for this device's pick
@@ -191,6 +193,8 @@ function setReader(on) {
 
 function renderHome(data) {
   const frag = document.createDocumentFragment();
+  const targets = targetToggle();
+  if (targets) frag.append(targets);
   if (reader) frag.append(searchBox());
   if (data.continue && data.continue.length) {
     const sec = el("section", "row-continue", { "aria-label": tr("Keep watching") });
@@ -209,6 +213,39 @@ function renderHome(data) {
     queueMicrotask(applySearch);
   }
   return frag;
+}
+
+// KA-13: TV or this device, as two pictures. Only when every picked kid may watch in the app; applies to the next pick.
+const store = () => {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+};
+let targetChoice = null; // the choice when storage is blocked
+
+function currentTarget() {
+  if (!targetAllowed(allProfiles, group)) return "tv";
+  return targetChoice ?? readTarget(store(), true);
+}
+
+function targetToggle() {
+  if (!targetAllowed(allProfiles, group)) return null;
+  const wrap = el("div", "target-toggle", { role: "group" });
+  const buttons = [];
+  for (const [value, icon, name] of [["tv", icons.tv, "Watch on the TV"], ["device", icons.phone, "Watch on this device"]]) {
+    const b = el("button", "target-btn", { type: "button", "aria-label": tr(name), "aria-pressed": String(currentTarget() === value) });
+    b.innerHTML = icon;
+    b.addEventListener("click", () => {
+      targetChoice = value;
+      writeTarget(store(), value);
+      for (const [other, ob] of buttons) ob.setAttribute("aria-pressed", String(other === value));
+    });
+    buttons.push([value, b]);
+    wrap.append(b);
+  }
+  return wrap;
 }
 
 // KA-12: filters the shows and the "keep watching" episodes already on the page, by title.
@@ -439,7 +476,7 @@ async function toggle() {
 // ---------- picks (KA-5, KA-9) ----------
 
 async function pick(tile) {
-  if (effective().time_up || playBusy) return;
+  if (effective().time_up || playBusy || activePlayer) return;
   if (!resolveGroup()) {
     forgetGroup(); // the day changed or it has been idle: ask who's watching
     return;
@@ -449,10 +486,40 @@ async function pick(tile) {
   tile.classList.add("is-pending");
   view.classList.add("is-picking");
   touchSelection();
-  const r = await api.play(id, group);
+  // KA-14: the player opens inside this tap (fullscreen needs it) and starts once the server has answered.
+  const inApp = currentTarget() === "device";
+  const deviceId = inApp ? getDeviceId(store(), (a) => crypto.getRandomValues(a)) : null;
+  if (inApp) {
+    activePlayer = createPlayer({
+      parent: document.body,
+      deviceId,
+      labels: { exit: tr("Close video"), back: tr("Home"), error: tr("Video not working") },
+      post: postJSON,
+      onExit: onPlayerExit,
+    });
+  }
+  const r = await api.play(id, group, inApp ? { target: "device", device_id: deviceId } : undefined);
   playBusy = false;
   tile.classList.remove("is-pending");
   view.classList.remove("is-picking");
+  if (inApp) {
+    if (r.status === 200 && r.data && r.data.url) {
+      activePlayer.start(r.data);
+      return;
+    }
+    if (r.status === 404 || r.status === 400 || r.status === 403 || r.status === 409) {
+      activePlayer.abort();
+      activePlayer = null;
+      if (r.status === 403) {
+        // not allowed (any more): the admin changed the profile; the toggle goes away with the refreshed profiles
+        api.profiles().then((p) => { allProfiles = p; loadView({ keepPlace: true }); }, () => {});
+        return;
+      }
+    } else {
+      activePlayer.fail(); // server or network trouble: a sad cloud, never the TV
+      return;
+    }
+  }
   if (r.status === 404) {
     loadView({ keepPlace: true });
     return;
@@ -462,6 +529,16 @@ async function pick(tile) {
     return;
   }
   handleActionResult(r);
+}
+
+// The in-app player is gone: back to the library, or to the time's-up screen (KA-9) when time ran out.
+function onPlayerExit(kind) {
+  activePlayer = null;
+  if (kind === "time_up") {
+    handleActionResult({ status: 409, data: null });
+    api.state().then(applyState, () => {});
+  }
+  loadView({ keepPlace: true });
 }
 
 function handleActionResult({ status, data }) {

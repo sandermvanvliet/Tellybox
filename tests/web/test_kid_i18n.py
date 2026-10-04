@@ -46,7 +46,7 @@ def test_every_language_has_every_label():
 def test_every_label_used_is_in_the_dictionaries():
     keys = set(_dictionaries()["en"])
     used = set()
-    for name in ("app.js", "sky.js", "profiles.js", "reader.js"):
+    for name in ("app.js", "sky.js", "profiles.js", "reader.js", "player.js"):
         used |= set(re.findall(r'\btr\("((?:[^"\\]|\\.)*)"', (STATIC / name).read_text(encoding="utf-8")))
     used |= set(re.findall(r'aria-label="([^"]+)"', (STATIC / "index.html").read_text(encoding="utf-8")))
     assert used, "no labels found"

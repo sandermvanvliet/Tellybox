@@ -41,7 +41,8 @@ export const api = {
   home: (ids) => getJSON(`/api/kid/home${group(ids)}`),
   show: (id, ids) => getJSON(`/api/kid/shows/${encodeURIComponent(id)}${group(ids)}`),
   state: () => getJSON("/api/kid/state"),
-  play: (episodeId, ids) => postJSON("/api/kid/play", { episode_id: episodeId, profile_ids: ids }),
+  // `device` ({target: "device", device_id}) plays in the app (KA-14); without it the body is the TV one, unchanged.
+  play: (episodeId, ids, device) => postJSON("/api/kid/play", { episode_id: episodeId, profile_ids: ids, ...(device || {}) }),
   pause: () => postJSON("/api/kid/pause"),
   resume: () => postJSON("/api/kid/resume"),
 };

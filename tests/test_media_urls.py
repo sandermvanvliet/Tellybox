@@ -79,3 +79,45 @@ def test_episode_id_from_url_rejects_foreign():
 
 def test_module_exports():
     assert media_urls.MEDIA_TTL_S == 24 * 3600
+
+
+# --------------------------------------------------------------------------- session-scoped URLs (PB-7, WT-11)
+
+
+def test_media_path_without_a_session_is_unchanged():
+    assert media_path(SECRET, 7, 1_800_000_000) == media_path(SECRET, 7, 1_800_000_000, session_id=None)
+    assert "?" not in media_path(SECRET, 7, 1_800_000_000)
+
+
+def test_session_path_carries_and_signs_the_session():
+    path = media_path(SECRET, 7, 1_800_000_000, session_id=42)
+    assert path.startswith("/media/7/1800000000/") and path.endswith(".mp4?s=42")
+    base, query = path.split("?")
+    sig = base.rsplit("/", 1)[1].removesuffix(".mp4")
+    assert sig != media_path(SECRET, 7, 1_800_000_000).rsplit("/", 1)[1].removesuffix(".mp4")
+    assert verify(SECRET, 7, 1_800_000_000, sig, NOW, session_id=42)
+    assert not verify(SECRET, 7, 1_800_000_000, sig, NOW, session_id=43)  # another session
+    assert not verify(SECRET, 7, 1_800_000_000, sig, NOW)  # nor does it pass as a TV URL
+    assert media_urls.session_id_from_query(query) == 42
+
+
+def test_a_tv_signature_does_not_open_a_session_url():
+    tv_sig = media_path(SECRET, 7, 1_800_000_000).rsplit("/", 1)[1].removesuffix(".mp4")
+    assert not verify(SECRET, 7, 1_800_000_000, tv_sig, NOW, session_id=42)
+
+
+def test_session_url_expires_and_is_still_recognised():
+    url = media_url("http://h", SECRET, 3, NOW, session_id=9)
+    assert url.startswith("http://h/media/3/") and url.endswith("?s=9")
+    ep, exp, sig = split(url.split("?")[0])
+    assert exp == int(NOW.timestamp()) + MEDIA_TTL_S
+    assert verify(SECRET, ep, exp, sig, NOW + timedelta(hours=23), session_id=9)
+    assert not verify(SECRET, ep, exp, sig, NOW + timedelta(hours=25), session_id=9)
+    assert episode_id_from_url(url) == 3
+
+
+def test_session_id_from_query():
+    f = media_urls.session_id_from_query
+    assert f("s=12") == 12 and f("a=1&s=12") == 12
+    assert f(None) is None and f("") is None and f("s=") is None and f("s=x") is None
+    assert f("s=-1") is None and f("s=1&s=2") is None and f("s=" + "9" * 30) is None

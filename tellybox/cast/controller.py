@@ -19,10 +19,10 @@ import sqlite3
 from collections.abc import Awaitable, Callable, Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 from tellybox import library, media_urls, store
+from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, UnknownProfile
 from tellybox.cast.device import (
     DEFAULT_MEDIA_RECEIVER,
     RECEIVER_LAUNCH_TIMEOUT_S,
@@ -38,11 +38,12 @@ from tellybox.cast.device import (
     ReceiverMessage,
     ReceiverStatus,
 )
+from tellybox.cast.device_sessions import DeviceSession, DeviceSessionsMixin
 from tellybox.cast.pychromecast_device import CastCommandError, ReceiverUnavailable
 from tellybox.clock import Clock
 from tellybox.db import to_db
 from tellybox.library import Episode
-from tellybox.timer import Action, Activity, Decision, TimeUpReason, WatchTimer, day_for
+from tellybox.timer import TV, Action, Activity, Decision, TimeUpReason, WatchTimer, day_for
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +53,6 @@ PERSIST_EVERY_S = 15.0       # WT-8: at least every 30 s
 STATUS_POLL_EVERY_S = 30.0   # drift check; the device sends nothing while playing
 RECOVERY_WAIT_S = 10.0       # NF-7: how long to wait for our media to show up after a restart
 RECONNECT_WAIT_S = 300.0     # PB-5: how long a lost connection may last before the session is ended
-RESUME_TAIL_S = 10.0         # don't resume within the last seconds of an episode
 RECEIVER_FALLBACK_S = 30 * 60.0  # CR-6: the longest stay on the Default Media Receiver (4th failed pick in a row, or a refusal)
 RECEIVER_BACKOFF_S = (None, 5 * 60.0, 15 * 60.0, RECEIVER_FALLBACK_S)  # CR-6: fallback after the 1st, 2nd, 3rd, 4th+ failed pick
 RECEIVER_RETRY_WAIT_S = 1.0  # CR-6: pause before the second launch attempt
@@ -64,31 +64,8 @@ FRACTION_STEP = 0.01         # CR-2: send a new state when the sky moves this mu
 LAST_FIVE_S = 300.0          # KA-8, as in the kid app
 
 
-class EndReason(StrEnum):
-    FINISHED = "finished"
-    REPLACED = "replaced"          # a new pick replaced it (A-5)
-    STOPPED = "stopped"            # stop from the kid app or another controller
-    PARENT_STOP = "parent_stop"    # WT-7 stop now
-    TIME_UP = "time_up"            # WT-4/WT-5/WT-3
-    BLOCKED = "blocked"            # WT-7 block
-    TAKEN_OVER = "taken_over"      # another app or cast took the device (WT-9, PB-5)
-    DISCONNECTED = "disconnected"  # PB-5
-    RESTART = "restart"            # our process restarted and the media was gone (NF-7)
-    LOAD_FAILED = "load_failed"
-
-
-class PlayRefused(Exception):
-    def __init__(self, decision: Decision) -> None:
-        super().__init__(f"play refused: {decision.reason}")
-        self.decision = decision
-
-
 class NoDevice(Exception):
     pass
-
-
-class UnknownProfile(ValueError):
-    """A pick named a profile that does not exist (PR-2)."""
 
 
 @dataclass
@@ -124,7 +101,7 @@ class Current:
         return max(0.0, pos)
 
 
-class CastController:
+class CastController(DeviceSessionsMixin):
     def __init__(
         self,
         conn: sqlite3.Connection,
@@ -148,6 +125,8 @@ class CastController:
         self._connected = asyncio.Event()  # set when the current device reports CONNECTED
         self.connection = ConnectionState.DISCONNECTED
         self.current: Current | None = None
+        self.device_sessions: dict[str, DeviceSession] = {}  # PB-8: episodes playing in kid apps, by device id
+        self._device_ended: dict[str, tuple[str | None, datetime]] = {}
 
         now = clock.now()
         settings = store.timer_settings(conn, tz)
@@ -189,7 +168,9 @@ class CastController:
     async def start(self, run_loops: bool = True) -> None:
         """Restore state after a (re)start (NF-7) and connect to the device."""
         now = self.clock.now()
-        open_sessions = store.open_watch_sessions(self.conn)
+        for stale in store.open_watch_sessions(self.conn, target="device"):  # PB-8: browser sessions are not recovered
+            store.close_watch_session(self.conn, stale.id, EndReason.RESTART, stale.last_heartbeat_at or stale.started_at)
+        open_sessions = store.open_watch_sessions(self.conn, target="tv")
         for stale in open_sessions[:-1]:
             store.close_watch_session(self.conn, stale.id, EndReason.RESTART, stale.last_heartbeat_at or stale.started_at)
         if open_sessions:
@@ -284,6 +265,7 @@ class CastController:
         if not decision.can_start:
             self._broadcast()
             raise PlayRefused(decision)  # a refused pick never moves the session to another TV
+        self._end_moved_device_sessions()  # PB-8: a profile watches in one place
         await self._route_to(target)
         await self._start_episode(episode, now, profiles)
 
@@ -336,6 +318,8 @@ class CastController:
             raise ValueError(f"unknown override {kind!r}")
         if kind == "stop_now":
             await self._stop_current(EndReason.PARENT_STOP)
+            for s in list(self.device_sessions.values()):  # WT-12: in-app sessions too, at once
+                self._end_device(s, EndReason.PARENT_STOP)
         for p in profiles:
             if kind == "extra_minutes":
                 self.timer.add_extra(now, p, value * 60.0)
@@ -349,6 +333,7 @@ class CastController:
             store.log_override(self.conn, p, self.timer.usage(p).day, kind, value, now, source)
         self._decision = self.timer.tick(now)
         await self._apply_decision(self._decision)
+        self._apply_device_decisions(now)  # WT-11: block at once; time up through the per-session decision
         self.persist(now)
         await self._push_receiver()
         self._broadcast()
@@ -366,6 +351,7 @@ class CastController:
         self._decision = self.timer.tick(now)
         await self._check_vanished(now)
         await self._apply_decision(self._decision)
+        self._tick_devices(now)  # WT-10: heartbeat gaps; WT-11: per-session limits
         if (
             self.current
             and self.device
@@ -408,7 +394,7 @@ class CastController:
         try:
             # Pick up admin changes to allowances and settings (AD-2), and to the profiles (PR-1).
             self._refresh_profiles(now, force=True)
-            counted = self.timer.pop_counted_s()
+            counted = self.timer.pop_counted_s(TV)  # PB-8: device sessions take their own share below
             store.save_usages(self.conn, self.timer.pop_dirty_usage(), now)
             store.save_timer_snapshot(self.conn, self.timer.snapshot(), now)
             if self.current:
@@ -416,6 +402,7 @@ class CastController:
                 store.heartbeat_watch_session(self.conn, c.watch_session_id, counted, now)
                 pos = c.position(now)
                 store.save_position(self.conn, c.profile_ids, c.episode.id, pos, store.is_finished(pos, c.duration_s), now)
+            self._persist_devices(now)
             self.conn.execute("COMMIT")
         except Exception:
             self.conn.execute("ROLLBACK")
@@ -784,7 +771,7 @@ class CastController:
         now = self.clock.now()
         self._refresh_profiles(now)  # a profile deleted meanwhile must not get a position row
         self._decision = self.timer.set_activity(now, Activity.STOPPED)
-        counted = self.timer.pop_counted_s()
+        counted = self.timer.pop_counted_s(TV)
         pos = c.position(ended_at or now)
         finished = reason == EndReason.FINISHED or store.is_finished(pos, c.duration_s)
         store.save_position(self.conn, c.profile_ids, c.episode.id, pos, finished, now)
@@ -846,6 +833,16 @@ class CastController:
             self._known_profiles = ids
         if self.current and any(p not in ids for p in self.current.profile_ids):
             self.current.profile_ids = [p for p in self.current.profile_ids if p in ids]
+        for s in self.device_sessions.values():
+            if any(p not in ids for p in s.profile_ids):
+                s.profile_ids = [p for p in s.profile_ids if p in ids]
+
+    def _end_moved_device_sessions(self) -> None:
+        """PB-8: a TV pick took profiles out of device sessions (``timer.moved_from``); those sessions end,
+        group-mates included, and their devices are told on the next heartbeat."""
+        for key in self.timer.moved_from():
+            if key != TV and (s := self.device_sessions.get(key.removeprefix("device:"))) is not None:
+                self._end_device(s, EndReason.REPLACED)
 
     # ------------------------------------------------------------------ state (KA-6, KA-7, AD-3)
 
@@ -867,10 +864,16 @@ class CastController:
                 "profile_ids": sorted(c.profile_ids),
             }
         info = self.device.info if self.device else None
+        sessions = [self._device_session_state(s, now) for s in sorted(self.device_sessions.values(), key=lambda s: s.started_at)]
+        if now_playing is not None:  # PB-8, WT-12: every session with its target; the TV first
+            sessions.insert(0, {
+                "key": TV, "target": "tv", "label": info.name if info else None, "device_id": None, **now_playing,
+            })
         return {
             "connection": self.connection.value,
             "device": {"uuid": info.uuid, "name": info.name} if info else None,
             "now_playing": now_playing,
+            "sessions": sessions,
             "timer": {
                 "remaining_s": None if d.remaining_s is None else round(d.remaining_s),
                 "can_start": d.can_start,
@@ -1018,7 +1021,8 @@ class CastController:
             "reason": status.reason.value if status.reason else None,
             "session_elapsed_s": None if status.session_elapsed_s is None else round(status.session_elapsed_s),
             # Watching means part of the episode on screen; the timer keeps the last group as its watchers.
-            "watching": self.current is not None and profile_id in self.current.profile_ids,
+            "watching": (self.current is not None and profile_id in self.current.profile_ids)
+            or any(profile_id in s.profile_ids for s in self.device_sessions.values()),
         }
 
     def subscribe(self) -> asyncio.Queue:

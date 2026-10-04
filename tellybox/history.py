@@ -55,6 +55,8 @@ class HistoryEpisode:
     minutes: int  # seconds_counted, rounded
     end_reason_label: str  # WATCHING_NOW_LABEL for an open session
     profiles: tuple[HistoryProfile, ...] = ()  # who watched, in the admin's order
+    target: str = "tv"  # PB-8, AD-4: 'tv' or 'device'
+    device_label: str | None = None  # a short browser label such as "iPhone Safari"
 
 
 @dataclass(frozen=True)
@@ -110,7 +112,7 @@ def history_days(
 
     # Coarse SQL prefilter (a couple of days' slack for zone/reset edges); day_for() decides exactly.
     rows = conn.execute(
-        """SELECT ws.id, ws.episode_id, ws.started_at, ws.ended_at, ws.seconds_counted, ws.end_reason,
+        """SELECT ws.id, ws.episode_id, ws.started_at, ws.ended_at, ws.seconds_counted, ws.end_reason, ws.target, ws.device_label,
                   e.title AS episode_title, s.name AS show_name
            FROM watch_session ws
            LEFT JOIN episode e ON e.id = ws.episode_id
@@ -139,6 +141,8 @@ def history_days(
             minutes=round(r["seconds_counted"] / 60),
             end_reason_label=_end_reason_label(r["end_reason"], ended_at),
             profiles=tuple(profiles[p] for p in members),
+            target=r["target"],
+            device_label=r["device_label"],
         ))
 
     orows = conn.execute(

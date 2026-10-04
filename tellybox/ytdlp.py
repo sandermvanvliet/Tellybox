@@ -29,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 from urllib.parse import parse_qs, quote, urlsplit
 
 from tellybox import sponsorblock
@@ -226,6 +226,108 @@ def _best_thumbnail(thumbnails: list[dict] | None) -> str | None:
     return best["url"] if best else None
 
 
+# --------------------------------------------------------------------------- channels (CS-1, CS-2, CS-5)
+
+ChannelTab = Literal["videos", "shorts"]
+_TAB_SUFFIX = re.compile(r"/(videos|shorts|streams|live|featured|playlists|community|about|releases)/?$")
+_NOT_PUBLIC_YET = ("is_live", "is_upcoming", "post_live")  # finished streams ("was_live") count (A-31)
+
+
+@dataclass(frozen=True)
+class ChannelEntry:
+    youtube_id: str
+    url: str  # canonical https://www.youtube.com/watch?v=<id>
+    title: str
+    duration_s: float | None  # None for Shorts (their listing has none) and live or upcoming videos
+    thumbnail_url: str | None
+    approx_date: datetime | None  # approximate_date: midnight UTC, can be a day off; sorting and display only
+    is_short: bool  # from the /shorts/ URL, never from the duration
+    live_status: str | None  # normally None in a flat listing
+
+
+@dataclass(frozen=True)
+class ChannelListing:
+    channel_id: str  # stable UC... id; "" only for a Shorts tab the channel doesn't have
+    channel_name: str
+    entries: list[ChannelEntry]  # newest first
+
+
+@dataclass(frozen=True)
+class VideoStatus:
+    """The one-video metadata call: what a flat listing can't tell (CS-5)."""
+
+    published_at: datetime | None  # exact
+    live_status: str | None  # not_live | was_live | is_live | is_upcoming | post_live
+    availability: str | None  # public | unlisted | needs_auth | subscriber_only | premium_only | private
+    channel_id: str | None
+
+
+class ChannelLister(Protocol):
+    def list_channel(self, url: str, tab: ChannelTab, offset: int, limit: int) -> ChannelListing: ...
+
+    def video_status(self, youtube_id: str) -> VideoStatus: ...
+
+
+def channel_tab_url(url: str, tab: ChannelTab) -> str:
+    """The URL of one tab of a channel page, whichever tab or form the admin pasted."""
+    parts = urlsplit(url.strip() if "://" in url else "https://" + url.strip())
+    path = _TAB_SUFFIX.sub("", parts.path.rstrip("/"))
+    return f"https://www.youtube.com{path}/{tab}"
+
+
+def _timestamp(value) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(float(value), UTC) if value is not None else None
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def parse_channel_listing(data: dict) -> ChannelListing:
+    """Map a `-J --flat-playlist` dict of a channel tab to ChannelListing.
+
+    Entries are flat: id, url, title, duration, thumbnails, and with approximate_date a timestamp.
+    Raises YtDlpError(retryable=False) when the dict is not a channel or has no channel id.
+    """
+    if data.get("_type") != "playlist":
+        raise YtDlpError("URL is not a channel", retryable=False)
+    channel_id = data.get("channel_id")
+    if not channel_id:
+        raise YtDlpError("yt-dlp returned no channel id; is this a channel URL?", retryable=False)
+    entries = []
+    for raw in data.get("entries") or []:
+        if not isinstance(raw, dict) or not raw.get("id"):
+            continue
+        vid = raw["id"]
+        duration = raw.get("duration")
+        entries.append(ChannelEntry(
+            youtube_id=vid,
+            url=watch_url(vid),
+            title=raw.get("title") or vid,
+            duration_s=float(duration) if duration else None,
+            thumbnail_url=_best_thumbnail(raw.get("thumbnails")) or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+            approx_date=_timestamp(raw.get("timestamp")),
+            is_short="/shorts/" in (raw.get("url") or ""),
+            live_status=raw.get("live_status"),
+        ))
+    return ChannelListing(channel_id, data.get("channel") or data.get("uploader") or channel_id, entries)
+
+
+def parse_video_status(data: dict) -> VideoStatus:
+    published = _timestamp(data.get("release_timestamp") or data.get("timestamp"))
+    if published is None and re.fullmatch(r"\d{8}", str(data.get("upload_date") or "")):
+        published = datetime.strptime(data["upload_date"], "%Y%m%d").replace(tzinfo=UTC)
+    return VideoStatus(published, data.get("live_status"), data.get("availability"), data.get("channel_id"))
+
+
+_NO_CHANNEL = re.compile(r"does not exist|http error 404|not a valid url|unsupported url", re.IGNORECASE)
+_NO_SHORTS_TAB = re.compile(r"does not have a shorts tab", re.IGNORECASE)
+_STATUS_FROM_ERROR = (  # a video yt-dlp refuses to describe still tells us why
+    (re.compile(r"premieres in|live event will begin", re.IGNORECASE), (None, "is_upcoming", None)),
+    (re.compile(r"members-only|join this channel", re.IGNORECASE), (None, None, "subscriber_only")),
+    (re.compile(r"sign in to confirm your age|age-restricted", re.IGNORECASE), (None, None, "needs_auth")),
+)
+
+
 @dataclass(frozen=True)
 class DownloadResult:
     video_path: Path
@@ -392,6 +494,51 @@ class YtDlp:
         except json.JSONDecodeError:
             raise YtDlpError("yt-dlp returned invalid JSON", retryable=True) from None
         return parse_playlist(data)
+
+    def list_channel(
+        self, url: str, tab: ChannelTab, offset: int, limit: int, *, timeout: float = 120
+    ) -> ChannelListing:
+        """CS-1, CS-2: entries offset+1..offset+limit of a channel's Videos or Shorts tab, newest first.
+
+        Flat (about 1 s a page) and approximate dates, no per-video calls. A bad handle or a channel
+        that doesn't exist raises YtDlpError(retryable=False) with a clear message; --extractor-retries 1
+        keeps the 404 retry delay short.
+        """
+        if tab not in ("videos", "shorts"):
+            raise ValueError(tab)
+        if classify_url(url) != "channel":
+            raise YtDlpError("Not a YouTube channel URL", retryable=False)
+        try:
+            out = self._run(
+                ["-J", "--flat-playlist", "--skip-download", "--extractor-retries", "1",
+                 "--extractor-args", "youtubetab:approximate_date",
+                 "--playlist-items", f"{offset + 1}:{offset + limit}", "--", channel_tab_url(url, tab)],
+                timeout,
+            )
+        except YtDlpError as exc:
+            if tab == "shorts" and _NO_SHORTS_TAB.search(exc.message):
+                return ChannelListing("", "", [])
+            if _NO_CHANNEL.search(exc.message):
+                raise YtDlpError(f"Channel not found: {exc.message}", retryable=False) from None
+            raise
+        try:
+            return parse_channel_listing(json.loads(out))
+        except json.JSONDecodeError:
+            raise YtDlpError("yt-dlp returned invalid JSON", retryable=True) from None
+
+    def video_status(self, youtube_id: str, *, timeout: float = 90) -> VideoStatus:
+        """CS-5: exact publish date, live status and availability of one video (about 3 s)."""
+        try:
+            out = self._run(["-J", "--no-playlist", "--skip-download", "--", watch_url(youtube_id)], timeout)
+        except YtDlpError as exc:
+            for pattern, (published, live, availability) in _STATUS_FROM_ERROR:
+                if pattern.search(exc.message):
+                    return VideoStatus(published, live, availability, None)
+            raise
+        try:
+            return parse_video_status(json.loads(out))
+        except json.JSONDecodeError:
+            raise YtDlpError("yt-dlp returned invalid JSON", retryable=True) from None
 
     def sponsor_segments(self, url: str, categories: list[str], *, timeout: float = 120) -> list[Segment]:
         """SB-3: the video's current SponsorBlock segments in `categories`, without downloading.

@@ -95,30 +95,29 @@ def preview(ytdlp: YtDlp, url: str) -> VideoInfo:
     return ytdlp.preview(url)
 
 
-def add(conn: sqlite3.Connection, info: VideoInfo, *, publish: bool, now: datetime) -> tuple[int, int]:
+def add(
+    conn: sqlite3.Connection, info: VideoInfo, *, publish: bool, now: datetime, show_id: int | None = None
+) -> tuple[int, int]:
     """Approve a previewed video: record it and queue its download. Returns (source_video_id, job_id).
 
     publish=False holds the episode hidden when ready, e.g. a compilation to split first.
+    show_id forces the show the episode joins instead of the channel's (CS-9). Joins the caller's
+    transaction if one is open (a subscription approval records its decision in the same one).
     """
     existing = conn.execute("SELECT id, status FROM source_video WHERE youtube_id = ?", (info.youtube_id,)).fetchone()
     if existing:
         raise AlreadyAdded(existing["id"], existing["status"])
     chapters = json.dumps([asdict(c) for c in info.chapters]) if info.chapters else None
-    conn.execute("BEGIN IMMEDIATE")
-    try:
+    with library._transaction(conn):
         cur = conn.execute(
             """INSERT INTO source_video (youtube_id, url, title, channel_id, channel_name, duration_s, chapters_json,
-                 thumbnail_url, publish, status, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)""",
+                 thumbnail_url, publish, show_id, status, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)""",
             (info.youtube_id, info.url, info.title, info.channel_id, info.channel_name, info.duration_s, chapters,
-             info.thumbnail_url, "publish" if publish else "hold", to_db(now), to_db(now)),
+             info.thumbnail_url, "publish" if publish else "hold", show_id, to_db(now), to_db(now)),
         )
         source_id = cur.lastrowid
         job_id = jobs.enqueue(conn, JobType.DOWNLOAD, source_id, now=now)
-        conn.execute("COMMIT")
-    except Exception:
-        conn.execute("ROLLBACK")
-        raise
     log.info("added %s (%s) as source video %d, job %d", info.youtube_id, info.title, source_id, job_id)
     return source_id, job_id
 
@@ -389,8 +388,8 @@ class JobRunner:
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
         try:
-            show = library.find_show_by_channel(self.conn, source.channel_id) if source.channel_id else None
-            cats = sponsorblock.effective_categories(self.conn, show.id if show else None)
+            show_id = source.show_id or self._channel_show_id(source.channel_id)
+            cats = sponsorblock.effective_categories(self.conn, show_id)
             fetched = self._fetch(job, source.url, tmp, cats, source_id=source.id)
             self._publish(job, source, fetched)
         except YtDlpError as exc:
@@ -402,6 +401,10 @@ class JobRunner:
             self._failed(job, source, f"{type(exc).__name__}: {exc}", retryable=True)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+    def _channel_show_id(self, channel_id: str | None) -> int | None:
+        show = library.find_show_by_channel(self.conn, channel_id) if channel_id else None
+        return show.id if show else None
 
     def _failed(self, job: Job, source: SourceVideo, error: str, *, retryable: bool) -> None:
         now = self.clock.now()
@@ -422,14 +425,15 @@ class JobRunner:
         if not source.channel_id and info.channel_id:
             source = replace(source, channel_id=info.channel_id, channel_name=source.channel_name or info.channel_name)
         chapters = json.dumps([asdict(c) for c in info.chapters]) if info.chapters else None
-        show = library.find_show_by_channel(self.conn, source.channel_id) if source.channel_id else None
+        show_id = source.show_id or self._channel_show_id(source.channel_id)  # a forced show wins (CS-9)
         moved: list[Path] = []
         self.conn.execute("BEGIN IMMEDIATE")
         try:
-            show_id = show.id if show else library.create_show(
-                self.conn, source.channel_name or info.channel_name or source.title, now=now,
-                youtube_channel_id=source.channel_id,
-            )
+            if show_id is None:
+                show_id = library.create_show(
+                    self.conn, source.channel_name or info.channel_name or source.title, now=now,
+                    youtube_channel_id=source.channel_id,
+                )
             # ES-10, A-22: a long video of a show set to auto-detect stays hidden until its split is decided.
             awaiting = self._is_compilation(show_id, duration_s or source.duration_s)
             rel_dir = Path(SHOWS_DIR) / str(show_id)

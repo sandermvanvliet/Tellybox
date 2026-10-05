@@ -1,7 +1,7 @@
 // Tellybox kid app (KA-1..KA-10). Vanilla ES modules, no build step.
 // Routes: #/ (home), #/show/{id} and #/who (who is watching, PR-2). Live state via SSE; the sky is the timer.
 
-import { api, subscribe, postJSON, HttpError } from "./api.js";
+import { api, subscribe, postJSON, HttpError, isEmptyHome } from "./api.js";
 import { createPlayer, getDeviceId, readTarget, writeTarget, targetAllowed } from "./player.js";
 import { icons, placeholderTv } from "./icons.js";
 import { applySky } from "./sky.js";
@@ -195,6 +195,13 @@ function renderHome(data) {
   const frag = document.createDocumentFragment();
   const targets = targetToggle();
   if (targets) frag.append(targets);
+  if (isEmptyHome(data)) {
+    // KA-15: nothing visible to this profile or group. A picture only, no text (KA-2).
+    const empty = el("section", "empty-state", { "aria-hidden": "true" });
+    empty.innerHTML = icons.tvSleepy;
+    frag.append(empty);
+    return frag;
+  }
   if (reader) frag.append(searchBox());
   if (data.continue && data.continue.length) {
     const sec = el("section", "row-continue", { "aria-label": tr("Keep watching") });

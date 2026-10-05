@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, Response
 from tellybox import auth
 from tellybox.i18n import _
 from tellybox.oidc import BROWSER_COOKIE, LOGIN_TTL, OidcError, is_admin
-from tellybox.web.admin import add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages, subscription_pages
+from tellybox.web.admin import access_page, add, dashboard, history, integrations, jobs_page, library_pages, profiles_page, settings_page, split_pages, subscription_pages
 from tellybox.web.admin.common import (
     STATIC_DIR,
     AdminContext,
@@ -30,7 +30,7 @@ from tellybox.web.static_files import NoCacheStaticFiles
 
 log = logging.getLogger(__name__)
 
-PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, settings_page, integrations, history, split_pages,
+PAGE_MODULES = (dashboard, add, jobs_page, library_pages, profiles_page, access_page, settings_page, integrations, history, split_pages,
                 subscription_pages)
 
 

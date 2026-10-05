@@ -12,7 +12,7 @@ import logging
 import os
 import shutil
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -96,13 +96,15 @@ def preview(ytdlp: YtDlp, url: str) -> VideoInfo:
 
 
 def add(
-    conn: sqlite3.Connection, info: VideoInfo, *, publish: bool, now: datetime, show_id: int | None = None
+    conn: sqlite3.Connection, info: VideoInfo, *, publish: bool, now: datetime, show_id: int | None = None,
+    profile_ids: Iterable[int] = (),
 ) -> tuple[int, int]:
     """Approve a previewed video: record it and queue its download. Returns (source_video_id, job_id).
 
     publish=False holds the episode hidden when ready, e.g. a compilation to split first.
     show_id forces the show the episode joins instead of the channel's (CS-9). Joins the caller's
     transaction if one is open (a subscription approval records its decision in the same one).
+    profile_ids are granted the show when the episode joins it (AD-8); none by default.
     """
     existing = conn.execute("SELECT id, status FROM source_video WHERE youtube_id = ?", (info.youtube_id,)).fetchone()
     if existing:
@@ -117,9 +119,18 @@ def add(
              info.thumbnail_url, "publish" if publish else "hold", show_id, to_db(now), to_db(now)),
         )
         source_id = cur.lastrowid
+        _remember_profiles(conn, source_id, profile_ids)
         job_id = jobs.enqueue(conn, JobType.DOWNLOAD, source_id, now=now)
     log.info("added %s (%s) as source video %d, job %d", info.youtube_id, info.title, source_id, job_id)
     return source_id, job_id
+
+
+def _remember_profiles(conn: sqlite3.Connection, source_id: int, profile_ids: Iterable[int]) -> None:
+    """Profiles to grant the show when this download publishes (AD-8); unknown profile ids are ignored."""
+    conn.executemany(
+        "INSERT OR IGNORE INTO source_video_profile (source_video_id, profile_id) SELECT ?, id FROM profile WHERE id = ?",
+        [(source_id, pid) for pid in dict.fromkeys(profile_ids)],
+    )
 
 
 @dataclass(frozen=True)
@@ -147,7 +158,8 @@ def existing_youtube_ids(conn: sqlite3.Connection, youtube_ids: list[str]) -> se
 
 
 def add_playlist(
-    conn: sqlite3.Connection, playlist: PlaylistInfo, youtube_ids: list[str], *, publish: bool, now: datetime
+    conn: sqlite3.Connection, playlist: PlaylistInfo, youtube_ids: list[str], *, publish: bool, now: datetime,
+    profile_ids: Iterable[int] = (),
 ) -> PlaylistAddResult:
     """Approve the selected videos of a previewed playlist: one source_video and one DOWNLOAD job each (CI-7).
 
@@ -182,6 +194,7 @@ def add_playlist(
                  entry.thumbnail_url, playlist.playlist_id, playlist.title, publish_value, to_db(now), to_db(now)),
             )
             source_id = cur.lastrowid
+            _remember_profiles(conn, source_id, profile_ids)
             added.append((source_id, jobs.enqueue(conn, JobType.DOWNLOAD, source_id, now=now)))
         conn.execute("COMMIT")
     except Exception:
@@ -466,6 +479,9 @@ class JobRunner:
                  *_sb_columns(fetched, now),
                  to_db(now + timedelta(days=sponsorblock.RECHECK_DAYS)), int(awaiting), to_db(now), source.id),
             )
+            self.conn.execute(  # AD-8: the profiles chosen when this was approved get the show
+                "INSERT OR IGNORE INTO profile_show (profile_id, show_id) "
+                "SELECT profile_id, ? FROM source_video_profile WHERE source_video_id = ?", (show_id, source.id))
             jobs.complete(self.conn, job.id, now=now)
             self.conn.execute("COMMIT")
         except Exception:

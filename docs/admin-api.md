@@ -76,7 +76,8 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
       "can_start": true,
       "reason": null | "allowance" | "session_max" | "blocked",
       "watching": true,                  // in the current episode, on the TV or in the app (step 17)
-      "last_five": false
+      "last_five": false,
+      "visible_shows": 12                // shows this profile may see (PR-5, HA-10); 0 means an empty kid app. Read-only
     }
   ],
   "jobs": {"queued": 1, "running": 1, "failed": 0,  // running = downloading + processing

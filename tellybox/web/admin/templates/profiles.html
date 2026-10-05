@@ -14,6 +14,7 @@
       <p class="muted">
         {% if p.used_s is not none %}{{ _("%(time)s used", time=p.used_s | minutes) }}{% endif %}
         {% if p.watching %}<span class="badge ok">{{ _("watching") }}</span>{% endif %}
+        <a href="/admin/access">{{ ngettext("%(num)d show visible", "%(num)d shows visible", p.visible_shows) }}</a>
       </p>
     </div>
   </div>
@@ -62,6 +63,15 @@
       <input type="text" name="name" maxlength="{{ limit }}" required>
     </label>
     {{ pf.picker(avatars, none, _("No picture")) }}
+    {% if profiles %}
+    <label>{{ _("Copy shows from") }}
+      <select name="copy_from">
+        <option value="">{{ _("Nobody (start with no shows)") }}</option>
+        {% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <p class="muted">{{ _("A one-off copy. Later changes to either profile are not shared; adjust them on the Access page.") }}</p>
+    {% endif %}
     <div class="row"><button class="btn primary" type="submit">{{ _("Add") }}</button></div>
   </form>
 </section>

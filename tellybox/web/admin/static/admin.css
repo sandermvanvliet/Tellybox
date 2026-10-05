@@ -162,3 +162,14 @@ label.avatar-tile input:focus-visible + .pic { outline: 3px solid var(--yolk); o
 .nav-badge { background: var(--yolk); color: var(--ink); margin-left: .2rem; }
 header.top nav a[aria-current="page"] .nav-badge { background: var(--ink); color: var(--yolk); }
 .bulk-bar { position: sticky; top: 3.2rem; z-index: 5; background: var(--bg); padding: .4rem 0; }
+
+/* Show x profile matrix (AD-8): scrolls sideways on a phone, the show name stays in view. */
+.matrix-wrap { overflow-x: auto; }
+table.matrix th[scope="row"] { position: sticky; left: 0; background: #fff; min-width: 8rem; max-width: 12rem; overflow-wrap: anywhere; }
+.matrix-profile { text-align: center !important; min-width: 4.5rem; }
+.matrix-profile span { display: block; font-size: .8rem; overflow-wrap: anywhere; }
+.matrix-cell { text-align: center !important; padding: 0 !important; }
+.matrix-tick { display: flex; align-items: center; justify-content: center; min-height: 44px; }
+.matrix-tick input { width: 1.4rem; height: 1.4rem; }
+.profile-checks { gap: .5rem 1rem; }
+.attention { border-left: 4px solid var(--yolk); }

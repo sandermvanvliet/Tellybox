@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-04 21:20+0200\n"
+"POT-Creation-Date: 2026-10-05 14:04+0200\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -41,7 +41,7 @@ msgstr "von Eltern gestoppt"
 msgid "time was up"
 msgstr "Zeit war um"
 
-#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:81
+#: tellybox/history.py:31 tellybox/web/admin/templates/dashboard.html:84
 msgid "blocked"
 msgstr "gesperrt"
 
@@ -215,6 +215,14 @@ msgstr "Die Anmeldung mit OIDC ist fehlgeschlagen. Versuch es erneut."
 msgid "Your account may not use the Tellybox admin."
 msgstr "Dein Konto darf die Tellybox-Verwaltung nicht verwenden."
 
+#: tellybox/web/admin/access_page.py:44 tellybox/web/admin/access_page.py:53
+#: tellybox/web/admin/library_pages.py:295
+#: tellybox/web/admin/library_pages.py:313
+#: tellybox/web/admin/library_pages.py:332
+#: tellybox/web/admin/profiles_page.py:106
+msgid "Saved."
+msgstr "Gespeichert."
+
 #: tellybox/web/admin/add.py:25
 msgid "That preview has expired; fetch it again."
 msgstr "Diese Vorschau ist abgelaufen; lade sie neu."
@@ -267,9 +275,9 @@ msgid_plural "Added %(num)d videos"
 msgstr[0] "%(num)d Video hinzugefügt"
 msgstr[1] "%(num)d Videos hinzugefügt"
 
-#: tellybox/web/admin/add.py:86 tellybox/web/admin/templates/add.html:54
-#: tellybox/web/admin/templates/add.html:114
-#: tellybox/web/admin/templates/inbox.html:51
+#: tellybox/web/admin/add.py:86 tellybox/web/admin/templates/add.html:55
+#: tellybox/web/admin/templates/add.html:122
+#: tellybox/web/admin/templates/inbox.html:59
 msgid "Unknown channel"
 msgstr "Unbekannter Kanal"
 
@@ -290,23 +298,23 @@ msgstr "Gib die URL eines Videos oder einer Playlist ein (http:// oder https://)
 msgid "%(error)s It may work later."
 msgstr "%(error)s Vielleicht klappt es später."
 
-#: tellybox/web/admin/add.py:159
+#: tellybox/web/admin/add.py:160
 msgid "That video was already added."
 msgstr "Dieses Video wurde schon hinzugefügt."
 
-#: tellybox/web/admin/add.py:162
+#: tellybox/web/admin/add.py:163
 msgid "Added"
 msgstr "Hinzugefügt"
 
-#: tellybox/web/admin/add.py:162
+#: tellybox/web/admin/add.py:163
 msgid "Added and held"
 msgstr "Hinzugefügt und zurückgehalten"
 
-#: tellybox/web/admin/add.py:179 tellybox/web/admin/add.py:190
+#: tellybox/web/admin/add.py:181 tellybox/web/admin/add.py:192
 msgid "That selection doesn't match the preview; fetch it again."
 msgstr "Die Auswahl passt nicht zur Vorschau; lade sie neu."
 
-#: tellybox/web/admin/add.py:184
+#: tellybox/web/admin/add.py:186
 msgid "Tick at least one video to add."
 msgstr "Wähle mindestens ein Video aus."
 
@@ -338,27 +346,27 @@ msgstr "GB"
 msgid "%(size)s B"
 msgstr "%(size)s B"
 
-#: tellybox/web/admin/dashboard.py:29
+#: tellybox/web/admin/dashboard.py:30
 msgid "extra_minutes needs a positive value"
 msgstr "extra_minutes braucht einen positiven Wert"
 
-#: tellybox/web/admin/dashboard.py:29
+#: tellybox/web/admin/dashboard.py:30
 msgid "extra_minutes is at most 240"
 msgstr "extra_minutes darf höchstens 240 sein"
 
-#: tellybox/web/admin/dashboard.py:178
+#: tellybox/web/admin/dashboard.py:181
 msgid "Cast service unreachable; nothing was stopped."
 msgstr "Cast-Dienst nicht erreichbar; nichts wurde gestoppt."
 
-#: tellybox/web/admin/dashboard.py:179
+#: tellybox/web/admin/dashboard.py:182
 msgid "Stopped."
 msgstr "Gestoppt."
 
-#: tellybox/web/admin/dashboard.py:193
+#: tellybox/web/admin/dashboard.py:196
 msgid "Cast service unreachable; the change wasn't applied."
 msgstr "Cast-Dienst nicht erreichbar; die Änderung wurde nicht übernommen."
 
-#: tellybox/web/admin/dashboard.py:194
+#: tellybox/web/admin/dashboard.py:197
 msgid "Done."
 msgstr "Erledigt."
 
@@ -367,8 +375,8 @@ msgid "Added time"
 msgstr "Extrazeit"
 
 #: tellybox/web/admin/history.py:15
-#: tellybox/web/admin/templates/dashboard.html:86
-#: tellybox/web/admin/templates/dashboard.html:99
+#: tellybox/web/admin/templates/dashboard.html:89
+#: tellybox/web/admin/templates/dashboard.html:102
 msgid "Unlimited today"
 msgstr "Heute unbegrenzt"
 
@@ -377,8 +385,8 @@ msgid "Block"
 msgstr "Sperren"
 
 #: tellybox/web/admin/history.py:17
-#: tellybox/web/admin/templates/dashboard.html:88
-#: tellybox/web/admin/templates/dashboard.html:103
+#: tellybox/web/admin/templates/dashboard.html:91
+#: tellybox/web/admin/templates/dashboard.html:106
 msgid "Stop now"
 msgstr "Jetzt stoppen"
 
@@ -386,11 +394,11 @@ msgstr "Jetzt stoppen"
 msgid "Cleared unlimited and block"
 msgstr "Unbegrenzt und Sperre aufgehoben"
 
-#: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:66
+#: tellybox/web/admin/integrations.py:42 tellybox/web/admin/profiles_page.py:67
 msgid "Enter a name."
 msgstr "Gib einen Namen ein."
 
-#: tellybox/web/admin/integrations.py:44 tellybox/web/admin/profiles_page.py:68
+#: tellybox/web/admin/integrations.py:44 tellybox/web/admin/profiles_page.py:69
 #, python-format
 msgid "The name can be at most %(max)d characters."
 msgstr "Der Name darf höchstens %(max)d Zeichen lang sein."
@@ -501,7 +509,7 @@ msgstr "pausiert"
 
 #: tellybox/web/admin/js_strings.py:26
 #: tellybox/web/admin/templates/dashboard.html:14
-#: tellybox/web/admin/templates/dashboard.html:126
+#: tellybox/web/admin/templates/dashboard.html:129
 msgid "unknown"
 msgstr "unbekannt"
 
@@ -532,32 +540,32 @@ msgid "Watching: %(names)s"
 msgstr "Schaut: %(names)s"
 
 #: tellybox/web/admin/js_strings.py:32
-#: tellybox/web/admin/templates/dashboard.html:77
+#: tellybox/web/admin/templates/dashboard.html:80
 #: tellybox/web/admin/templates/profiles.html:15
 #, python-format
 msgid "%(time)s used"
 msgstr "%(time)s verbraucht"
 
 #: tellybox/web/admin/js_strings.py:33
-#: tellybox/web/admin/templates/dashboard.html:77
+#: tellybox/web/admin/templates/dashboard.html:80
 #, python-format
 msgid "%(time)s left"
 msgstr "%(time)s übrig"
 
 #: tellybox/web/admin/js_strings.py:34
-#: tellybox/web/admin/templates/dashboard.html:128
+#: tellybox/web/admin/templates/dashboard.html:131
 #, python-format
 msgid "Media on disk: %(size)s"
 msgstr "Medien auf Festplatte: %(size)s"
 
 #: tellybox/web/admin/js_strings.py:35
-#: tellybox/web/admin/templates/dashboard.html:128
+#: tellybox/web/admin/templates/dashboard.html:131
 #, python-format
 msgid "Free space: %(size)s"
 msgstr "Frei: %(size)s"
 
 #: tellybox/web/admin/js_strings.py:36
-#: tellybox/web/admin/templates/dashboard.html:117
+#: tellybox/web/admin/templates/dashboard.html:120
 msgid "Nothing downloading."
 msgstr "Es wird nichts heruntergeladen."
 
@@ -769,7 +777,7 @@ msgid "TB"
 msgstr "TB"
 
 #: tellybox/web/admin/js_strings.py:111
-#: tellybox/web/admin/templates/add.html:124
+#: tellybox/web/admin/templates/add.html:137
 #: tellybox/web/admin/templates/backlog.html:24
 #, python-format
 msgid "Add %(num)d video"
@@ -778,7 +786,7 @@ msgstr[0] "%(num)d Video hinzufügen"
 msgstr[1] "%(num)d Videos hinzufügen"
 
 #: tellybox/web/admin/js_strings.py:112
-#: tellybox/web/admin/templates/dashboard.html:111
+#: tellybox/web/admin/templates/dashboard.html:114
 #, python-format
 msgid "%(num)d failed job"
 msgid_plural "%(num)d failed jobs"
@@ -819,137 +827,130 @@ msgid "The text region needs four percentages (left, top, width, height) that fi
 msgstr "Der Textbereich braucht vier Prozentwerte (links, oben, Breite, Höhe), die ins Bild passen."
 
 #: tellybox/web/admin/library_pages.py:162
-#: tellybox/web/admin/templates/add.html:81
+#: tellybox/web/admin/templates/add.html:89
 #: tellybox/web/admin/templates/library.html:121
 msgid "Playlist"
 msgstr "Playlist"
 
-#: tellybox/web/admin/library_pages.py:230
-#: tellybox/web/admin/library_pages.py:280
+#: tellybox/web/admin/library_pages.py:233
+#: tellybox/web/admin/library_pages.py:283
 msgid "Show name must not be empty."
 msgstr "Der Name der Serie darf nicht leer sein."
 
-#: tellybox/web/admin/library_pages.py:232
+#: tellybox/web/admin/library_pages.py:235
 msgid "Show created."
 msgstr "Serie angelegt."
 
-#: tellybox/web/admin/library_pages.py:239
+#: tellybox/web/admin/library_pages.py:242
 msgid "Confirm the merge first."
 msgstr "Bestätige zuerst das Zusammenführen."
 
-#: tellybox/web/admin/library_pages.py:243
+#: tellybox/web/admin/library_pages.py:246
 msgid "Cannot merge a show into itself."
 msgstr "Eine Serie lässt sich nicht mit sich selbst zusammenführen."
 
-#: tellybox/web/admin/library_pages.py:246
+#: tellybox/web/admin/library_pages.py:249
 msgid "Shows merged."
 msgstr "Serien zusammengeführt."
 
-#: tellybox/web/admin/library_pages.py:254
+#: tellybox/web/admin/library_pages.py:257
 #: tellybox/web/admin/split_pages.py:238
 msgid "Published to the kid app."
 msgstr "In der Kinder-App freigegeben."
 
-#: tellybox/web/admin/library_pages.py:265
+#: tellybox/web/admin/library_pages.py:268
 msgid "Nothing in that playlist is ready yet."
 msgstr "In dieser Playlist ist noch nichts bereit."
 
-#: tellybox/web/admin/library_pages.py:266
+#: tellybox/web/admin/library_pages.py:269
 #, python-format
 msgid "Published %(num)d video to the kid app."
 msgid_plural "Published %(num)d videos to the kid app."
 msgstr[0] "%(num)d Video in der Kinder-App freigegeben."
 msgstr[1] "%(num)d Videos in der Kinder-App freigegeben."
 
-#: tellybox/web/admin/library_pages.py:284
-#: tellybox/web/admin/library_pages.py:396
+#: tellybox/web/admin/library_pages.py:287
+#: tellybox/web/admin/library_pages.py:399
 msgid "Renamed."
 msgstr "Umbenannt."
 
-#: tellybox/web/admin/library_pages.py:292
-#: tellybox/web/admin/library_pages.py:310
-#: tellybox/web/admin/library_pages.py:329
-#: tellybox/web/admin/profiles_page.py:97
-msgid "Saved."
-msgstr "Gespeichert."
-
-#: tellybox/web/admin/library_pages.py:337
-#: tellybox/web/admin/library_pages.py:402
+#: tellybox/web/admin/library_pages.py:340
+#: tellybox/web/admin/library_pages.py:405
 msgid "Hidden."
 msgstr "Ausgeblendet."
 
-#: tellybox/web/admin/library_pages.py:337
-#: tellybox/web/admin/library_pages.py:402
+#: tellybox/web/admin/library_pages.py:340
+#: tellybox/web/admin/library_pages.py:405
 msgid "Unhidden."
 msgstr "Wieder eingeblendet."
 
-#: tellybox/web/admin/library_pages.py:345
+#: tellybox/web/admin/library_pages.py:348
 msgid "Type the show's name exactly to delete it."
 msgstr "Gib den Namen der Serie genau ein, um sie zu löschen."
 
-#: tellybox/web/admin/library_pages.py:348
+#: tellybox/web/admin/library_pages.py:351
 msgid "Show deleted."
 msgstr "Serie gelöscht."
 
-#: tellybox/web/admin/library_pages.py:362
-#: tellybox/web/admin/library_pages.py:384
+#: tellybox/web/admin/library_pages.py:365
+#: tellybox/web/admin/library_pages.py:387
 msgid "Artwork updated."
 msgstr "Titelbild aktualisiert."
 
-#: tellybox/web/admin/library_pages.py:372
+#: tellybox/web/admin/library_pages.py:375
 msgid "Pick an episode of this show."
 msgstr "Wähle eine Folge dieser Serie."
 
-#: tellybox/web/admin/library_pages.py:376
+#: tellybox/web/admin/library_pages.py:379
 msgid "That episode's video file is missing."
 msgstr "Die Videodatei dieser Folge fehlt."
 
-#: tellybox/web/admin/library_pages.py:394
+#: tellybox/web/admin/library_pages.py:397
 msgid "Episode title must not be empty."
 msgstr "Der Titel der Folge darf nicht leer sein."
 
-#: tellybox/web/admin/library_pages.py:410
+#: tellybox/web/admin/library_pages.py:413
 msgid "Unknown target show."
 msgstr "Unbekannte Zielserie."
 
-#: tellybox/web/admin/library_pages.py:412
+#: tellybox/web/admin/library_pages.py:415
 msgid "Episode moved."
 msgstr "Folge verschoben."
 
-#: tellybox/web/admin/library_pages.py:426
+#: tellybox/web/admin/library_pages.py:429
 msgid "Type \"delete\" to confirm."
 msgstr "Gib „delete“ ein, um zu bestätigen."
 
-#: tellybox/web/admin/library_pages.py:429
+#: tellybox/web/admin/library_pages.py:432
 msgid "Episode deleted."
 msgstr "Folge gelöscht."
 
-#: tellybox/web/admin/library_pages.py:473
+#: tellybox/web/admin/library_pages.py:476
 msgid "This episode has no downloaded video to download again."
 msgstr "Diese Folge hat kein heruntergeladenes Video, das erneut heruntergeladen werden könnte."
 
-#: tellybox/web/admin/library_pages.py:478
+#: tellybox/web/admin/library_pages.py:481
 msgid "This video is split into episodes, so it can't be downloaded again."
 msgstr "Dieses Video ist in Folgen aufgeteilt und kann deshalb nicht erneut heruntergeladen werden."
 
-#: tellybox/web/admin/library_pages.py:480
+#: tellybox/web/admin/library_pages.py:483
 msgid "This video is already being checked or downloaded again."
 msgstr "Dieses Video wird bereits geprüft oder erneut heruntergeladen."
 
-#: tellybox/web/admin/library_pages.py:482
+#: tellybox/web/admin/library_pages.py:485
 msgid "This video can't be downloaded again right now."
 msgstr "Dieses Video kann gerade nicht erneut heruntergeladen werden."
 
-#: tellybox/web/admin/library_pages.py:483
+#: tellybox/web/admin/library_pages.py:486
 msgid "Queued: the video will be downloaded again."
 msgstr "In der Warteschlange: Das Video wird erneut heruntergeladen."
 
-#: tellybox/web/admin/library_pages.py:510
-#: tellybox/web/admin/library_pages.py:525
+#: tellybox/web/admin/library_pages.py:513
+#: tellybox/web/admin/library_pages.py:528
 msgid "Thumbnail updated."
 msgstr "Vorschaubild aktualisiert."
 
-#: tellybox/web/admin/library_pages.py:517
+#: tellybox/web/admin/library_pages.py:520
 msgid "This episode's video file is missing."
 msgstr "Die Videodatei dieser Folge fehlt."
 
@@ -985,39 +986,43 @@ msgstr "Frosch"
 msgid "Penguin"
 msgstr "Pinguin"
 
-#: tellybox/web/admin/profiles_page.py:70
+#: tellybox/web/admin/profiles_page.py:71
 msgid "Choose one of the pictures."
 msgstr "Wähle eines der Bilder."
 
-#: tellybox/web/admin/profiles_page.py:88
+#: tellybox/web/admin/profiles_page.py:86
+msgid "Choose one of the existing profiles."
+msgstr "Wähle eines der vorhandenen Profile."
+
+#: tellybox/web/admin/profiles_page.py:97
 msgid "Profile added."
 msgstr "Profil hinzugefügt."
 
-#: tellybox/web/admin/profiles_page.py:103
+#: tellybox/web/admin/profiles_page.py:112
 msgid "Choose up or down."
 msgstr "Wähle nach oben oder nach unten."
 
-#: tellybox/web/admin/profiles_page.py:121
+#: tellybox/web/admin/profiles_page.py:130
 msgid "Photo updated."
 msgstr "Foto aktualisiert."
 
-#: tellybox/web/admin/profiles_page.py:127
+#: tellybox/web/admin/profiles_page.py:136
 msgid "Photo removed."
 msgstr "Foto entfernt."
 
-#: tellybox/web/admin/profiles_page.py:133
+#: tellybox/web/admin/profiles_page.py:142
 msgid "This is the last profile; it can't be deleted."
 msgstr "Das ist das letzte Profil; du kannst es nicht löschen."
 
-#: tellybox/web/admin/profiles_page.py:136
+#: tellybox/web/admin/profiles_page.py:145
 msgid "Cast service unreachable; can't tell whether this profile is watching."
 msgstr "Cast-Dienst nicht erreichbar; ich kann nicht prüfen, ob dieses Profil gerade schaut."
 
-#: tellybox/web/admin/profiles_page.py:138
+#: tellybox/web/admin/profiles_page.py:147
 msgid "This profile is watching right now. Stop the TV first."
 msgstr "Dieses Profil schaut gerade. Stoppe zuerst den Fernseher."
 
-#: tellybox/web/admin/profiles_page.py:140
+#: tellybox/web/admin/profiles_page.py:149
 msgid "Profile deleted."
 msgstr "Profil gelöscht."
 
@@ -1210,15 +1215,15 @@ msgstr "Dieses Video ist nicht abgelehnt."
 msgid "Back in the inbox."
 msgstr "Wieder im Eingang."
 
-#: tellybox/web/admin/subscription_pages.py:252
+#: tellybox/web/admin/subscription_pages.py:253
 msgid "Choose what to do with the selection."
 msgstr "Wähle, was mit der Auswahl geschehen soll."
 
-#: tellybox/web/admin/subscription_pages.py:254
+#: tellybox/web/admin/subscription_pages.py:255
 msgid "Tick at least one video first."
 msgstr "Wähle zuerst mindestens ein Video aus."
 
-#: tellybox/web/admin/subscription_pages.py:259
+#: tellybox/web/admin/subscription_pages.py:260
 #, python-format
 msgid "Rejected %(num)d video. You can undo this on the Rejected tab."
 msgid_plural "Rejected %(num)d videos. You can undo this on the Rejected tab."
@@ -1241,117 +1246,167 @@ msgstr "wird geschnitten"
 msgid "done"
 msgstr "fertig"
 
-#: tellybox/web/admin/templates/add.html:3
-#: tellybox/web/admin/templates/add.html:71
+#: tellybox/web/admin/templates/access.html:3
+#: tellybox/web/admin/templates/base.html:20
+#: tellybox/web/admin/templates/integrations.html:28
+#: tellybox/web/admin/templates/integrations.html:42
+msgid "Access"
+msgstr "Zugriff"
+
+#: tellybox/web/admin/templates/access.html:6
+msgid "Which shows each profile can see"
+msgstr "Welche Serien jedes Profil sehen kann"
+
+#: tellybox/web/admin/templates/access.html:7
+msgid "Tick the shows each profile may watch. A new show stays hidden from everyone until you tick it here. When several profiles watch together, they see only the shows all of them may see."
+msgstr "Hake die Serien an, die jedes Profil ansehen darf. Eine neue Serie bleibt für alle ausgeblendet, bis du sie hier ankreuzt. Wenn mehrere Profile zusammen schauen, sehen sie nur die Serien, die alle sehen dürfen."
+
+#: tellybox/web/admin/templates/access.html:10
+msgid "There are no shows yet."
+msgstr "Es gibt noch keine Serien."
+
+#: tellybox/web/admin/templates/access.html:17
+#: tellybox/web/admin/templates/history.html:11
+#: tellybox/web/admin/templates/history.html:32
+#: tellybox/web/admin/templates/show.html:10
+#: tellybox/web/admin/templates/subscriptions.html:11
+msgid "Show"
+msgstr "Serie"
+
+#: tellybox/web/admin/templates/access.html:26
+msgid "hidden"
+msgstr "ausgeblendet"
+
+#: tellybox/web/admin/templates/access.html:31
+#, python-format
+msgid "%(show)s for %(profile)s"
+msgstr "%(show)s für %(profile)s"
+
+#: tellybox/web/admin/templates/access.html:40
+#: tellybox/web/admin/templates/profiles.html:27
+#: tellybox/web/admin/templates/settings.html:181
+#: tellybox/web/admin/templates/show.html:38
+#: tellybox/web/admin/templates/show.html:70
+#: tellybox/web/admin/templates/show.html:127
+msgid "Save"
+msgstr "Speichern"
+
+#: tellybox/web/admin/templates/add.html:4
+#: tellybox/web/admin/templates/add.html:78
 #: tellybox/web/admin/templates/base.html:19
-#: tellybox/web/admin/templates/profiles.html:65
+#: tellybox/web/admin/templates/profiles.html:75
 msgid "Add"
 msgstr "Hinzufügen"
 
-#: tellybox/web/admin/templates/add.html:6
+#: tellybox/web/admin/templates/add.html:7
 msgid "Add a video or playlist"
 msgstr "Video oder Playlist hinzufügen"
 
-#: tellybox/web/admin/templates/add.html:8
+#: tellybox/web/admin/templates/add.html:9
 msgid "YouTube URL"
 msgstr "YouTube-URL"
 
-#: tellybox/web/admin/templates/add.html:12
+#: tellybox/web/admin/templates/add.html:13
 msgid "Fetch preview"
 msgstr "Vorschau laden"
 
-#: tellybox/web/admin/templates/add.html:13
-#: tellybox/web/admin/templates/add.html:41
+#: tellybox/web/admin/templates/add.html:14
+#: tellybox/web/admin/templates/add.html:42
 #: tellybox/web/admin/templates/subscriptions.html:20
 msgid "Fetching…"
 msgstr "Wird geladen…"
 
-#: tellybox/web/admin/templates/add.html:17
+#: tellybox/web/admin/templates/add.html:18
 #, python-format
 msgid "Already added (source video %(id)s, %(status)s)."
 msgstr "Schon hinzugefügt (Quellvideo %(id)s, %(status)s)."
 
-#: tellybox/web/admin/templates/add.html:19
+#: tellybox/web/admin/templates/add.html:20
 #, python-format
 msgid "See %(jobs)s or %(library)s."
 msgstr "Siehe %(jobs)s oder %(library)s."
 
-#: tellybox/web/admin/templates/add.html:19
+#: tellybox/web/admin/templates/add.html:20
 #: tellybox/web/admin/templates/base.html:19
 #: tellybox/web/admin/templates/jobs.html:3
 #: tellybox/web/admin/templates/jobs.html:7
 msgid "Jobs"
 msgstr "Aufgaben"
 
-#: tellybox/web/admin/templates/add.html:20
+#: tellybox/web/admin/templates/add.html:21
 #: tellybox/web/admin/templates/base.html:20
 #: tellybox/web/admin/templates/library.html:3
 #: tellybox/web/admin/templates/library.html:6
-#: tellybox/web/admin/templates/show.html:5
+#: tellybox/web/admin/templates/show.html:6
 #: tellybox/web/admin/templates/split.html:8
 msgid "Library"
 msgstr "Mediathek"
 
-#: tellybox/web/admin/templates/add.html:27
+#: tellybox/web/admin/templates/add.html:28
 msgid "This is a channel"
 msgstr "Das ist ein Kanal"
 
-#: tellybox/web/admin/templates/add.html:28
+#: tellybox/web/admin/templates/add.html:29
 msgid "A channel is followed with a subscription: its new videos wait in the inbox until you approve them."
 msgstr "Einem Kanal folgst du mit einem Abo: Seine neuen Videos warten im Eingang, bis du sie freigibst."
 
-#: tellybox/web/admin/templates/add.html:29
+#: tellybox/web/admin/templates/add.html:30
 msgid "Subscribe to this channel"
 msgstr "Diesen Kanal abonnieren"
 
-#: tellybox/web/admin/templates/add.html:35
+#: tellybox/web/admin/templates/add.html:36
 msgid "Video or playlist?"
 msgstr "Video oder Playlist?"
 
-#: tellybox/web/admin/templates/add.html:36
+#: tellybox/web/admin/templates/add.html:37
 msgid "This link is a video inside a playlist. What do you want to add?"
 msgstr "Dieser Link ist ein Video in einer Playlist. Was möchtest du hinzufügen?"
 
-#: tellybox/web/admin/templates/add.html:39
+#: tellybox/web/admin/templates/add.html:40
 msgid "Just this video"
 msgstr "Nur dieses Video"
 
-#: tellybox/web/admin/templates/add.html:40
+#: tellybox/web/admin/templates/add.html:41
 msgid "Whole playlist"
 msgstr "Ganze Playlist"
 
-#: tellybox/web/admin/templates/add.html:56
+#: tellybox/web/admin/templates/add.html:57
 #, python-format
 msgid "Goes to: %(show)s"
 msgstr "Kommt in: %(show)s"
 
-#: tellybox/web/admin/templates/add.html:57
+#: tellybox/web/admin/templates/add.html:58
 #, python-format
 msgid "Goes to: new show: %(show)s"
 msgstr "Kommt in neue Serie: %(show)s"
 
-#: tellybox/web/admin/templates/add.html:61
+#: tellybox/web/admin/templates/add.html:62
 #, python-format
 msgid "%(num)d chapter"
 msgid_plural "%(num)d chapters"
 msgstr[0] "%(num)d Kapitel"
 msgstr[1] "%(num)d Kapitel"
 
-#: tellybox/web/admin/templates/add.html:72
+#: tellybox/web/admin/templates/add.html:73
+#: tellybox/web/admin/templates/add.html:130
+msgid "Make the show visible to (optional)"
+msgstr "Serie sichtbar machen für (optional)"
+
+#: tellybox/web/admin/templates/add.html:79
 msgid "Add and hold"
 msgstr "Hinzufügen und zurückhalten"
 
-#: tellybox/web/admin/templates/add.html:81
+#: tellybox/web/admin/templates/add.html:89
 #, python-format
 msgid "Playlist by %(channel)s"
 msgstr "Playlist von %(channel)s"
 
-#: tellybox/web/admin/templates/add.html:84
+#: tellybox/web/admin/templates/add.html:92
 #, python-format
 msgid "showing the first %(shown)s of %(total)s videos"
 msgstr "die ersten %(shown)s von %(total)s Videos"
 
-#: tellybox/web/admin/templates/add.html:86
+#: tellybox/web/admin/templates/add.html:94
 #: tellybox/web/admin/templates/library.html:128
 #, python-format
 msgid "%(num)d video"
@@ -1359,27 +1414,27 @@ msgid_plural "%(num)d videos"
 msgstr[0] "%(num)d Video"
 msgstr[1] "%(num)d Videos"
 
-#: tellybox/web/admin/templates/add.html:90
+#: tellybox/web/admin/templates/add.html:98
 msgid "Add the rest later by adding the playlist again; videos already added are skipped."
 msgstr "Füge den Rest später hinzu, indem du die Playlist noch einmal hinzufügst; vorhandene Videos werden übersprungen."
 
-#: tellybox/web/admin/templates/add.html:92
+#: tellybox/web/admin/templates/add.html:100
 msgid "Each video goes to its own channel's show."
 msgstr "Jedes Video kommt in die Serie seines eigenen Kanals."
 
-#: tellybox/web/admin/templates/add.html:97
+#: tellybox/web/admin/templates/add.html:105
 #: tellybox/web/admin/templates/backlog.html:15
-#: tellybox/web/admin/templates/inbox.html:30
+#: tellybox/web/admin/templates/inbox.html:31
 msgid "Select all"
 msgstr "Alle auswählen"
 
-#: tellybox/web/admin/templates/add.html:98
+#: tellybox/web/admin/templates/add.html:106
 #: tellybox/web/admin/templates/backlog.html:16
-#: tellybox/web/admin/templates/inbox.html:31
+#: tellybox/web/admin/templates/inbox.html:32
 msgid "Select none"
 msgstr "Keine auswählen"
 
-#: tellybox/web/admin/templates/add.html:122
+#: tellybox/web/admin/templates/add.html:135
 msgid "Hold for approval"
 msgstr "Bis zur Freigabe zurückhalten"
 
@@ -1433,8 +1488,8 @@ msgid "Profiles"
 msgstr "Profile"
 
 #: tellybox/web/admin/templates/base.html:21
-#: tellybox/web/admin/templates/inbox.html:2
-#: tellybox/web/admin/templates/inbox.html:5
+#: tellybox/web/admin/templates/inbox.html:3
+#: tellybox/web/admin/templates/inbox.html:6
 #: tellybox/web/admin/templates/subscriptions.html:64
 msgid "Inbox"
 msgstr "Eingang"
@@ -1497,54 +1552,58 @@ msgstr "Zeit ist um"
 msgid "watching"
 msgstr "schaut"
 
-#: tellybox/web/admin/templates/dashboard.html:80
+#: tellybox/web/admin/templates/dashboard.html:77
+msgid "No shows visible. Choose some on the Access page."
+msgstr "Keine Serien sichtbar. Wähle welche auf der Seite Zugriff."
+
+#: tellybox/web/admin/templates/dashboard.html:83
 msgid "unlimited today"
 msgstr "heute unbegrenzt"
 
-#: tellybox/web/admin/templates/dashboard.html:84
-#: tellybox/web/admin/templates/dashboard.html:85
-#: tellybox/web/admin/templates/dashboard.html:97
-#: tellybox/web/admin/templates/dashboard.html:98
+#: tellybox/web/admin/templates/dashboard.html:87
+#: tellybox/web/admin/templates/dashboard.html:88
+#: tellybox/web/admin/templates/dashboard.html:100
+#: tellybox/web/admin/templates/dashboard.html:101
 #: tellybox/web/admin/templates/history.html:57
 #, python-format
 msgid "+%(minutes)s min"
 msgstr "+%(minutes)s min"
 
-#: tellybox/web/admin/templates/dashboard.html:86
-#: tellybox/web/admin/templates/dashboard.html:100
+#: tellybox/web/admin/templates/dashboard.html:89
+#: tellybox/web/admin/templates/dashboard.html:103
 msgid "Turn off unlimited"
 msgstr "Unbegrenzt beenden"
 
-#: tellybox/web/admin/templates/dashboard.html:87
-#: tellybox/web/admin/templates/dashboard.html:101
+#: tellybox/web/admin/templates/dashboard.html:90
+#: tellybox/web/admin/templates/dashboard.html:104
 msgid "Block today"
 msgstr "Heute sperren"
 
-#: tellybox/web/admin/templates/dashboard.html:87
-#: tellybox/web/admin/templates/dashboard.html:102
+#: tellybox/web/admin/templates/dashboard.html:90
+#: tellybox/web/admin/templates/dashboard.html:105
 msgid "Unblock"
 msgstr "Entsperren"
 
-#: tellybox/web/admin/templates/dashboard.html:95
+#: tellybox/web/admin/templates/dashboard.html:98
 #: tellybox/web/admin/templates/history.html:13
 msgid "Everyone"
 msgstr "Alle"
 
-#: tellybox/web/admin/templates/dashboard.html:109
+#: tellybox/web/admin/templates/dashboard.html:112
 msgid "Downloads & jobs"
 msgstr "Downloads und Aufgaben"
 
-#: tellybox/web/admin/templates/dashboard.html:120
+#: tellybox/web/admin/templates/dashboard.html:123
 msgid "See all jobs"
 msgstr "Alle Aufgaben"
 
-#: tellybox/web/admin/templates/dashboard.html:124
+#: tellybox/web/admin/templates/dashboard.html:127
 msgid "System"
 msgstr "System"
 
 #: tellybox/web/admin/templates/episode.html:12
 #: tellybox/web/admin/templates/library.html:43
-#: tellybox/web/admin/templates/show.html:171
+#: tellybox/web/admin/templates/show.html:181
 #: tellybox/web/admin/templates/split.html:44
 msgid "Hidden"
 msgstr "Ausgeblendet"
@@ -1565,7 +1624,7 @@ msgstr "Das Originalvideo wurde nach dem Aufteilen gelöscht und kann deshalb ni
 
 #: tellybox/web/admin/templates/episode.html:30
 #: tellybox/web/admin/templates/settings.html:156
-#: tellybox/web/admin/templates/show.html:34
+#: tellybox/web/admin/templates/show.html:44
 msgid "SponsorBlock"
 msgstr "SponsorBlock"
 
@@ -1637,15 +1696,8 @@ msgstr "Erneut mit SponsorBlock herunterladen"
 msgid "The last 21 days."
 msgstr "Die letzten 21 Tage."
 
-#: tellybox/web/admin/templates/history.html:11
-#: tellybox/web/admin/templates/history.html:32
-#: tellybox/web/admin/templates/show.html:9
-#: tellybox/web/admin/templates/subscriptions.html:11
-msgid "Show"
-msgstr "Serie"
-
 #: tellybox/web/admin/templates/history.html:17
-#: tellybox/web/admin/templates/inbox.html:18
+#: tellybox/web/admin/templates/inbox.html:19
 msgid "Filter"
 msgstr "Filtern"
 
@@ -1690,67 +1742,75 @@ msgstr "aus"
 msgid "via %(name)s"
 msgstr "über %(name)s"
 
-#: tellybox/web/admin/templates/inbox.html:7
+#: tellybox/web/admin/templates/inbox.html:8
 msgid "Waiting"
 msgstr "Wartend"
 
-#: tellybox/web/admin/templates/inbox.html:8
+#: tellybox/web/admin/templates/inbox.html:9
 msgid "Rejected"
 msgstr "Abgelehnt"
 
-#: tellybox/web/admin/templates/inbox.html:12
+#: tellybox/web/admin/templates/inbox.html:13
 msgid "Channel"
 msgstr "Kanal"
 
-#: tellybox/web/admin/templates/inbox.html:14
+#: tellybox/web/admin/templates/inbox.html:15
 msgid "All channels"
 msgstr "Alle Kanäle"
 
-#: tellybox/web/admin/templates/inbox.html:33
+#: tellybox/web/admin/templates/inbox.html:34
 msgid "Approve selected"
 msgstr "Auswahl freigeben"
 
-#: tellybox/web/admin/templates/inbox.html:34
+#: tellybox/web/admin/templates/inbox.html:35
 msgid "Reject selected"
 msgstr "Auswahl ablehnen"
 
-#: tellybox/web/admin/templates/inbox.html:36
+#: tellybox/web/admin/templates/inbox.html:37
 msgid "Reject every video waiting here? You can undo this on the Rejected tab."
 msgstr "Jedes hier wartende Video ablehnen? Du kannst das im Tab Abgelehnt rückgängig machen."
 
-#: tellybox/web/admin/templates/inbox.html:36
+#: tellybox/web/admin/templates/inbox.html:37
 msgid "Reject all remaining"
 msgstr "Alle übrigen ablehnen"
 
-#: tellybox/web/admin/templates/inbox.html:43
+#: tellybox/web/admin/templates/inbox.html:41
+msgid "Make approved shows visible to (optional)"
+msgstr "Freigegebene Serien sichtbar machen für (optional)"
+
+#: tellybox/web/admin/templates/inbox.html:42
+msgid "Applies to Approve and Approve selected. A new show stays hidden from everyone you leave unticked."
+msgstr "Gilt für Freigeben und Auswahl freigeben. Eine neue Serie bleibt für alle ausgeblendet, die du nicht ankreuzt."
+
+#: tellybox/web/admin/templates/inbox.html:51
 msgid "Select"
 msgstr "Auswählen"
 
-#: tellybox/web/admin/templates/inbox.html:53
+#: tellybox/web/admin/templates/inbox.html:61
 msgid "may not be downloadable"
 msgstr "lässt sich vielleicht nicht herunterladen"
 
-#: tellybox/web/admin/templates/inbox.html:55
+#: tellybox/web/admin/templates/inbox.html:63
 msgid "Open on YouTube"
 msgstr "Auf YouTube öffnen"
 
-#: tellybox/web/admin/templates/inbox.html:60
+#: tellybox/web/admin/templates/inbox.html:68
 msgid "Approve"
 msgstr "Freigeben"
 
-#: tellybox/web/admin/templates/inbox.html:61
+#: tellybox/web/admin/templates/inbox.html:69
 msgid "Reject"
 msgstr "Ablehnen"
 
-#: tellybox/web/admin/templates/inbox.html:63
+#: tellybox/web/admin/templates/inbox.html:71
 msgid "Undo"
 msgstr "Rückgängig"
 
-#: tellybox/web/admin/templates/inbox.html:71
+#: tellybox/web/admin/templates/inbox.html:79
 msgid "Nothing is waiting for approval."
 msgstr "Nichts wartet auf Freigabe."
 
-#: tellybox/web/admin/templates/inbox.html:71
+#: tellybox/web/admin/templates/inbox.html:79
 msgid "No rejected videos."
 msgstr "Keine abgelehnten Videos."
 
@@ -1790,19 +1850,14 @@ msgstr "Neues Token"
 #: tellybox/web/admin/templates/integrations.html:24
 #: tellybox/web/admin/templates/integrations.html:42
 #: tellybox/web/admin/templates/library.html:57
-#: tellybox/web/admin/templates/profiles.html:22
-#: tellybox/web/admin/templates/profiles.html:61
+#: tellybox/web/admin/templates/profiles.html:23
+#: tellybox/web/admin/templates/profiles.html:62
 msgid "Name"
 msgstr "Name"
 
 #: tellybox/web/admin/templates/integrations.html:25
 msgid "Home Assistant"
 msgstr "Home Assistant"
-
-#: tellybox/web/admin/templates/integrations.html:28
-#: tellybox/web/admin/templates/integrations.html:42
-msgid "Access"
-msgstr "Zugriff"
 
 #: tellybox/web/admin/templates/integrations.html:29
 #: tellybox/web/admin/templates/integrations.html:47
@@ -2040,51 +2095,63 @@ msgstr "Passwort"
 msgid "The kids who watch. Each has their own time, continue watching and viewing session. Allowance and session length are in Settings."
 msgstr "Die Kinder, die schauen. Jedes hat eigene Zeit, eigene Weiterschauen-Liste und eigene Schausitzung. Zeitkontingent und Sitzungslänge findest du unter Einstellungen."
 
-#: tellybox/web/admin/templates/profiles.html:25
-#: tellybox/web/admin/templates/profiles.html:64
+#: tellybox/web/admin/templates/profiles.html:17
+#, python-format
+msgid "%(num)d show visible"
+msgid_plural "%(num)d shows visible"
+msgstr[0] "%(num)d Serie sichtbar"
+msgstr[1] "%(num)d Serien sichtbar"
+
+#: tellybox/web/admin/templates/profiles.html:26
+#: tellybox/web/admin/templates/profiles.html:65
 msgid "No picture"
 msgstr "Kein Bild"
 
-#: tellybox/web/admin/templates/profiles.html:26
-#: tellybox/web/admin/templates/settings.html:181
-#: tellybox/web/admin/templates/show.html:60
-#: tellybox/web/admin/templates/show.html:117
-msgid "Save"
-msgstr "Speichern"
-
-#: tellybox/web/admin/templates/profiles.html:31
+#: tellybox/web/admin/templates/profiles.html:32
 msgid "Photo"
 msgstr "Foto"
 
-#: tellybox/web/admin/templates/profiles.html:32
+#: tellybox/web/admin/templates/profiles.html:33
 msgid "Upload photo"
 msgstr "Foto hochladen"
 
-#: tellybox/web/admin/templates/profiles.html:36
+#: tellybox/web/admin/templates/profiles.html:37
 msgid "Remove photo"
 msgstr "Foto entfernen"
 
-#: tellybox/web/admin/templates/profiles.html:44
-#: tellybox/web/admin/templates/show.html:178
+#: tellybox/web/admin/templates/profiles.html:45
+#: tellybox/web/admin/templates/show.html:188
 msgid "Move up"
 msgstr "Nach oben"
 
-#: tellybox/web/admin/templates/profiles.html:48
-#: tellybox/web/admin/templates/show.html:182
+#: tellybox/web/admin/templates/profiles.html:49
+#: tellybox/web/admin/templates/show.html:192
 msgid "Move down"
 msgstr "Nach unten"
 
-#: tellybox/web/admin/templates/profiles.html:51
+#: tellybox/web/admin/templates/profiles.html:52
 msgid "Delete this profile with its continue watching and history?"
 msgstr "Dieses Profil mit Weiterschauen-Liste und Verlauf löschen?"
 
-#: tellybox/web/admin/templates/profiles.html:52
+#: tellybox/web/admin/templates/profiles.html:53
 msgid "Delete profile"
 msgstr "Profil löschen"
 
-#: tellybox/web/admin/templates/profiles.html:59
+#: tellybox/web/admin/templates/profiles.html:60
 msgid "Add a profile"
 msgstr "Profil hinzufügen"
+
+#: tellybox/web/admin/templates/profiles.html:67
+msgid "Copy shows from"
+msgstr "Serien kopieren von"
+
+#: tellybox/web/admin/templates/profiles.html:69
+msgid "Nobody (start with no shows)"
+msgstr "Niemand (ohne Serien beginnen)"
+
+#: tellybox/web/admin/templates/profiles.html:73
+msgid "A one-off copy. Later changes to either profile are not shared; adjust them on the Access page."
+msgstr "Eine einmalige Kopie. Spätere Änderungen an einem der beiden Profile werden nicht übernommen; passe sie auf der Seite Zugriff an."
 
 #: tellybox/web/admin/templates/settings.html:12
 msgid "Daily allowance"
@@ -2263,211 +2330,219 @@ msgstr "Passwort wiederholen"
 msgid "Set password and sign in"
 msgstr "Passwort festlegen und anmelden"
 
-#: tellybox/web/admin/templates/show.html:12
-#: tellybox/web/admin/templates/show.html:192
+#: tellybox/web/admin/templates/show.html:13
+#: tellybox/web/admin/templates/show.html:202
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: tellybox/web/admin/templates/show.html:18
+#: tellybox/web/admin/templates/show.html:19
 msgid "Autoplay on (tap to turn off)"
 msgstr "Automatisch weiter: an (tippen für aus)"
 
-#: tellybox/web/admin/templates/show.html:18
+#: tellybox/web/admin/templates/show.html:19
 msgid "Autoplay off (tap to turn on)"
 msgstr "Automatisch weiter: aus (tippen für an)"
 
-#: tellybox/web/admin/templates/show.html:23
+#: tellybox/web/admin/templates/show.html:24
 msgid "Unhide show"
 msgstr "Serie einblenden"
 
-#: tellybox/web/admin/templates/show.html:23
+#: tellybox/web/admin/templates/show.html:24
 msgid "Hide show"
 msgstr "Serie ausblenden"
 
-#: tellybox/web/admin/templates/show.html:26
+#: tellybox/web/admin/templates/show.html:27
 msgid "Hidden from the kid app"
 msgstr "In der Kinder-App ausgeblendet"
 
-#: tellybox/web/admin/templates/show.html:28
+#: tellybox/web/admin/templates/show.html:29
 msgid "Type the show's name to delete it"
 msgstr "Zum Löschen den Namen der Serie eingeben"
 
-#: tellybox/web/admin/templates/show.html:29
+#: tellybox/web/admin/templates/show.html:30
 msgid "Delete show and its files"
 msgstr "Serie samt Dateien löschen"
 
-#: tellybox/web/admin/templates/show.html:39
+#: tellybox/web/admin/templates/show.html:35
+msgid "Visible to"
+msgstr "Sichtbar für"
+
+#: tellybox/web/admin/templates/show.html:40
+msgid "Only the ticked profiles see this show in the kid app. Watching is never cut off mid-episode; the next episode just doesn't start."
+msgstr "Nur die angekreuzten Profile sehen diese Serie in der Kinder-App. Das Ansehen wird nie mitten in einer Folge abgebrochen; die nächste Folge startet nur nicht."
+
+#: tellybox/web/admin/templates/show.html:49
 #, python-format
 msgid "Use the default (%(categories)s)"
 msgstr "Standard verwenden (%(categories)s)"
 
-#: tellybox/web/admin/templates/show.html:41
+#: tellybox/web/admin/templates/show.html:51
 msgid "Use the default (off)"
 msgstr "Standard verwenden (aus)"
 
-#: tellybox/web/admin/templates/show.html:46
+#: tellybox/web/admin/templates/show.html:56
 msgid "Off for this show"
 msgstr "Für diese Serie aus"
 
-#: tellybox/web/admin/templates/show.html:50
+#: tellybox/web/admin/templates/show.html:60
 msgid "Choose"
 msgstr "Auswählen"
 
-#: tellybox/web/admin/templates/show.html:62
+#: tellybox/web/admin/templates/show.html:72
 msgid "Applies to new downloads and to videos still inside their 7-day re-check."
 msgstr "Gilt für neue Downloads und für Videos, die noch in ihrer 7-tägigen Nachprüfung liegen."
 
-#: tellybox/web/admin/templates/show.html:66
+#: tellybox/web/admin/templates/show.html:76
 msgid "Splitting"
 msgstr "Aufteilen"
 
-#: tellybox/web/admin/templates/show.html:67
+#: tellybox/web/admin/templates/show.html:77
 msgid "Tellybox finds where each episode starts in a compilation by recognising the title card. Mark a title card on the split page of a long video."
 msgstr "Tellybox findet den Anfang jeder Folge in einer Zusammenstellung, indem es die Titelkarte erkennt. Markiere eine Titelkarte auf der Schnittseite eines langen Videos."
 
-#: tellybox/web/admin/templates/show.html:69
+#: tellybox/web/admin/templates/show.html:79
 msgid "No title cards marked yet. Open a long video of this show, go to its split page and choose “Mark as title card”."
 msgstr "Noch keine Titelkarten markiert. Öffne ein langes Video dieser Serie, gehe zur Schnittseite und wähle „Als Titelkarte markieren“."
 
-#: tellybox/web/admin/templates/show.html:79
+#: tellybox/web/admin/templates/show.html:89
 #: tellybox/web/admin/templates/subscriptions.html:67
 msgid "Remove"
 msgstr "Entfernen"
 
-#: tellybox/web/admin/templates/show.html:86
+#: tellybox/web/admin/templates/show.html:96
 msgid "Match threshold"
 msgstr "Übereinstimmungsschwelle"
 
-#: tellybox/web/admin/templates/show.html:89
+#: tellybox/web/admin/templates/show.html:99
 msgid "How different a frame may be from the title card and still count as a match. Lower is stricter."
 msgstr "Wie stark ein Bild von der Titelkarte abweichen darf und trotzdem zählt. Niedriger ist strenger."
 
-#: tellybox/web/admin/templates/show.html:90
+#: tellybox/web/admin/templates/show.html:100
 msgid "Episode length (optional)"
 msgstr "Folgenlänge (optional)"
 
-#: tellybox/web/admin/templates/show.html:91
+#: tellybox/web/admin/templates/show.html:101
 msgid "minutes, or mm:ss"
 msgstr "Minuten oder mm:ss"
 
-#: tellybox/web/admin/templates/show.html:93
+#: tellybox/web/admin/templates/show.html:103
 msgid "A typical episode. Matches that are much too close together are dropped, and the search looks again where a whole episode seems to be missing."
 msgstr "Eine typische Folge. Treffer, die viel zu dicht beieinander liegen, werden verworfen, und wo eine ganze Folge zu fehlen scheint, wird erneut gesucht."
 
-#: tellybox/web/admin/templates/show.html:94
+#: tellybox/web/admin/templates/show.html:104
 msgid "Snap window (seconds)"
 msgstr "Einrastfenster (Sekunden)"
 
-#: tellybox/web/admin/templates/show.html:97
+#: tellybox/web/admin/templates/show.html:107
 msgid "A cut moves back to a black frame or scene change at most this many seconds before the title card."
 msgstr "Ein Schnitt rückt auf ein schwarzes Bild oder einen Szenenwechsel zurück, höchstens so viele Sekunden vor der Titelkarte."
 
-#: tellybox/web/admin/templates/show.html:100
+#: tellybox/web/admin/templates/show.html:110
 msgid "Read the episode title from the title card"
 msgstr "Den Folgentitel von der Titelkarte lesen"
 
-#: tellybox/web/admin/templates/show.html:103
+#: tellybox/web/admin/templates/show.html:113
 msgid "Where the title is (optional)"
 msgstr "Wo der Titel steht (optional)"
 
-#: tellybox/web/admin/templates/show.html:104
+#: tellybox/web/admin/templates/show.html:114
 msgid "Left, top, width and height as a percentage of the frame. Leave empty to read the whole frame."
 msgstr "Links, oben, Breite und Höhe in Prozent des Bildes. Leer lassen, um das ganze Bild zu lesen."
 
-#: tellybox/web/admin/templates/show.html:106
+#: tellybox/web/admin/templates/show.html:116
 msgid "Left"
 msgstr "Links"
 
-#: tellybox/web/admin/templates/show.html:106
+#: tellybox/web/admin/templates/show.html:116
 msgid "Top"
 msgstr "Oben"
 
-#: tellybox/web/admin/templates/show.html:106
+#: tellybox/web/admin/templates/show.html:116
 msgid "Width"
 msgstr "Breite"
 
-#: tellybox/web/admin/templates/show.html:106
+#: tellybox/web/admin/templates/show.html:116
 msgid "Height"
 msgstr "Höhe"
 
-#: tellybox/web/admin/templates/show.html:115
+#: tellybox/web/admin/templates/show.html:125
 msgid "Find episodes in new long videos automatically; they stay hidden until you approve them"
 msgstr "Folgen in neuen langen Videos automatisch finden; sie bleiben ausgeblendet, bis du sie freigibst"
 
-#: tellybox/web/admin/templates/show.html:122
+#: tellybox/web/admin/templates/show.html:132
 msgid "Artwork"
 msgstr "Titelbild"
 
-#: tellybox/web/admin/templates/show.html:127
+#: tellybox/web/admin/templates/show.html:137
 msgid "Upload"
 msgstr "Hochladen"
 
-#: tellybox/web/admin/templates/show.html:132
+#: tellybox/web/admin/templates/show.html:142
 msgid "Frame from"
 msgstr "Bild aus"
 
-#: tellybox/web/admin/templates/show.html:139
+#: tellybox/web/admin/templates/show.html:149
 msgid "At"
 msgstr "Bei"
 
-#: tellybox/web/admin/templates/show.html:140
-#: tellybox/web/admin/templates/show.html:218
+#: tellybox/web/admin/templates/show.html:150
+#: tellybox/web/admin/templates/show.html:228
 msgid "mm:ss or seconds"
 msgstr "mm:ss oder Sekunden"
 
-#: tellybox/web/admin/templates/show.html:143
-#: tellybox/web/admin/templates/show.html:221
+#: tellybox/web/admin/templates/show.html:153
+#: tellybox/web/admin/templates/show.html:231
 msgid "Preview frame"
 msgstr "Bild ansehen"
 
-#: tellybox/web/admin/templates/show.html:148
-#: tellybox/web/admin/templates/show.html:226
+#: tellybox/web/admin/templates/show.html:158
+#: tellybox/web/admin/templates/show.html:236
 msgid "Frame preview"
 msgstr "Bildvorschau"
 
-#: tellybox/web/admin/templates/show.html:153
-#: tellybox/web/admin/templates/show.html:230
+#: tellybox/web/admin/templates/show.html:163
+#: tellybox/web/admin/templates/show.html:240
 msgid "Use this frame"
 msgstr "Dieses Bild verwenden"
 
-#: tellybox/web/admin/templates/show.html:161
+#: tellybox/web/admin/templates/show.html:171
 msgid "Episodes"
 msgstr "Folgen"
 
-#: tellybox/web/admin/templates/show.html:163
+#: tellybox/web/admin/templates/show.html:173
 msgid "No episodes in this show."
 msgstr "Keine Folgen in dieser Serie."
 
-#: tellybox/web/admin/templates/show.html:188
+#: tellybox/web/admin/templates/show.html:198
 msgid "Edit episode"
 msgstr "Folge bearbeiten"
 
-#: tellybox/web/admin/templates/show.html:198
+#: tellybox/web/admin/templates/show.html:208
 msgid "Unhide"
 msgstr "Einblenden"
 
-#: tellybox/web/admin/templates/show.html:198
+#: tellybox/web/admin/templates/show.html:208
 msgid "Hide"
 msgstr "Ausblenden"
 
-#: tellybox/web/admin/templates/show.html:205
+#: tellybox/web/admin/templates/show.html:215
 msgid "Move to show"
 msgstr "In Serie verschieben"
 
-#: tellybox/web/admin/templates/show.html:212
+#: tellybox/web/admin/templates/show.html:222
 msgid "Upload thumbnail"
 msgstr "Vorschaubild hochladen"
 
-#: tellybox/web/admin/templates/show.html:217
+#: tellybox/web/admin/templates/show.html:227
 msgid "Frame at"
 msgstr "Bild bei"
 
-#: tellybox/web/admin/templates/show.html:236
+#: tellybox/web/admin/templates/show.html:246
 #, python-format
 msgid "Type \"%(word)s\" to confirm"
 msgstr "Zum Bestätigen „%(word)s“ eingeben"
 
-#: tellybox/web/admin/templates/show.html:237
+#: tellybox/web/admin/templates/show.html:247
 msgid "Delete episode and its files"
 msgstr "Folge samt Dateien löschen"
 

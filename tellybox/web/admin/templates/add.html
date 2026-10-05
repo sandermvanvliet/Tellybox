@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "_labels.html" as labels %}
+{% import "_profile.html" as pf %}
 {% block title %}{{ _("Add") }}{% endblock %}
 {% block content %}
 <section class="card narrow">
@@ -66,10 +67,17 @@
       {% endif %}
     </div>
   </div>
-  <form method="post" action="/admin/add" class="row">
+  <form method="post" action="/admin/add" class="stack">
     <input type="hidden" name="preview_id" value="{{ preview_id }}">
+    {% if profiles %}
+    <fieldset class="stack"><legend>{{ _("Make the show visible to (optional)") }}</legend>
+      {{ pf.checklist(profiles) }}
+    </fieldset>
+    {% endif %}
+    <div class="row">
     <button class="btn primary" name="action" value="add" type="submit">{{ _("Add") }}</button>
     <button class="btn" name="action" value="hold" type="submit">{{ _("Add and hold") }}</button>
+    </div>
   </form>
 </section>
 {% endif %}
@@ -118,6 +126,11 @@
       </li>
       {% endfor %}
     </ul>
+    {% if profiles %}
+    <fieldset class="stack"><legend>{{ _("Make the show visible to (optional)") }}</legend>
+      {{ pf.checklist(profiles) }}
+    </fieldset>
+    {% endif %}
     <div class="pick-footer row">
       <label class="check"><input type="checkbox" name="hold" value="1" checked> {{ _("Hold for approval") }}</label>
       <button class="btn primary" type="submit" id="playlist-submit" {% if not selectable %}disabled{% endif %}>

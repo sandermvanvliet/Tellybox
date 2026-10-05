@@ -47,4 +47,7 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = '-m "not slow"'
-markers = ["slow: long-running benchmarks (NF-6); run with -m slow"]
+markers = [
+    "slow: long-running benchmarks (NF-6); run with -m slow",
+    "strict_access: keep show access (PR-5) as in production: new shows and profiles start hidden",
+]

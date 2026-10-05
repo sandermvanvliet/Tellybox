@@ -140,6 +140,11 @@ class AdminGuard:
         request.state.admin_session_ok = True  # the app middleware refreshes the cookie's lifetime
 
 
+def access_profiles(conn: sqlite3.Connection) -> list[dict]:
+    """Profiles in picker order for the show-access checklists and matrix (AD-8)."""
+    return [dict(r) for r in conn.execute("SELECT id, name, avatar, picture_path FROM profile ORDER BY sort_order, id")]
+
+
 # --------------------------------------------------------------------------- responses
 
 

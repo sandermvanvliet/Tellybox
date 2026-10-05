@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from tellybox import store
 from tellybox.cast.controller import CastController, NoDevice, PlayRefused
+from tellybox.cast.common import ShowNotAllowed
 from tellybox.cast.device_sessions import LABEL_MAX
 from tellybox.cast.device import CastDevice, DeviceInfo
 from tellybox.cast.pychromecast_device import CastCommandError
@@ -101,6 +102,8 @@ def create_api(
             raise HTTPException(404, "no such episode") from None
         except ValueError as exc:  # UnknownProfile
             raise HTTPException(422, f"unknown profile: {exc}") from None
+        except ShowNotAllowed:
+            raise HTTPException(403, "show not allowed") from None  # PR-7
         except PlayRefused as exc:
             raise HTTPException(409, {"error": "time_up", "reason": exc.decision.reason}) from None
 
@@ -112,6 +115,8 @@ def create_api(
             raise HTTPException(404, "no such episode") from None
         except ValueError as exc:  # UnknownProfile
             raise HTTPException(422, f"unknown profile: {exc}") from None
+        except ShowNotAllowed:
+            raise HTTPException(403, "show not allowed") from None  # PR-7
         except PlayRefused as exc:
             raise HTTPException(409, {"error": "time_up", "reason": exc.decision.reason}) from None
 

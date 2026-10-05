@@ -895,3 +895,16 @@ def test_add_joins_an_open_transaction(conn, clock):
     assert conn.in_transaction
     conn.execute("ROLLBACK")
     assert conn.execute("SELECT COUNT(*) FROM source_video").fetchone()[0] == 0
+
+
+@pytest.mark.strict_access
+def test_publish_grants_the_profiles_chosen_at_approval(conn, clock, runner):  # AD-8
+    conn.execute("INSERT INTO profile (id, name, created_at) VALUES (2, 'Noor', 'x')")
+    ingest.add(conn, info("aaa"), publish=True, now=clock.now(), profile_ids=[2, 99])
+    ingest.add(conn, info("bbb", channel_id="UCother", channel_name="Other"), publish=True, now=clock.now())
+    run_next(runner, clock)
+    run_next(runner, clock)
+    kids = library.find_show_by_channel(conn, "UCkids")
+    other = library.find_show_by_channel(conn, "UCother")
+    assert {(r[0], r[1]) for r in conn.execute("SELECT profile_id, show_id FROM profile_show")} == {(2, kids.id)}
+    assert other is not None  # approved without a profile: stays hidden (A-9)

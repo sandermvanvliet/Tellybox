@@ -78,3 +78,9 @@ export function subscribe({ onState, onDown }) {
   };
   connect();
 }
+
+// KA-15: a successful home answer with nothing in it means no shows are visible to this profile or
+// group. Loading and errors never reach the renderer, so this is not confused with them.
+export function isEmptyHome(data) {
+  return !((data?.shows && data.shows.length) || (data?.continue && data.continue.length));
+}

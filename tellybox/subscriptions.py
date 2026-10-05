@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
@@ -406,11 +407,12 @@ def due_subscriptions(conn: sqlite3.Connection, now: datetime) -> list[int]:
 # --------------------------------------------------------------------------- decisions
 
 
-def approve(conn: sqlite3.Connection, item_id: int, *, now: datetime) -> tuple[int, int]:
+def approve(conn: sqlite3.Connection, item_id: int, *, now: datetime, profile_ids: Iterable[int] = ()) -> tuple[int, int]:
     """CS-3: approve a pending item. Returns (source_video_id, job_id).
 
     One transaction: the download is queued with publish, in the subscription's show (CS-9), and the
-    item becomes approved. Raises KeyError for an unknown item and ItemNotPending for any other status.
+    item becomes approved. profile_ids are granted the show once it publishes (AD-8); approving never
+    grants anything by itself (A-9). Raises KeyError for an unknown item and ItemNotPending for any other status.
     A video that is already in the library marks the item approved and raises ingest.AlreadyAdded.
     """
     already: ingest.AlreadyAdded | None = None
@@ -431,7 +433,7 @@ def approve(conn: sqlite3.Connection, item_id: int, *, now: datetime) -> tuple[i
             chapters=[], is_live=False,
         )
         try:
-            result = ingest.add(conn, info, publish=True, now=now, show_id=row["sub_show_id"])
+            result = ingest.add(conn, info, publish=True, now=now, show_id=row["sub_show_id"], profile_ids=profile_ids)
         except ingest.AlreadyAdded as exc:
             already = exc
         conn.execute("UPDATE inbox_item SET status = 'approved', decided_at = ? WHERE id = ?", (to_db(now), item_id))
@@ -463,13 +465,14 @@ def _decide(conn: sqlite3.Connection, item_id: int, expected: str, new: str, now
         )
 
 
-def bulk_approve(conn: sqlite3.Connection, item_ids: list[int], *, now: datetime) -> BulkApproveResult:
+def bulk_approve(conn: sqlite3.Connection, item_ids: list[int], *, now: datetime,
+                 profile_ids: Iterable[int] = ()) -> BulkApproveResult:
     """Approve each pending item in the list, one transaction apiece; the others are skipped, not errors."""
     approved: list[tuple[int, int, int]] = []
     skipped: list[int] = []
     for item_id in dict.fromkeys(item_ids):
         try:
-            source_id, job_id = approve(conn, item_id, now=now)
+            source_id, job_id = approve(conn, item_id, now=now, profile_ids=profile_ids)
         except (KeyError, ItemNotPending, ingest.AlreadyAdded):
             skipped.append(item_id)
         else:

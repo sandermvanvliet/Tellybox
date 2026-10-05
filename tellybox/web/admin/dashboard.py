@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 
+from tellybox import show_access
 from tellybox.jobs import Job, JobStatus, list_jobs
 from tellybox.i18n import N_, _
 from tellybox.library import disk_usage
@@ -61,6 +62,7 @@ def _profiles_context(conn: sqlite3.Connection, state: dict | None) -> list[dict
     for x in (state or {}).get("sessions") or []:  # WT-12: watching in the app counts too
         watchers.update(x.get("profile_ids") or [])
     timers = {p["profile_id"]: p for p in ((state or {}).get("timer") or {}).get("profiles", [])}
+    visible = show_access.visible_count_by_profile(conn)
     result = []
     for r in rows:
         t = timers.get(r["id"])
@@ -77,6 +79,7 @@ def _profiles_context(conn: sqlite3.Connection, state: dict | None) -> list[dict
             "id": r["id"], "name": r["name"], "avatar": r["avatar"], "picture_path": r["picture_path"],
             "watching": r["id"] in watchers, "allowance_min": None if policy_unlimited else (int(allowance_s / 60.0) if allowance_s else 0),
             "used_s": used_s, "remaining_s": remaining_s, "unlimited": unlimited, "blocked": blocked,
+            "visible_shows": visible.get(r["id"], 0),  # AD-9: 0 gets a flag
         })
     return result
 

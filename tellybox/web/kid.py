@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from tellybox import library, store
+from tellybox import library, show_access, store
 from tellybox.config import Config
 from tellybox.web.browser_label import browser_label
 from tellybox.web.cast_client import CastNotFound, CastUnavailable, TimeUp
@@ -104,17 +104,21 @@ def _show(row: sqlite3.Row) -> dict:
 # --------------------------------------------------------------------------- queries (KA-3, KA-4, PB-4)
 
 
-def list_shows(conn: sqlite3.Connection) -> list[dict]:
-    """Visible shows with at least one visible episode, in admin order."""
+def list_shows(conn: sqlite3.Connection, profile_ids: list[int] | None = None) -> list[dict]:
+    """Visible shows with at least one visible episode, in admin order, that the whole group may see (PR-5, PR-6)."""
+    allowed = show_access.visible_show_ids(conn, parse_group(conn, profile_ids))
     rows = conn.execute(
         """SELECT s.id, s.name FROM show s
            WHERE s.hidden = 0 AND EXISTS (SELECT 1 FROM episode e WHERE e.show_id = s.id AND e.hidden = 0)
            ORDER BY s.sort_order, s.id"""
     ).fetchall()
-    return [_show(r) for r in rows]
+    return [_show(r) for r in rows if r["id"] in allowed]
 
 
 def get_show(conn: sqlite3.Connection, show_id: int, profile_ids: list[int] | None = None) -> dict | None:
+    profile_ids = parse_group(conn, profile_ids)
+    if not show_access.can_watch(conn, profile_ids, show_id):  # PR-7
+        return None
     row = conn.execute("SELECT id, name FROM show WHERE id = ? AND hidden = 0", (show_id,)).fetchone()
     if row is None:
         return None
@@ -140,6 +144,8 @@ def _with_position(row: sqlite3.Row, pos: sqlite3.Row | None) -> dict:
 def show_episodes(conn: sqlite3.Connection, show_id: int, profile_ids: list[int] | None = None) -> list[dict]:
     """Visible episodes in episode order, with the group's progress (the most recent position among its members)."""
     profile_ids = parse_group(conn, profile_ids)
+    if not show_access.can_watch(conn, profile_ids, show_id):  # PR-7
+        return []
     rows = conn.execute(
         f"""SELECT e.id, e.show_id, e.title, e.duration_s FROM episode e JOIN show s ON s.id = e.show_id
             WHERE e.show_id = ? AND {_VISIBLE}
@@ -156,7 +162,7 @@ def _episode_tile(conn: sqlite3.Connection, episode_id: int, profile_ids: list[i
             WHERE e.id = ? AND {_VISIBLE}""",
         (episode_id,),
     ).fetchone()
-    if row is None:
+    if row is None or not show_access.can_watch(conn, profile_ids, row["show_id"]):
         return None
     pos = _latest_positions(conn, profile_ids, "e.id = ?", (episode_id,)).get(episode_id)
     return _tile(_with_position(row, pos))
@@ -176,8 +182,11 @@ def continue_watching(conn: sqlite3.Connection, profile_ids: list[int] | None = 
             ORDER BY p.updated_at DESC, e.id DESC""",
         profile_ids,
     ).fetchall()
+    allowed = show_access.visible_show_ids(conn, profile_ids)  # PR-5, PR-8: revoked shows leave the list
     rows, seen_episodes = [], set()
     for r in all_rows:  # newest first: the first row of an episode is the group's latest position
+        if r["show_id"] not in allowed:
+            continue
         if r["id"] not in seen_episodes:
             seen_episodes.add(r["id"])
             rows.append(r)
@@ -209,10 +218,12 @@ def continue_watching(conn: sqlite3.Connection, profile_ids: list[int] | None = 
     return tiles
 
 
-def episode_is_visible(conn: sqlite3.Connection, episode_id: int) -> bool:
-    return conn.execute(
-        f"SELECT 1 FROM episode e JOIN show s ON s.id = e.show_id WHERE e.id = ? AND {_VISIBLE}", (episode_id,)
-    ).fetchone() is not None
+def episode_is_visible(conn: sqlite3.Connection, episode_id: int, profile_ids: list[int]) -> bool:
+    """Visible (KA-4) and allowed for the whole group (PR-5..PR-7)."""
+    row = conn.execute(
+        f"SELECT e.show_id FROM episode e JOIN show s ON s.id = e.show_id WHERE e.id = ? AND {_VISIBLE}", (episode_id,)
+    ).fetchone()
+    return row is not None and show_access.can_watch(conn, profile_ids, row["show_id"])
 
 
 def episode_image_paths(conn: sqlite3.Connection, episode_id: int) -> list[str]:
@@ -400,7 +411,7 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
     @router.get("/api/kid/home")
     async def home(profiles: str | None = Query(None)) -> dict:
         group = parse_group_param(conn, profiles)
-        return {"continue": continue_watching(conn, group), "shows": list_shows(conn)}
+        return {"continue": continue_watching(conn, group), "shows": list_shows(conn, group)}
 
     @router.get("/api/kid/shows/{show_id}")
     async def show(show_id: int, profiles: str | None = Query(None)) -> dict:
@@ -427,7 +438,7 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
         group = parse_group(conn, req.profile_ids)
         if req.target == "device":
             return await play_on_device(req, group, request)
-        if not episode_is_visible(conn, req.episode_id):
+        if not episode_is_visible(conn, req.episode_id, group):
             raise not_found()
         try:
             return await command("play", lambda: cast.play(req.episode_id, group))
@@ -442,7 +453,7 @@ def create_router(config: Config, conn: sqlite3.Connection, cast, hub: KidHub,
                                group).fetchone()[0]
         if allowed != len(group):
             return JSONResponse({"error": "not_allowed"}, status_code=403)
-        if not episode_is_visible(conn, req.episode_id):
+        if not episode_is_visible(conn, req.episode_id, group):
             raise not_found()
         label = browser_label(request.headers.get("user-agent"))  # never from the client
         try:

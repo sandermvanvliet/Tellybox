@@ -526,10 +526,16 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Built: migrations 017 and 018 (main took 016 for step 17); `tellybox/subscriptions.py` (subscribe, check, inbox decisions, counts, check-now requests); yt-dlp channel listing and video status; `ingest.add(show_id=)`; the worker checks one due subscription per step; Subscriptions and Inbox admin pages with a pending badge, paged backlog and bulk actions; the check interval in settings; `AdminState.inbox` and the `"inbox"` capability (read-only, HA-9); nl and de translations.
 - **Open:** real-device checks (subscribe on the phone, approve, play on the TV, the Home Assistant automation on `latest_received_at`); how a terminated channel's error reads (untested).
 
-### 18. Show access per profile (v10, issue #40), planned
+### 18. Show access per profile (v10, issue #40), built; device checks open (branch `step18-impl`)
 - Grilled with the owner on 2026-10-05. PRD: PR-5..PR-8, KA-15, AD-8, AD-9, HA-10, A-37 (supersedes A-8). Plan: `docs/plans/step18-profile-show-access.md` (PR #46).
 - Decisions: allow-list per profile at show level; new shows and profiles start hidden; the upgrade grants everything to existing profiles; groups see the intersection; server-side enforcement on every path; revoking lets the episode in progress finish and stops autoplay; data is kept; the admin API is read-only.
-- Next: migration 020 and the `show_access` helper, then enforcement, admin UI, kid empty state, nl/de strings, real-device checks.
+- Built: migrations 020 (`profile_show`, backfill) and 021 (`source_video_profile`); `tellybox/show_access.py`; enforcement in kid listing, pick, device play, autoplay and playlists; admin access matrix, "Visible to" checklist, approval-time profiles, copy-from on profile creation, zero-show flag, `visible_shows` in `AdminState` (HA-10); nl/de strings; the kid app's picture-only empty state (sleepy TV, `isEmptyHome` in `api.js`, no text); `docs/kid-api.md` and `docs/admin-api.md`.
+- Open (real-device checks with the owner): assign a show to one profile only and check the other profile's grid on the TV and in the app; a group shows only the shared shows; revoke during playback (episode finishes, autoplay stops); the empty-state screen on the TV and the phone.
+- Notes and open decisions:
+  - Approval-time grants (profiles chosen when approving from the inbox or adding by URL) are stored in `source_video_profile` and apply to the whole show once the first download publishes.
+  - Approving a subscription backlog has no profile checklist; grant access afterwards on the matrix or the show page.
+  - Images `/img/show|episode` are not profile-scoped (only hidden/unpublished content is a 404); a hidden show's artwork URL is guessable but nothing lists it.
+  - The scoped media route is deliberately not blocked on revoke, so the episode in progress finishes (PR-8).
 
 ### Then
 (none planned after step 11)

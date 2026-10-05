@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_profile.html" as pf %}
 {% block title %}{{ _("Inbox") }}{% endblock %}
 {% block content %}
 <section class="card">
@@ -35,6 +36,13 @@
     <button class="btn small danger" name="action" value="reject_all"
             data-confirm="{{ _("Reject every video waiting here? You can undo this on the Rejected tab.") }}">{{ _("Reject all remaining") }}</button>
   </div>
+  {% if profiles %}
+  <details class="card" id="inbox-profiles">
+    <summary>{{ _("Make approved shows visible to (optional)") }}</summary>
+    <p class="muted">{{ _("Applies to Approve and Approve selected. A new show stays hidden from everyone you leave unticked.") }}</p>
+    {{ pf.checklist(profiles) }}
+  </details>
+  {% endif %}
   {% endif %}
   <ul class="inbox-list">
     {% for i in items %}

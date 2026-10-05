@@ -57,10 +57,14 @@ Requirement IDs are referenced in the release plan. Priority: **Must** = require
 | PR-2 | The kid page starts with a "who's watching" screen showing profile pictures only. More than one profile can be selected for watching together. | Must | v2 |
 | PR-3 | Each profile has its own daily allowance (inherit from default, custom or unlimited), usage, continue-watching list and history. Maximum session length is also per-profile (inherit, custom or unlimited) (A-23). | Must | v2 |
 | PR-4 | When several profiles watch together, watch time is deducted from each of them, and playback is allowed only while all have time left. | Should | v2 |
+| PR-5 | The admin controls which shows each profile can see: a per-profile allow-list of shows (A-37). Episodes inherit from their show. A new show is hidden from every profile until assigned; a new profile starts with no shows, and can be filled once by copying another profile's shows. | Must | v10 |
+| PR-6 | When several profiles watch together, the group sees only the shows every selected profile may see (the intersection). | Must | v10 |
+| PR-7 | The server enforces visibility on every path, not only in the listing: kid listings, continue watching, playlists (filtered at read time), picks on the TV and in the app, autoplay-next, scoped media URLs and the cast service. A refused pick never moves current playback. | Must | v10 |
+| PR-8 | When the admin removes a show from a profile, the episode in progress finishes, autoplay-next stops (for a group, when any member lost access), and the show leaves the grid and continue watching. Positions and history are kept, hidden from the kid app only; granting the show again restores resume. | Must | v10 |
 
 In v1, before profiles exist, a single household profile holds one shared allowance. The data model includes profiles from the start, so v2 needs no migration of history.
 
-Profiles separate time, history and continue watching; every profile sees the whole approved library (A-8). There is no PIN: a kid who picks a sibling's picture uses the sibling's time, an accepted risk (A-7).
+Profiles separate time, history and continue watching; which shows a profile sees is set by the admin (PR-5, A-37). There is no PIN: a kid who picks a sibling's picture uses the sibling's time, an accepted risk (A-7).
 
 ### Kid app
 
@@ -80,6 +84,7 @@ Profiles separate time, history and continue watching; every profile sees the wh
 | KA-12 | In the reader UI, a search box on the home screen filters the visible shows and episodes by title. It searches only approved content (KA-4). | Could | v8 |
 | KA-13 | A profile the admin has allowed to watch in the app (AD-7) gets a TV/device toggle, a large picture of a TV and of a phone, so it needs no reading. The choice is stored on the device, defaults to the TV, and applies to the next pick. The toggle is hidden when no selected profile may watch in the app; in a group, it is shown only when every selected profile may. | Must | v9 |
 | KA-14 | Playing on the device: a pick starts the video full screen with the browser's video controls, seeking included. When the video ends, the next episode of the show plays (PB-3); after the last episode, or when time is up, the library is shown. Leaving full screen returns to the library and ends the session. A video that fails to load shows an error picture and a way back to the library; it does not fall back to the TV. | Must | v9 |
+| KA-15 | A profile with no visible shows, or a group whose shared shows are empty (PR-6), gets a picture-only empty state, such as a sleepy TV, with no text and no way to see hidden content. | Must | v10 |
 
 ### Playback and casting
 
@@ -207,6 +212,8 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | AD-5 | History older than 21 days is purged automatically. | Must | v1 |
 | AD-6 | Optionally, the admin signs in with an OpenID Connect provider instead of the password; only members of one configured group are admitted, and the password stays available. | Should | — |
 | AD-7 | Per profile, the admin can allow watching in the app (default off). When off, the profile only plays on the TV and the toggle (KA-13) is hidden. | Must | v9 |
+| AD-8 | A show-access page shows a show x profile matrix of ticks, usable on a phone; the show's settings carry a "Visible to" checklist. Approving from the inbox (CS-*) or adding by URL offers an optional profile checklist, with none selected by default. Creating a profile offers "copy shows from" another profile, as a one-off copy. | Must | v10 |
+| AD-9 | The dashboard flags a profile that has no visible shows. | Should | v10 |
 
 ### Admin API (Home Assistant)
 
@@ -223,6 +230,7 @@ A token-authenticated JSON API lets a home-automation system (first Home Assista
 | HA-7 | Overrides applied through the API are recorded with the token's name, and the history shows it. | Should | v2.1 |
 | HA-8 | Every API action goes through Tellybox's cast service; the API offers no way to cast directly or to start playback when time is up. | Must | v2.1 |
 | HA-9 | The admin state carries an inbox object: `pending` (items waiting in the subscription inbox, paused subscriptions included), `unhealthy` (subscriptions with the 7-day failure warning of CS-7) and `latest_received_at` (when the newest inbox item arrived, null if none, so an automation can fire on every new upload). `/api/info` lists an `inbox` capability. It is read-only, filled by the web service from the database without the cast service, and outside HA-8 (A-36). | Must | v4 |
+| HA-10 | The admin state lists the number of visible shows per profile, read-only, so an automation can alert on zero. There are no endpoints to change assignments. It is filled by the web service from the database and is outside HA-8, like HA-9. | Should | v10 |
 
 ### Installation
 
@@ -291,7 +299,7 @@ The cast controller is the single owner of the Chromecast connection and the tim
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| Profile | name, picture, daily allowance (inherit/custom/unlimited), maximum session length (inherit/custom/unlimited), counting mode, UI mode (icons or text, KA-11), default TV (PB-6), may watch in the app (AD-7) | v1 has one household profile; limits per-profile from v2 (A-23); UI mode defaults to icons, default TV to none (the global device) |
+| Profile | name, picture, daily allowance (inherit/custom/unlimited), maximum session length (inherit/custom/unlimited), counting mode, UI mode (icons or text, KA-11), default TV (PB-6), may watch in the app (AD-7), allowed shows (PR-5) | v1 has one household profile; limits per-profile from v2 (A-23); UI mode defaults to icons, default TV to none (the global device) |
 | Show | name, artwork, autoplay, sort order, splitting profile, SponsorBlock categories | Defaults to one per YouTube channel; categories not set = the global setting, none = SponsorBlock off for the show (SB-2) |
 | SourceVideo | YouTube ID, channel, title, duration, file path, status, removed segments, SponsorBlock re-check until | The downloaded original; may be deleted after splitting |
 | Episode | show, source video, start/end offset, title, thumbnail, file path, order, hidden | What kids see and play |
@@ -319,6 +327,7 @@ v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-
 | v6 · Smart splitting | Title-card marking and detection, length hint, scene snap, OCR titles, automatic detection for new compilations (ES-3..6, ES-9, ES-10) | Detection accepted on 2 shows |
 | v7 · Tellybox receiver | Own Cast receiver: time left on the TV, time's-up screen, loading and idle screens, up-next card, automatic fallback to the Default Media Receiver (CR-1..8) | Real-device checks pass on the 1st-gen Chromecast |
 | v9 · Watching in the app | Play in the kid app on the device itself: TV/device toggle, full screen, heartbeat-timed with server-enforced limits, several sessions at once (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7) | Real-device checks pass on the Chromecast, an iPhone and an Android phone |
+| v10 · Show access per profile | Per-profile allow-list of shows, intersection for groups, server-side enforcement, admin matrix, empty state (PR-5..PR-8, KA-15, AD-8, AD-9, HA-10) | Real-device checks pass |
 
 ### v1 build order
 
@@ -344,6 +353,7 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 15. **Easier installation.** Versioned multi-arch images, a release compose file, no manual prep, a first-run password, a single container, an install script, a Home Assistant add-on and platform templates (DP-1..DP-8). (Added by the owner, 2026-10-02, and built before 11. Plan: `docs/plans/step15-installation.md`.)
 16. **Reader UI and per-profile TV (v8).** A text-rich kid app that the admin switches on per profile (KA-11, KA-12), and a default TV per profile (PB-6). The no-text app stays the default (KA-2). (Added from GitHub issue #29, 2026-10-02.)
 17. **Watching in the app (v9).** Play episodes in the kid app on the device itself, with a per-device TV/device toggle and an admin switch per profile (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7). Two PRs: first the cast controller handles several sessions with no visible change, then the browser player. (Added from GitHub issue #31, 2026-10-04; plan: `docs/plans/step17-in-app-playback.md`.)
+18. **Show access per profile (v10).** An admin-managed allow-list of shows per profile, enforced on the server on every path, with a show x profile matrix and a picture-only empty state (PR-5..PR-8, KA-15, AD-8, AD-9, HA-10). It supersedes A-8. (Added from GitHub issue #40, 2026-10-05; plan: `docs/plans/step18-profile-show-access.md`.)
 
 ## Risks, assumptions and open questions
 
@@ -358,6 +368,7 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | The original Chromecast no longer receives Google software updates | Casting behaviour could change or break | Use only the standard Default Media Receiver; verify in step 1 of v1 |
 | CPU-only encoding of long compilations is slow | Content availability delayed by hours | Remux when possible, x264 `veryfast`, low-priority background jobs |
 | The kid app has no login, so a kid can pick a sibling's profile | One kid uses another's allowance | Accepted: no PIN (A-7). Revisit if it's abused. |
+| A new show stays invisible until the admin assigns it | A kid sees nothing new, and the admin wonders why | The inbox approval and add-by-URL forms offer the profile checklist (AD-8); the dashboard flags profiles with no shows (AD-9) |
 | SponsorBlock segments are community-submitted and can be wrong | Real content is cut out | Only sponsor, self-promotion and interaction by default; per-show opt-out; the removed segments are visible, with "Download again without SponsorBlock" (SB-2, SB-4) |
 | Segments are submitted after the download | Sponsor parts stay in the file | Daily re-check for 7 days (SB-3) |
 | Title-card detection accuracy varies per show | Wrong or missed cuts | Mandatory review (ES-7), manual cuts as fallback, per-show tuning |
@@ -378,7 +389,7 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-5 | A new pick in the kid app replaces what is playing, rather than being queued. |
 | A-6 | Removing a subscription keeps its downloaded episodes. |
 | A-7 | Kid profiles have no PIN or other protection (owner, 2026-09-28). |
-| A-8 | Every profile sees the whole approved library; profiles separate time, history and continue watching only (owner, 2026-09-28). |
+| A-8 | Superseded by A-37. Originally every profile saw the whole approved library (owner, 2026-09-28). |
 | A-9 | Subscription uploads always go through the approval inbox; there is no auto-approve (owner, 2026-09-28). |
 | A-10 | SponsorBlock segments are removed from the file at download rather than skipped during playback; default categories are sponsor, self-promotion and interaction reminders (owner, 2026-09-28). |
 | A-11 | The Tellybox receiver (v7) covers time left on the TV, the time's-up screen, loading and idle screens and the up-next card; the Default Media Receiver stays as an automatic fallback (owner, 2026-09-28). |
@@ -407,6 +418,7 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-34 | Rejected videos are remembered by YouTube ID, so a check never proposes them again, also after the subscription is removed and added again. A rejection can be undone from the inbox's "Rejected" tab. Inbox items never expire (owner, 2026-10-04). |
 | A-35 | A failing subscription keeps retrying on the normal schedule and is never paused automatically. It shows its last error, and a warning after 7 days of failures. There are no push alerts (owner, 2026-10-04). |
 | A-36 | The inbox sensor (HA-9) is read-only: no approve or reject through the API. It is filled by the web service, not the cast service, so HA-8 doesn't cover it and it still answers when the cast service is down (owner, 2026-10-04). |
+| A-37 | Each profile has an allow-list of shows (issue #40). New shows and new profiles start with nothing visible; assigning is a deliberate admin action. The upgrade grants every existing profile every existing show, so nothing changes on upgrade. Groups see the intersection (PR-6). Visibility is by show only, with no ratings or per-episode control, and read-only in the admin API (HA-10). It supersedes A-8 (owner, 2026-10-05). |
 
 ### Open questions
 

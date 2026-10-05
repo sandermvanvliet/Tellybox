@@ -65,6 +65,17 @@ sees the intersection (PR-6); profiles also separate time, continue watching and
   "finished": false }
 ```
 
+**Show visibility (step 18, PR-5..PR-8, KA-15).** Listings only contain shows the whole group may
+see (the intersection, PR-6); the continue-watching list is filtered the same way and resume
+positions are kept, so a re-granted show resumes. When nothing is visible, `/api/kid/home` answers
+200 with `{"continue": [], "shows": []}`: the app draws a picture-only empty state (a sleepy TV, no
+text). That empty answer is distinct from loading or an error, which never reach the renderer.
+A show or episode the group may not see is answered like a missing one: 404 on `/api/kid/shows/{id}`
+and 404 `{"detail": "not_found"}` on
+`/api/kid/play` and the device play call; a refused pick never changes what is playing. Revoking
+access lets the episode in progress finish (its scoped media URL keeps working, PR-8), but autoplay
+does not continue into the hidden show. Images (`/img/show|episode`) are not profile-scoped: they are 404 only for hidden or unpublished content, not for a show hidden from one profile.
+
 ## Endpoints
 
 | Method | Path | Response |

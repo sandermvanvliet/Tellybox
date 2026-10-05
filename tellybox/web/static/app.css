@@ -896,3 +896,8 @@ body.is-reader { --hill-h: calc(150px + env(safe-area-inset-bottom, 0px)); }
 .who-text { display: flex; flex-direction: column; align-items: flex-end; max-width: 34vw; color: var(--ink); text-align: right; }
 .who-names { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 15px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .who-change { font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-decoration: underline; }
+
+/* KA-15: no visible shows. Just a sleepy TV, no text. */
+.empty-state { display: grid; place-items: center; padding: 12vh 0; }
+.empty-state .icon { width: min(40vw, 220px); height: min(40vw, 220px); opacity: .55; }
+.is-night .empty-state { color: var(--star); }

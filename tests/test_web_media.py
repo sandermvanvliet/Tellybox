@@ -212,3 +212,11 @@ def test_url_without_s_is_unchanged_by_open_sessions(env):
     client, conn, _, _, ep = env
     device_session(conn, ep)
     assert client.get(url_for(ep)).status_code == 200
+
+
+def test_scoped_url_keeps_serving_after_the_show_is_revoked(env):  # PR-8: the episode in progress finishes
+    client, conn, _, sid, ep = env
+    session_id = device_session(conn, ep)
+    conn.execute("DELETE FROM profile_show WHERE show_id = ?", (sid,))
+    r = client.get(scoped_url(ep, session_id), headers={"Range": "bytes=100-199"})
+    assert r.status_code == 206

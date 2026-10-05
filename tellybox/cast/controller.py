@@ -21,8 +21,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from tellybox import library, media_urls, store
-from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, UnknownProfile
+from tellybox import library, media_urls, show_access, store
+from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, ShowNotAllowed, UnknownProfile
 from tellybox.cast.device import (
     DEFAULT_MEDIA_RECEIVER,
     RECEIVER_LAUNCH_TIMEOUT_S,
@@ -257,6 +257,8 @@ class CastController(DeviceSessionsMixin):
             first = list(dict.fromkeys(profile_ids))[0]  # PB-6: the first picker's TV wins
             if unknown := [p for p in profiles if p not in self._known_profiles]:
                 raise UnknownProfile(unknown[0])
+        if not show_access.can_watch(self.conn, profiles, episode.show_id):
+            raise ShowNotAllowed(episode_id)  # PR-7: refused before anything moves
         target = store.target_device(self.conn, first) if first is not None else store.selected_device(self.conn)
         if self.device is None and (target is None or self.device_factory is None):
             raise NoDevice()
@@ -534,6 +536,8 @@ class CastController(DeviceSessionsMixin):
         nxt = None
         if show and show.autoplay and self._decision.autoplay_allowed:
             nxt = library.next_episode(self.conn, c.episode.id)
+            if nxt is not None and not show_access.can_watch(self.conn, c.profile_ids, nxt.show_id):
+                nxt = None  # PR-8: access was revoked; the episode finished, autoplay stops
         if nxt is not None and c.profile_ids:
             decision = self.timer.on_pick(now, c.profile_ids)  # autoplay keeps the group
             self._decision = decision
@@ -941,6 +945,8 @@ class CastController(DeviceSessionsMixin):
             return None
         show = library.get_show(self.conn, c.episode.show_id)
         nxt = library.next_episode(self.conn, c.episode.id) if show and show.autoplay else None
+        if nxt is not None and not show_access.can_watch(self.conn, c.profile_ids, nxt.show_id):
+            nxt = None  # PR-8
         return {"thumb": f"{self.media_base_url.rstrip('/')}/img/episode/{nxt.id}.jpg"} if nxt else None
 
     def _sky(self, now: datetime) -> dict:

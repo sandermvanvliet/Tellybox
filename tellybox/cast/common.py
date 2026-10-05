@@ -30,3 +30,7 @@ class PlayRefused(Exception):
 
 class UnknownProfile(ValueError):
     """A pick named a profile that does not exist (PR-2)."""
+
+
+class ShowNotAllowed(Exception):
+    """A pick named an episode whose show the group may not see (PR-7)."""

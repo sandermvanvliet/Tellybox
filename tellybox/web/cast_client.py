@@ -66,7 +66,7 @@ class CastClient:
         r = await self._request("POST", "/play", json={"episode_id": episode_id, "profile_ids": list(profile_ids)})
         if r.status_code == 409:
             raise TimeUp(await self.state())
-        if r.status_code == 404:
+        if r.status_code in (403, 404):  # 403: the show is not allowed for the group (PR-7)
             raise CastNotFound(episode_id)
         return self._json(r)
 
@@ -77,7 +77,7 @@ class CastClient:
             "device_id": device_id, "label": label, "episode_id": episode_id, "profile_ids": list(profile_ids)})
         if r.status_code == 409:
             raise TimeUp(await self.state())
-        if r.status_code == 404:
+        if r.status_code in (403, 404):  # 403: the show is not allowed for the group (PR-7)
             raise CastNotFound(episode_id)
         if r.status_code == 422:
             raise ValueError(self._detail(r))

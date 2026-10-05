@@ -18,8 +18,8 @@ from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from tellybox import library, media_urls, store
-from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, UnknownProfile
+from tellybox import library, media_urls, show_access, store
+from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, ShowNotAllowed, UnknownProfile
 from tellybox.db import to_db
 from tellybox.library import Episode
 from tellybox.timer import TV, Action, Activity, TimeUpReason
@@ -112,6 +112,8 @@ class DeviceSessionsMixin:
         profiles = sorted(set(profile_ids))
         if unknown := [p for p in profiles if p not in self._known_profiles]:
             raise UnknownProfile(unknown[0])
+        if not show_access.can_watch(self.conn, profiles, episode.show_id):
+            raise ShowNotAllowed(episode_id)  # PR-7: refused before anything changes
         decision = self.timer.group_decision(now, profiles)  # check first: a refusal must change nothing
         if not decision.can_start:
             self._broadcast()
@@ -188,6 +190,8 @@ class DeviceSessionsMixin:
         self._end_device(s, EndReason.FINISHED, remember=False)
         show = library.get_show(self.conn, episode.show_id)
         nxt = library.next_episode(self.conn, episode.id) if show and show.autoplay else None
+        if nxt is not None and not show_access.can_watch(self.conn, profiles, nxt.show_id):
+            nxt = None  # PR-8: access was revoked; the episode finished, autoplay stops
         if nxt is not None and profiles:
             decision = self.timer.group_decision(now, profiles)
             if decision.autoplay_allowed:

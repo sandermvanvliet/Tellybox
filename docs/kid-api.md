@@ -8,8 +8,8 @@ held downloads are never listed, playable or served as images.
 every call. A group is a comma-separated list of profile ids (`?profiles=1,3`) or a JSON list
 (`"profile_ids": [1, 3]`), 1–20 ids, each an existing profile; anything else is a 400
 `{"detail": "bad_profiles"}`. Omitting the group means the first profile in the admin's order
-(the v1 behaviour with a single profile). Every profile sees the whole library (A-8); profiles separate
-time, continue watching and progress only.
+(the v1 behaviour with a single profile). Which shows a profile sees is set by the admin (PR-5, A-37), and a group
+sees the intersection (PR-6); profiles also separate time, continue watching and progress.
 
 ## Types
 

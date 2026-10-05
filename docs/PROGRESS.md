@@ -526,6 +526,11 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Built: migrations 017 and 018 (main took 016 for step 17); `tellybox/subscriptions.py` (subscribe, check, inbox decisions, counts, check-now requests); yt-dlp channel listing and video status; `ingest.add(show_id=)`; the worker checks one due subscription per step; Subscriptions and Inbox admin pages with a pending badge, paged backlog and bulk actions; the check interval in settings; `AdminState.inbox` and the `"inbox"` capability (read-only, HA-9); nl and de translations.
 - **Open:** real-device checks (subscribe on the phone, approve, play on the TV, the Home Assistant automation on `latest_received_at`); how a terminated channel's error reads (untested).
 
+### 18. Show access per profile (v10, issue #40), planned
+- Grilled with the owner on 2026-10-05. PRD: PR-5..PR-8, KA-15, AD-8, AD-9, HA-10, A-37 (supersedes A-8). Plan: `docs/plans/step18-profile-show-access.md` (PR #46).
+- Decisions: allow-list per profile at show level; new shows and profiles start hidden; the upgrade grants everything to existing profiles; groups see the intersection; server-side enforcement on every path; revoking lets the episode in progress finish and stops autoplay; data is kept; the admin API is read-only.
+- Next: migration 020 and the `show_access` helper, then enforcement, admin UI, kid empty state, nl/de strings, real-device checks.
+
 ### Then
 (none planned after step 11)
 

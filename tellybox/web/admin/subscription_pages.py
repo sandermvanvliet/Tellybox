@@ -17,7 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from tellybox import ingest, library, subscriptions
 from tellybox.i18n import _, ngettext
 from tellybox.web.admin.add import playlist_flash
-from tellybox.web.admin.common import AdminContext, render, see_other
+from tellybox.web.admin.common import AdminContext, access_profiles, render, see_other
 from tellybox.ytdlp import ChannelEntry, VideoInfo, YtDlpError
 
 BACKLOG_CAP = 20  # subscriptions whose listed backlog entries are kept in memory
@@ -194,7 +194,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
             subs=subscriptions.list_subscriptions(conn, now=now()),
             pending_total=subscriptions.inbox_counts(conn, now())["pending"],
             rejected_total=len(subscriptions.list_inbox(conn, status="rejected")),
-            not_downloadable=subscriptions.WARNING_NOT_DOWNLOADABLE,
+            not_downloadable=subscriptions.WARNING_NOT_DOWNLOADABLE, profiles=access_profiles(conn),
         )
 
     @router.get("/admin/inbox/count")
@@ -212,9 +212,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
         return text
 
     @router.post("/admin/inbox/{item_id}/approve")
-    def approve(item_id: int, channel: str = Form("")) -> Response:
+    def approve(item_id: int, channel: str = Form(""), profile: list[int] = Form([])) -> Response:
         try:
-            subscriptions.approve(conn, item_id, now=now())
+            subscriptions.approve(conn, item_id, now=now(), profile_ids=profile)
         except KeyError:
             return back(channel, flash=_("That video is no longer in the inbox."))
         except subscriptions.ItemNotPending:
@@ -244,7 +244,8 @@ def create_router(ctx: AdminContext) -> APIRouter:
         return back(channel, "rejected", _("Back in the inbox."))
 
     @router.post("/admin/inbox/bulk")
-    def bulk(action: str = Form(""), item: list[int] = Form([]), channel: str = Form("")) -> Response:
+    def bulk(action: str = Form(""), item: list[int] = Form([]), channel: str = Form(""),
+             profile: list[int] = Form([])) -> Response:
         if action == "reject_all":  # every pending item in the current view, not just the ticked ones
             item = [i.id for i in subscriptions.list_inbox(conn, subscription_id=_int_or_none(channel))]
             action = "reject"
@@ -253,7 +254,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         if not item:
             return back(channel, flash=_("Tick at least one video first."))
         if action == "approve":
-            result = subscriptions.bulk_approve(conn, item, now=now())
+            result = subscriptions.bulk_approve(conn, item, now=now(), profile_ids=profile)
             return back(channel, flash=decision_flash(len(result.approved), len(result.skipped)))
         rejected = subscriptions.bulk_reject(conn, item, now=now())
         return back(channel, flash=ngettext("Rejected %(num)d video. You can undo this on the Rejected tab.",

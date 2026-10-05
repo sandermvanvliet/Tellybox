@@ -12,7 +12,7 @@ import sqlite3
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 
-from tellybox import library
+from tellybox import library, show_access
 from tellybox.avatars import AVATARS
 from tellybox.i18n import N_, _
 from tellybox.images import MAX_UPLOAD_BYTES, ImageError, clean_upload, save_profile_photo
@@ -54,8 +54,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
         state = await cast_state()
         timers = {p["profile_id"]: p for p in ((state or {}).get("timer") or {}).get("profiles", [])}
         playing = set(((state or {}).get("now_playing") or {}).get("profile_ids") or [])
+        counts = show_access.visible_count_by_profile(conn)
         profiles = [{**dict(r), "used_s": timers[r["id"]]["used_s"] if r["id"] in timers else None,
-                     "watching": r["id"] in playing} for r in ordered()]
+                     "watching": r["id"] in playing, "visible_shows": counts.get(r["id"], 0)} for r in ordered()]
         return render(request, "profiles.html", status_code, nav="profiles", profiles=profiles,
                       avatars=[(key, _(AVATAR_LABELS[key])) for key in AVATARS], limit=NAME_MAX, **extra)
 
@@ -75,16 +76,24 @@ def create_router(ctx: AdminContext) -> APIRouter:
         return await page(request)
 
     @router.post("/admin/profiles")
-    async def add_profile(request: Request, name: str = Form(""), avatar: str = Form("")) -> Response:
+    async def add_profile(request: Request, name: str = Form(""), avatar: str = Form(""),
+                          copy_from: str = Form("")) -> Response:
         name, avatar_key, error = check(name, avatar)
+        source = None
+        if not error and copy_from:  # PR-5, AD-8: a one-off copy of another profile's shows ("" = start with none)
+            source = int(copy_from) if copy_from.isdigit() else None
+            if source is None or conn.execute("SELECT 1 FROM profile WHERE id = ?", (source,)).fetchone() is None:
+                error = _("Choose one of the existing profiles.")
         if error:
             return await page(request, 422, error=error)
         with _transaction(conn):
             last = conn.execute("SELECT COALESCE(MAX(sort_order), 0) FROM profile").fetchone()[0]
-            conn.execute(
+            cur = conn.execute(
                 "INSERT INTO profile (name, avatar, sort_order, created_at) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
                 (name, avatar_key, last + 1),
             )
+            if source is not None:
+                show_access.copy_from(conn, source, cur.lastrowid)
         return see_other("/admin/profiles", flash=_("Profile added."))
 
     @router.post("/admin/profiles/{profile_id}")
@@ -141,7 +150,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
 
     def _sync_context(**extra) -> dict:
         """The page context without the cast state (the upload handler is a plain, threaded function)."""
-        profiles = [{**dict(r), "used_s": None, "watching": False} for r in ordered()]
+        counts = show_access.visible_count_by_profile(conn)
+        profiles = [{**dict(r), "used_s": None, "watching": False, "visible_shows": counts.get(r["id"], 0)}
+                    for r in ordered()]
         return {"nav": "profiles", "profiles": profiles,
                 "avatars": [(key, _(AVATAR_LABELS[key])) for key in AVATARS], "limit": NAME_MAX, **extra}
 

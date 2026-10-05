@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_profile.html" as pf %}
+{% block title %}{{ _("Access") }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/admin/static/library.css">{% endblock %}
+{% block content %}
+<h1>{{ _("Which shows each profile can see") }}</h1>
+<p class="muted">{{ _("Tick the shows each profile may watch. A new show stays hidden from everyone until you tick it here. When several profiles watch together, they see only the shows all of them may see.") }}</p>
+
+{% if not shows %}
+<section class="card"><p class="muted">{{ _("There are no shows yet.") }}</p></section>
+{% else %}
+<form method="post" action="/admin/access" class="card stack" id="access-form">
+  <div class="matrix-wrap">
+    <table class="list matrix">
+      <thead>
+        <tr>
+          <th scope="col">{{ _("Show") }}</th>
+          {% for p in profiles %}
+          <th scope="col" class="matrix-profile">{{ pf.picture(p, 32) }}<span>{{ p.name }}</span></th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in shows %}
+        <tr>
+          <th scope="row"><a href="/admin/shows/{{ s.id }}#access">{{ s.name }}</a>{% if s.hidden %} <span class="badge warn">{{ _("hidden") }}</span>{% endif %}</th>
+          {% for p in profiles %}
+          <td class="matrix-cell">
+            <label class="matrix-tick">
+              <input type="checkbox" name="cell" value="{{ p.id }}:{{ s.id }}"{% if (p.id, s.id) in granted %} checked{% endif %}
+                     aria-label="{{ _("%(show)s for %(profile)s", show=s.name, profile=p.name) | forceescape }}">
+            </label>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row"><button class="btn primary" type="submit">{{ _("Save") }}</button></div>
+</form>
+{% endif %}
+{% endblock %}

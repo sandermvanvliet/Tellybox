@@ -16,7 +16,7 @@ from fastapi import APIRouter, Form, Request
 from tellybox import ingest, library
 from tellybox import ytdlp as ytdlp_module
 from tellybox.i18n import N_, _, ngettext
-from tellybox.web.admin.common import AdminContext, render, see_other
+from tellybox.web.admin.common import AdminContext, access_profiles, render, see_other
 from tellybox.ytdlp import PlaylistInfo, VideoInfo, YtDlpError
 
 PREVIEW_TTL = timedelta(minutes=30)
@@ -107,7 +107,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
                         **extra):
         rows = playlist_rows(playlist)
         return render(request, "add.html", status_code=status_code, nav="add", url=playlist.url,
-                      playlist=playlist, preview_id=preview_id, rows=rows,
+                      profiles=access_profiles(ctx.conn), playlist=playlist, preview_id=preview_id, rows=rows,
                       selectable=sum(1 for r in rows if r["reason"] is None), **extra)
 
     @router.get("/admin/add")
@@ -143,16 +143,17 @@ def create_router(ctx: AdminContext) -> APIRouter:
         preview_id = store(info, now)
         show_name, new_show_channel = show_for(info)
         return render(request, "add.html", nav="add", url=url, info=info, preview_id=preview_id,
+                     profiles=access_profiles(ctx.conn),
                      show_name=show_name, new_show_channel=new_show_channel)
 
     @router.post("/admin/add")
-    def add(request: Request, preview_id: str = Form(...), action: str = Form(...)):
+    def add(request: Request, preview_id: str = Form(...), action: str = Form(...), profile: list[int] = Form([])):
         now = ctx.clock.now()
         info = lookup(preview_id, VideoInfo, now)
         if info is None:
             return render(request, "add.html", status_code=422, nav="add", error=_(EXPIRED))
         try:
-            ingest.add(ctx.conn, info, publish=action != "hold", now=now)
+            ingest.add(ctx.conn, info, publish=action != "hold", now=now, profile_ids=profile)
         except ingest.AlreadyAdded as exc:
             del previews[preview_id]
             return render(request, "add.html", status_code=422, nav="add",
@@ -167,6 +168,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         preview_id: str = Form(...),
         video: list[str] = Form([]),
         hold: str = Form(""),
+        profile: list[int] = Form([]),
     ):
         now = ctx.clock.now()
         playlist = lookup(preview_id, PlaylistInfo, now)
@@ -184,7 +186,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
                                    error=_("Tick at least one video to add."))
         held = bool(hold)
         try:
-            result = ingest.add_playlist(ctx.conn, playlist, selected, publish=not held, now=now)
+            result = ingest.add_playlist(ctx.conn, playlist, selected, publish=not held, now=now, profile_ids=profile)
         except ValueError:
             return render(request, "add.html", status_code=422, nav="add",
                          error=_("That selection doesn't match the preview; fetch it again."))

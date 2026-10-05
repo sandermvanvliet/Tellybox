@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_profile.html" as pf %}
 {% block title %}{{ show.name }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="/admin/static/library.css">{% endblock %}
 {% block content %}
@@ -28,6 +29,15 @@
     <input type="text" name="confirm_name" placeholder="{{ _("Type the show's name to delete it") | forceescape }}" required style="flex:1">
     <button class="btn small danger" type="submit">{{ _("Delete show and its files") }}</button>
   </form>
+</div>
+
+<div class="card" id="access">
+  <h2>{{ _("Visible to") }}</h2>
+  <form method="post" action="/admin/shows/{{ show.id }}/access" class="stack">
+    {{ pf.checklist(access_profiles, visible_to) }}
+    <div><button class="btn small" type="submit">{{ _("Save") }}</button></div>
+  </form>
+  <p class="muted">{{ _("Only the ticked profiles see this show in the kid app. Watching is never cut off mid-episode; the next episode just doesn't start.") }}</p>
 </div>
 
 <div class="card">

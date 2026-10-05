@@ -26,3 +26,12 @@
   {% endfor %}
 </div>
 {%- endmacro %}
+
+{#- Checkboxes named `profile`, one per profile (AD-8); `checked` is a collection of ids. -#}
+{% macro checklist(profiles, checked=()) -%}
+<div class="row profile-checks">
+  {% for p in profiles %}
+  <label class="check"><input type="checkbox" name="profile" value="{{ p.id }}"{% if p.id in checked %} checked{% endif %}>{{ picture(p, 24) }} {{ p.name }}</label>
+  {% endfor %}
+</div>
+{%- endmacro %}

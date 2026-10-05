@@ -17,7 +17,7 @@ from tellybox import ingest, jobs, library, sponsorblock
 from tellybox.i18n import N_, _, ngettext
 from tellybox.images import MAX_UPLOAD_BYTES, ImageError, clean_upload, grab_frame, save_episode_thumbnail, save_show_artwork
 from tellybox.jobs import JobType
-from tellybox.web.admin.common import AdminContext, render, see_other
+from tellybox.web.admin.common import AdminContext, access_profiles, render, see_other
 
 PLAYLIST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")  # YouTube playlist ids (CI-7)
 IMAGE_CACHE = {"Cache-Control": "no-cache"}  # revalidate (304 via ETag): replacements show at once
@@ -191,7 +191,10 @@ def create_router(ctx: AdminContext) -> APIRouter:
             "nav": "library", "show": show, "episodes": episodes, "other_shows": other_shows,
             "art_preview": None, "thumb_preview": None,
             "sb_mode": "default" if show.sponsorblock_categories is None else "choose" if own_sb else "off",
-            "sb_global": global_sb, "sb_checked": own_sb or global_sb, **extra,
+            "sb_global": global_sb, "sb_checked": own_sb or global_sb,
+            "access_profiles": access_profiles(conn),
+            "visible_to": {r[0] for r in conn.execute("SELECT profile_id FROM profile_show WHERE show_id = ?", (show_id,))},
+            **extra,
         }
         profile = library.get_split_profile(conn, show_id)
         context["split_profile"] = profile

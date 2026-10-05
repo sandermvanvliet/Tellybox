@@ -73,6 +73,9 @@
     <h2>{{ p.name }}</h2>
     <span class="badge ok watching-badge{% if not p.watching %} hidden{% endif %}">{{ _("watching") }}</span>
   </div>
+  {% if p.visible_shows == 0 %}
+  <p class="badge warn no-shows"><a href="/admin/access">{{ _("No shows visible. Choose some on the Access page.") }}</a></p>
+  {% endif %}
   <p class="big used">
     {{ _("%(time)s used", time=p.used_s | minutes) }}{% if p.remaining_s is not none %} &middot; {{ _("%(time)s left", time=p.remaining_s | minutes) }}{% endif %}
   </p>

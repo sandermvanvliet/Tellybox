@@ -14,7 +14,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tellybox import api_tokens, jobs, library, subscriptions
+from tellybox import api_tokens, jobs, library, show_access, subscriptions
 from tellybox.config import Config
 from tellybox.store import profile_policies
 
@@ -107,6 +107,7 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
     playing = set(((cast_state or {}).get("now_playing") or {}).get("profile_ids") or [])
     for x in (cast_state or {}).get("sessions") or []:  # WT-12: watching in the app counts too
         playing.update(x.get("profile_ids") or [])
+    visible = show_access.visible_count_by_profile(conn)  # HA-10: read-only, straight from the database
     result = []
     for r in conn.execute("SELECT id, name, avatar, allowance_mode, max_session_mode FROM profile ORDER BY sort_order, id"):
         pol, t = policies[r["id"]], timers.get(r["id"])
@@ -128,6 +129,7 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
             "reason": t.get("reason") if t else None,
             "watching": r["id"] in playing,
             "last_five": last_five(remaining_s),
+            "visible_shows": visible.get(r["id"], 0),  # HA-10, AD-9: an automation can alert on 0
         })
     return result
 

@@ -62,7 +62,8 @@ def test_state_shape_and_absolute_units(client, api, reader):
         "id": 1, "name": "Mila", "avatar": "fox", "allowance_s": 3600, "allowance_source": "custom",
         "extra_s": 900, "used_s": 2710, "remaining_s": 1790, "unlimited": False, "blocked": False,
         "mode": "ignore_pauses", "max_session_s": 5400, "max_session_source": "custom",
-        "session_elapsed_s": 1200, "can_start": True, "reason": None, "watching": True, "last_five": False}
+        "session_elapsed_s": 1200, "can_start": True, "reason": None, "watching": True, "last_five": False,
+        "visible_shows": 4}
     assert noor["id"] == 2 and noor["name"] == "Noor" and noor["avatar"] is None
     assert noor["allowance_s"] == 1800 and noor["allowance_source"] == "custom"
     assert noor["mode"] == "wall_clock" and noor["max_session_s"] == 2700 and noor["max_session_source"] == "custom"

@@ -59,7 +59,8 @@ def test_state_shape_and_absolute_units(client, api, reader):
         "grace_ends_at": None, "session_started_at": "2026-09-28T13:40:00+00:00", "session_elapsed_s": 1200}
     mila, noor = body["profiles"]
     assert mila == {
-        "id": 1, "name": "Mila", "avatar": "fox", "allowance_s": 3600, "allowance_source": "custom",
+        "id": 1, "name": "Mila", "avatar": "fox", "picture": None, "watch_in_app": False, "ui_mode": "icons",
+        "allowance_s": 3600, "allowance_source": "custom",
         "extra_s": 900, "used_s": 2710, "remaining_s": 1790, "unlimited": False, "blocked": False,
         "mode": "ignore_pauses", "max_session_s": 5400, "max_session_source": "custom",
         "session_elapsed_s": 1200, "can_start": True, "reason": None, "watching": True, "last_five": False,
@@ -179,3 +180,61 @@ def test_jobs_and_disk_are_cached_for_ten_seconds(client, api, reader, monkeypat
     assert client.get(STATE, headers=reader).json()["jobs"]["queued"] == 0
     now[0] += 2
     assert client.get(STATE, headers=reader).json()["jobs"]["queued"] == 1
+
+
+# --- HA-11: picture, watch_in_app and ui_mode per profile, read-only, from the database
+
+FIELDS = ("picture", "watch_in_app", "ui_mode")
+
+
+def test_profile_picture_is_the_photo_path_or_null(client, api, reader):  # HA-11
+    api.conn.execute("UPDATE profile SET picture_path = 'profiles/1.jpg' WHERE id = 1")
+    two_profiles(api)
+    mila, noor = client.get(STATE, headers=reader).json()["profiles"]
+    assert mila["picture"] == "/img/profile/1.jpg" and mila["avatar"] == "fox"
+    assert noor["picture"] is None and "avatar" in noor
+
+
+def test_watch_in_app_is_false_by_default_and_follows_the_setting(client, api, reader):  # HA-11, AD-7
+    api.conn.execute("UPDATE profile SET watch_in_app = 1 WHERE id = 2")
+    two_profiles(api)
+    mila, noor = client.get(STATE, headers=reader).json()["profiles"]
+    assert mila["watch_in_app"] is False and noor["watch_in_app"] is True
+
+
+def test_ui_mode_is_icons_by_default_and_follows_the_setting(client, api, reader):  # HA-11, KA-11
+    api.conn.execute("UPDATE profile SET ui_mode = 'text' WHERE id = 2")
+    two_profiles(api)
+    mila, noor = client.get(STATE, headers=reader).json()["profiles"]
+    assert mila["ui_mode"] == "icons" and noor["ui_mode"] == "text"
+
+
+def test_profile_fields_survive_cold_start_and_an_unreachable_cast_service(client, api, reader):  # HA-11
+    api.conn.execute("UPDATE profile SET picture_path = 'profiles/1.jpg', watch_in_app = 1, ui_mode = 'text' WHERE id = 1")
+    api.cast.mode = "down"
+    api.app.state.admin_hub.refresh()  # the hub's cold-start state was built at startup; the 10 s tick does this
+    cold = client.get(STATE, headers=reader).json()["profiles"][0]
+    assert (cold["picture"], cold["watch_in_app"], cold["ui_mode"]) == ("/img/profile/1.jpg", True, "text")
+    api.cast.mode = "up"
+    two_profiles(api)
+    hub = api.app.state.admin_hub
+    hub.publish(hub.reduce(api.cast.current))
+    api.cast.mode = "down"
+    down = client.get(STATE, headers=reader).json()
+    assert down["tv"]["reachable"] is False
+    assert all(k in p for p in down["profiles"] for k in FIELDS)
+    assert (down["profiles"][0]["picture"], down["profiles"][0]["watch_in_app"]) == ("/img/profile/1.jpg", True)
+
+
+def test_a_settings_change_reaches_the_stream_on_the_next_refresh(api):  # HA-11: no push, the 10 s refresh
+    hub = api.app.state.admin_hub
+    two_profiles_state = cast_state(profiles=[profile_state(1), profile_state(2)])
+    hub.publish(hub.reduce(two_profiles_state))
+    hub._last_cast = two_profiles_state
+    q = hub.subscribe()
+    assert q.get_nowait()["profiles"][0]["watch_in_app"] is False
+    api.conn.execute("UPDATE profile SET watch_in_app = 1, ui_mode = 'text' WHERE id = 1")  # what the settings page writes
+    assert q.empty()  # nothing pushes it
+    hub.refresh()  # what the hub's refresh tick does
+    first = q.get_nowait()["profiles"][0]
+    assert first["watch_in_app"] is True and first["ui_mode"] == "text"

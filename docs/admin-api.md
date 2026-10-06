@@ -63,6 +63,9 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   "profiles": [                          // every profile, in the admin's order (sort_order, id)
     {
       "id": 1, "name": "Mila", "avatar": "fox" | null,
+      "picture": "/img/profile/1.jpg" | null,  // the uploaded photo (HA-11); null when there is none. avatar stays
+      "watch_in_app": false,             // may watch in the browser or app (AD-7, HA-11). Read-only
+      "ui_mode": "icons" | "text",       // the kid app style (KA-11, HA-11). Read-only
       "allowance_s": 3600 | null,        // the daily allowance (AD-2, A-23); null = unlimited
       "allowance_source": "inherit" | "custom" | "unlimited",  // A-23
       "extra_s": 900,                    // extra time given today
@@ -98,6 +101,7 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   - `day.date` and `day.resets_at` are null.
   - The same holds for a profile the cast state doesn't list yet, such as one just added.
 - **Refreshing:** `jobs` and `disk` are refreshed at most every 10 s. `inbox` is read from the database by the web service and pushed when it changes.
+- **Profile fields (HA-11):** `picture`, `watch_in_app` and `ui_mode` are read-only and come straight from the database, so they are in every shape (cold start and an unreachable cast service included) and outside HA-8. There are no endpoints to change them. They are additive: `api` stays 1 and `/api/info` capabilities don't change. `picture` is a path on the Tellybox address; the photo, like the built-in avatar at `/static/avatars/<avatar>.svg`, is served without login as in the kid app (NF-1), so an integration fetches it itself. A settings change shows up in the state and the event stream at the next refresh (up to 10 s).
 - **The inbox is read-only and independent of the cast service (HA-9):** it is filled from the database, so it stays accurate when `tv.connection` is `"unreachable"`. There is no way to approve or reject through this API, and HA-8 (playback and overrides go through the cast service) doesn't apply to it.
 
 ## Endpoints

@@ -1,6 +1,6 @@
 # Tellybox — Product Requirements
 
-_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered; Sep 30, 2026: receiver app published, CR-1; Oct 4, 2026: channel subscriptions CS-1..9, inbox sensor HA-9)_
+_Sep 27, 2026 · Sander · updated Sep 28, 2026 (playlists CI-7, episode and show titles KA-10, interface languages NF-13, SponsorBlock SB-1..6, Cast receiver CR-1..8, phases reordered; Sep 30, 2026: receiver app published, CR-1; Oct 4, 2026: channel subscriptions CS-1..9, inbox sensor HA-9; Oct 6, 2026: profile fields HA-11, daily history HA-12, typed events HA-13)_
 
 ## Overview
 
@@ -231,6 +231,9 @@ A token-authenticated JSON API lets a home-automation system (first Home Assista
 | HA-8 | Every API action goes through Tellybox's cast service; the API offers no way to cast directly or to start playback when time is up. | Must | v2.1 |
 | HA-9 | The admin state carries an inbox object: `pending` (items waiting in the subscription inbox, paused subscriptions included), `unhealthy` (subscriptions with the 7-day failure warning of CS-7) and `latest_received_at` (when the newest inbox item arrived, null if none, so an automation can fire on every new upload). `/api/info` lists an `inbox` capability. It is read-only, filled by the web service from the database without the cast service, and outside HA-8 (A-36). | Must | v4 |
 | HA-10 | The admin state lists the number of visible shows per profile, read-only, so an automation can alert on zero. There are no endpoints to change assignments. It is filled by the web service from the database and is outside HA-8, like HA-9. | Should | v10 |
+| HA-11 | The admin state lists, per profile, the path of the profile's uploaded photo (`picture`, null when there is none), whether the profile may watch in the app (`watch_in_app`, AD-7) and the kid app style (`ui_mode`, KA-11), read-only, so an integration can show the kid's picture and the two settings. There are no endpoints to change them. They are filled by the web service from the database and are outside HA-8, like HA-9 and HA-10. The picture file is the one the kid app shows, served without login (NF-1, A-39). | Should | v11 |
+| HA-12 | A read-scope endpoint, `GET /api/admin/history?days=N&profile_ids=…`, returns per profile the daily totals for the last 1 to 21 timer days (today first: seconds used, extra seconds, unlimited, blocked) and the most recent watched episode (title, show, start, end, TV or app), so an integration can show yesterday's time and a weekly average. It is read-only, filled by the web service from the database, outside HA-8, and answers while the cast service is down. `/api/info` lists a `history` capability. Retention follows AD-5; the contents are visible to any `read` token (A-38). | Should | v12 |
+| HA-13 | A client that asks for it (`GET /api/admin/events?typed=1`, advertised by a `typed_events` capability) also receives typed events on the admin stream: playback started and stopped (with the reason: finished, replaced, stopped, parent stop, time up, blocked, taken over, disconnected, restart or load failed), time up (with the reason), last five minutes, an override applied (with the name of the token, none for the admin pages), a new inbox item and a download ready. Without the option the stream is unchanged. Events are advisory edges that are not stored or replayed; the state stays the source of truth. The stream is read-only and starts nothing (HA-8). | Should | v13 |
 
 ### Installation
 
@@ -328,6 +331,9 @@ v1 delivers a complete, usable loop for the whole family; it shipped on 2026-09-
 | v7 · Tellybox receiver | Own Cast receiver: time left on the TV, time's-up screen, loading and idle screens, up-next card, automatic fallback to the Default Media Receiver (CR-1..8) | Real-device checks pass on the 1st-gen Chromecast |
 | v9 · Watching in the app | Play in the kid app on the device itself: TV/device toggle, full screen, heartbeat-timed with server-enforced limits, several sessions at once (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7) | Real-device checks pass on the Chromecast, an iPhone and an Android phone |
 | v10 · Show access per profile | Per-profile allow-list of shows, intersection for groups, server-side enforcement, admin matrix, empty state (PR-5..PR-8, KA-15, AD-8, AD-9, HA-10) | Real-device checks pass |
+| v11 · Profile fields in the admin API | Profile photo path, `watch_in_app` and `ui_mode` per profile in the admin state, read-only (HA-11) | Home Assistant shows the pictures and the two settings |
+| v12 · Daily history API | Per-profile daily totals and the last watched episode over the admin API (HA-12) | Home Assistant shows yesterday's time and the weekly average |
+| v13 · Typed events | Typed events with reasons and sources on the admin stream, opt-in (HA-13) | Home Assistant automations use the reasons without diffing the state |
 
 ### v1 build order
 
@@ -354,6 +360,9 @@ One step per branch or PR, each proposed as a plan first and closed with real-de
 16. **Reader UI and per-profile TV (v8).** A text-rich kid app that the admin switches on per profile (KA-11, KA-12), and a default TV per profile (PB-6). The no-text app stays the default (KA-2). (Added from GitHub issue #29, 2026-10-02.)
 17. **Watching in the app (v9).** Play episodes in the kid app on the device itself, with a per-device TV/device toggle and an admin switch per profile (KA-13, KA-14, PB-7..PB-9, WT-10..WT-12, AD-7). Two PRs: first the cast controller handles several sessions with no visible change, then the browser player. (Added from GitHub issue #31, 2026-10-04; plan: `docs/plans/step17-in-app-playback.md`.)
 18. **Show access per profile (v10).** An admin-managed allow-list of shows per profile, enforced on the server on every path, with a show x profile matrix and a picture-only empty state (PR-5..PR-8, KA-15, AD-8, AD-9, HA-10). It supersedes A-8. (Added from GitHub issue #40, 2026-10-05; plan: `docs/plans/step18-profile-show-access.md`.)
+19. **Profile fields in the admin API (v11).** `picture`, `watch_in_app` and `ui_mode` per profile in the admin state (HA-11), for the Home Assistant integration's kid pictures and read-only settings. (Proposed by the owner, 2026-10-06; plan: `docs/plans/step19-profile-fields.md`.)
+20. **Daily history API (v12).** `GET /api/admin/history` and the `history` capability (HA-12), so Home Assistant can show yesterday's time and a weekly average. (Proposed 2026-10-06; plan: `docs/plans/step20-history-api.md`.)
+21. **Typed events (v13).** Typed events with reasons and token names on the admin stream, opt-in with `?typed=1` and the `typed_events` capability (HA-13). The Home Assistant integration derives events from state diffs until this lands. (Proposed 2026-10-06; plan: `docs/plans/step21-typed-events.md`.)
 
 ## Risks, assumptions and open questions
 
@@ -419,6 +428,8 @@ The biggest risks are external: YouTube changes that break yt-dlp, and the agein
 | A-35 | A failing subscription keeps retrying on the normal schedule and is never paused automatically. It shows its last error, and a warning after 7 days of failures. There are no push alerts (owner, 2026-10-04). |
 | A-36 | The inbox sensor (HA-9) is read-only: no approve or reject through the API. It is filled by the web service, not the cast service, so HA-8 doesn't cover it and it still answers when the cast service is down (owner, 2026-10-04). |
 | A-37 | Each profile has an allow-list of shows (issue #40). New shows and new profiles start with nothing visible; assigning is a deliberate admin action. The upgrade grants every existing profile every existing show, so nothing changes on upgrade. Groups see the intersection (PR-6). Visibility is by show only, with no ratings or per-episode control, and read-only in the admin API (HA-10). It supersedes A-8 (owner, 2026-10-05). |
+| A-38 | The history endpoint (HA-12) is read-only and limited to what AD-5 keeps (21 days). It gives the last watched episode's title and show to any `read` token, the same trust as the now-playing title in HA-2, so a token on a wall tablet can see what a kid watched last (owner, 2026-10-06). |
+| A-39 | The admin state tells an integration where a profile's uploaded photo is (HA-11). The photo is served without login, as in the kid app (NF-1), so a photo of a child can appear in Home Assistant; the integration fetches it itself and doesn't expose the Tellybox address to the browser (owner, 2026-10-06). |
 
 ### Open questions
 

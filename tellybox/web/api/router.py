@@ -13,9 +13,11 @@ import sqlite3
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from tellybox import api_tokens, subscriptions
+from tellybox import api_tokens, store, subscriptions
 from tellybox.clock import Clock
 from tellybox.config import Config
+from tellybox.db import to_db
+from tellybox.history import UsageHistory, usage_history
 from tellybox.web.api.guard import TokenGuard
 from tellybox.web.api.state import API_VERSION, build_admin_state, unreachable
 from tellybox.web.cast_client import CastUnavailable
@@ -26,7 +28,7 @@ from tellybox.web.overrides import apply_override
 log = logging.getLogger(__name__)
 
 SSE_KEEPALIVE_S = _DEFAULT_KEEPALIVE_S
-CAPABILITIES = ["state", "events", "overrides", "profiles", "inbox"]
+CAPABILITIES = ["state", "events", "overrides", "profiles", "inbox", "history"]
 
 
 class BadRequest(ValueError):
@@ -77,6 +79,30 @@ def _parse_query_ids(raw: str | None) -> list[int] | None:
         raise BadRequest("profile_ids must be comma-separated integers") from None
 
 
+def _history_json(h: UsageHistory) -> dict:
+    return {
+        "today": h.today.isoformat(),
+        "days": h.days,
+        "profiles": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "days": [{"date": d.date.isoformat(), "used_s": d.used_s, "extra_s": d.extra_s,
+                          "unlimited": d.unlimited, "blocked": d.blocked} for d in p.days],
+                "last_watched": None if p.last_watched is None else {
+                    "episode_id": p.last_watched.episode_id,
+                    "title": p.last_watched.title,
+                    "show": p.last_watched.show,
+                    "started_at": to_db(p.last_watched.started_at),
+                    "ended_at": to_db(p.last_watched.ended_at),
+                    "target": p.last_watched.target,
+                },
+            }
+            for p in h.profiles
+        ],
+    }
+
+
 def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, admin_hub: KidHub, counts) -> APIRouter:
     router = APIRouter()
     read = Depends(TokenGuard(conn, clock, api_tokens.READ))
@@ -97,6 +123,23 @@ def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, 
         except CastUnavailable:
             # The inbox comes from the database (HA-9, A-36), so it is current even while the cast service is down.
             return {**unreachable(admin_hub.state), "inbox": subscriptions.inbox_counts(conn, clock.now())}
+
+    @router.get("/api/admin/history", dependencies=[read])
+    async def history(request: Request) -> JSONResponse:
+        # HA-12, A-38: database only, so it answers while the cast service is down.
+        q = request.query_params
+        try:
+            try:
+                days = int(q.get("days", "7"))
+            except ValueError:
+                raise BadRequest("days must be an integer") from None
+            raw = q.get("profile_ids")
+            ids = _parse_query_ids(raw) if raw else None
+            result = usage_history(conn, clock.now(), config.tz, store.timer_settings(conn, config.tz).reset_time,
+                                   days, ids)
+        except ValueError as exc:  # BadRequest is one; so are the query's range and unknown-id errors
+            return _detail(422, str(exc))
+        return JSONResponse(_history_json(result))
 
     @router.get("/api/admin/events", dependencies=[read])
     async def events() -> StreamingResponse:

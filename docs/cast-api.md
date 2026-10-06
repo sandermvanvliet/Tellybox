@@ -100,6 +100,16 @@ Behaviour:
 - **Finished (PB-8).** An episode is marked finished only at 95% of its length with at least half of it actually played (accumulated playing time), however it ended; otherwise only the position is saved.
 - **Restart (NF-7).** Open device sessions are closed as `restart` at start-up; only the TV session is re-attached. The history row (`watch_session`) records `target` (`tv` or `device`) and `device_label` (migration 016).
 
+## Typed events (step 21, HA-13)
+
+`GET /typed-events` (SSE, localhost like the rest of this API; `: keepalive` every 15 s) streams the cast service's discrete events as `data: <event dict>` frames, one per event, in the order they happened. The web service reads it and relays it on `GET /api/admin/events?typed=1` (see `admin-api.md`, "Typed events", for the catalog and the envelope). This stream is separate from `GET /events`, which carries state snapshots only and is unchanged.
+
+- Cast-side types: `playback_started`, `playback_stopped`, `time_up`, `last_five`, `override_applied`. The web service adds `inbox_item_arrived` and `download_ready` itself.
+- **No replay and no persistence.** A subscriber sees only events emitted while it is connected. Each subscriber has a bounded queue (100) that drops the oldest event when full, so a slow reader never blocks the controller.
+- **Ordering.** An event is emitted after the state broadcast for the same cause.
+- **Edges, not levels.** `time_up` and `last_five` fire once on the false to true edge of the watching group and re-arm when the value goes false (extra minutes, the daily reset), never once per tick.
+- `override_applied.source` is the override's source verbatim (the API token's name, null for the admin pages).
+
 ## Receiver resilience (CR-6)
 
 The new `receiver` fields are additive. The cast service writes the `receiver_event` table (migration 011; the worker purges rows older than 21 days), and `receiver` summarises it.

@@ -10,7 +10,7 @@ import pytest
 
 from tellybox import db, library, store
 from tellybox.cast.controller import EndReason
-from tellybox.history import WATCHING_NOW_LABEL, history_days
+from tellybox.history import HISTORY_DAYS, WATCHING_NOW_LABEL, history_days, usage_history
 
 AMS = ZoneInfo("Europe/Amsterdam")
 FOUR = time(4, 0)
@@ -234,3 +234,146 @@ def test_open_watch_sessions_filter_by_target(conn, episode_id, profile_id):  # 
     assert [s.target for s in store.open_watch_sessions(conn, target="tv")] == ["tv"]
     (device,) = store.open_watch_sessions(conn, target="device")
     assert device.device_label == "Pixel Chrome"
+
+
+# --- usage_history (HA-12, A-38) ---------------------------------------------------------------
+
+
+def put_usage(conn, profile, day, seconds=0.0, extra_min=0, unlimited=0, blocked=0):
+    conn.execute(
+        "INSERT INTO daily_usage (profile_id, day, seconds_used, extra_min, unlimited, blocked) VALUES (?, ?, ?, ?, ?, ?)",
+        (profile, day, seconds, extra_min, unlimited, blocked),
+    )
+
+
+def test_usage_history_missing_days_are_zeros_newest_first(conn, profile_id):  # HA-12
+    h = usage_history(conn, NOW, AMS, FOUR)
+    assert h.today == date(2026, 9, 28)
+    assert h.days == 7
+    (p,) = h.profiles
+    assert [d.date for d in p.days] == [date(2026, 9, 28) - timedelta(days=i) for i in range(7)]
+    assert all((d.used_s, d.extra_s, d.unlimited, d.blocked) == (0, 0, False, False) for d in p.days)
+    assert p.last_watched is None
+
+
+def test_usage_history_reads_daily_usage_rounded(conn, profile_id):  # HA-12
+    put_usage(conn, profile_id, "2026-09-28", 1199.6, 0)
+    put_usage(conn, profile_id, "2026-09-27", 2710.2, 15)
+    p = usage_history(conn, NOW, AMS, FOUR).profiles[0]
+    assert (p.days[0].used_s, p.days[0].extra_s) == (1200, 0)
+    assert (p.days[1].used_s, p.days[1].extra_s) == (2710, 900)
+    assert isinstance(p.days[0].used_s, int)
+
+
+def test_usage_history_flags(conn, profile_id):  # HA-12
+    put_usage(conn, profile_id, "2026-09-28", 0, 0, unlimited=1)
+    put_usage(conn, profile_id, "2026-09-27", 0, 0, blocked=1)
+    p = usage_history(conn, NOW, AMS, FOUR).profiles[0]
+    assert (p.days[0].unlimited, p.days[0].blocked) == (True, False)
+    assert (p.days[1].unlimited, p.days[1].blocked) == (False, True)
+
+
+def test_usage_history_day_boundary_follows_reset_time(conn, episode_id, profile_id):  # HA-12, WT-1
+    now = datetime(2026, 9, 28, 2, 30, tzinfo=UTC)  # 04:30 CEST, just after the reset
+    assert usage_history(conn, now, AMS, FOUR).today == date(2026, 9, 28)
+    before = datetime(2026, 9, 28, 1, 59, tzinfo=UTC)  # 03:59 CEST
+    assert usage_history(conn, before, AMS, FOUR).today == date(2026, 9, 27)
+    put_usage(conn, profile_id, "2026-09-27", 100)
+    put_usage(conn, profile_id, "2026-09-28", 200)
+    # A session at 03:59 and one at 04:01 local are the latest-by-start; usage rows sit on each side.
+    open_close(conn, episode_id, profile_id, before, before + timedelta(minutes=1))
+    after = datetime(2026, 9, 28, 2, 1, tzinfo=UTC)  # 04:01 CEST
+    open_close(conn, episode_id, profile_id, after, after + timedelta(minutes=1))
+    at_before = usage_history(conn, before, AMS, FOUR, days=2).profiles[0]
+    assert [(d.date, d.used_s) for d in at_before.days] == [(date(2026, 9, 27), 100), (date(2026, 9, 26), 0)]
+    at_after = usage_history(conn, now, AMS, FOUR, days=2).profiles[0]
+    assert [(d.date, d.used_s) for d in at_after.days] == [(date(2026, 9, 28), 200), (date(2026, 9, 27), 100)]
+    assert at_after.last_watched.started_at == after
+
+
+def test_usage_history_rows_outside_window_are_absent(conn, profile_id):  # HA-12, AD-5
+    put_usage(conn, profile_id, "2026-09-20", 999)  # 8 days before today
+    put_usage(conn, profile_id, "2026-09-29", 888)  # a future day is not an entry either
+    p = usage_history(conn, NOW, AMS, FOUR, days=7).profiles[0]
+    assert len(p.days) == 7
+    assert all(d.used_s == 0 for d in p.days)
+    p = usage_history(conn, NOW, AMS, FOUR, days=HISTORY_DAYS).profiles[0]
+    assert len(p.days) == 21
+    assert {d.date: d.used_s for d in p.days}[date(2026, 9, 20)] == 999
+    put_usage(conn, profile_id, "2026-09-07", 777)  # 21 days back: one past the window
+    p = usage_history(conn, NOW, AMS, FOUR, days=HISTORY_DAYS).profiles[0]
+    assert date(2026, 9, 7) not in {d.date for d in p.days}
+
+
+@pytest.mark.parametrize("days", [0, -1, HISTORY_DAYS + 1])
+def test_usage_history_days_out_of_range(conn, profile_id, days):  # HA-12
+    with pytest.raises(ValueError):
+        usage_history(conn, NOW, AMS, FOUR, days=days)
+
+
+@pytest.mark.parametrize("days", [1, HISTORY_DAYS])
+def test_usage_history_days_bounds_accepted(conn, profile_id, days):  # HA-12
+    h = usage_history(conn, NOW, AMS, FOUR, days=days)
+    assert h.days == days
+    assert len(h.profiles[0].days) == days
+
+
+def test_usage_history_shared_session_counts_once_in_totals(conn, episode_id, profile_id, second_profile):  # HA-12
+    started = NOW - timedelta(minutes=10)
+    session_id = store.open_watch_session(conn, episode_id, [profile_id, second_profile], started)
+    store.close_watch_session(conn, session_id, EndReason.FINISHED, NOW, 600.0)
+    put_usage(conn, profile_id, "2026-09-28", 600)
+    # second_profile has no daily_usage row: totals come from daily_usage only
+    a, b = usage_history(conn, NOW, AMS, FOUR).profiles
+    assert (a.days[0].used_s, b.days[0].used_s) == (600, 0)
+    for p in (a, b):
+        assert p.last_watched.title == "Hospital"
+        assert p.last_watched.show == "Bluey"
+        assert p.last_watched.episode_id == episode_id
+
+
+def test_usage_history_last_watched_is_latest_by_start_with_ends_and_target(conn, episode_id, profile_id):  # A-38
+    first = NOW - timedelta(hours=3)
+    open_close(conn, episode_id, profile_id, first, first + timedelta(minutes=10))
+    second = NOW - timedelta(hours=1)
+    sid = store.open_watch_session(conn, episode_id, [profile_id], second, target="device", device_label="Pixel Chrome")
+    store.close_watch_session(conn, sid, EndReason.STOPPED, second + timedelta(minutes=5), 300)
+    lw = usage_history(conn, NOW, AMS, FOUR).profiles[0].last_watched
+    assert lw.started_at == second
+    assert lw.ended_at == second + timedelta(minutes=5)
+    assert lw.started_at.tzinfo is not None and lw.target == "device"
+
+
+def test_usage_history_open_session_has_no_end(conn, episode_id, profile_id):  # A-38
+    store.open_watch_session(conn, episode_id, [profile_id], NOW - timedelta(minutes=5))
+    lw = usage_history(conn, NOW, AMS, FOUR).profiles[0].last_watched
+    assert lw.ended_at is None
+    assert lw.target == "tv"
+
+
+def test_usage_history_deleted_episode_has_no_title(conn, episode_id, profile_id):  # A-38
+    started = NOW - timedelta(hours=1)
+    open_close(conn, episode_id, profile_id, started, started + timedelta(minutes=10))
+    library.delete_episode(conn, Path("/nonexistent-media-dir"), episode_id)
+    lw = usage_history(conn, NOW, AMS, FOUR).profiles[0].last_watched
+    assert (lw.episode_id, lw.title, lw.show) == (None, None, None)
+    assert lw.started_at == started
+
+
+def test_usage_history_profiles_in_admin_order(conn, profile_id, second_profile):  # HA-12
+    conn.execute("UPDATE profile SET sort_order = 5 WHERE id = ?", (profile_id,))
+    conn.execute("UPDATE profile SET sort_order = 1 WHERE id = ?", (second_profile,))
+    h = usage_history(conn, NOW, AMS, FOUR)
+    assert [(p.id, p.name) for p in h.profiles] == [(second_profile, "Noor"), (profile_id, "Mila")]
+
+
+def test_usage_history_profile_ids_filter_keeps_admin_order(conn, profile_id, second_profile):  # HA-12
+    only = usage_history(conn, NOW, AMS, FOUR, profile_ids=[second_profile])
+    assert [p.id for p in only.profiles] == [second_profile]
+    both = usage_history(conn, NOW, AMS, FOUR, profile_ids=[second_profile, profile_id])
+    assert [p.id for p in both.profiles] == [profile_id, second_profile]
+
+
+def test_usage_history_unknown_profile_id_raises(conn, profile_id):  # HA-12
+    with pytest.raises(ValueError):
+        usage_history(conn, NOW, AMS, FOUR, profile_ids=[profile_id, 999])

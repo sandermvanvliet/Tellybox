@@ -543,6 +543,13 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Notes: `api` stays 1 and `/api/info` is unchanged. A settings change reaches the event stream at the hub's next 10 s refresh (the settings page does not call it). `/img/profile/<id>.jpg` and `/static/avatars/<key>.svg` need no login.
 - **Open:** the pytellybox 0.4.0 release and the ha-tellybox entities (separate repositories).
 
+### 20. Daily history in the admin API (v12, HA-12), built (branch `step20/history-api`)
+- 2026-10-06. PRD: HA-12, A-38. Plan: `docs/plans/step20-history-api.md` (plan 12 of the Home Assistant work).
+- Built: `usage_history` in `tellybox/history.py`; `GET /api/admin/history?days=N&profile_ids=1,3` (scope `read`, database only, so it answers while the cast service is down); the `history` capability in `/api/info`; tests in `tests/test_history.py` and `tests/web/api/test_history.py`; `docs/admin-api.md`.
+- Notes: totals come from `daily_usage` (a shared session would count twice in `watch_session`); `last_watched` carries the title and show, visible to any `read` token (A-38). Retention (AD-5) is 21 days, so `days` is capped at 21.
+- **Retention:** `last_watched` can only be as old as what the purge keeps. Closed sessions older than 21 days are deleted, so a kid who has not watched for three weeks gets `last_watched: null`.
+- **Open:** the pytellybox 0.5.0 release and the ha-tellybox sensors (separate repositories).
+
 ### Then
 (none planned after step 11)
 

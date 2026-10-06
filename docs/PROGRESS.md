@@ -537,6 +537,12 @@ Settings page and admin API: allowance and maximum session length per profile ar
   - Images `/img/show|episode` are not profile-scoped (only hidden/unpublished content is a 404); a hidden show's artwork URL is guessable but nothing lists it.
   - The scoped media route is deliberately not blocked on revoke, so the episode in progress finishes (PR-8).
 
+### 19. Profile fields in the admin API (v11, HA-11), built (branch `step19/profile-fields`)
+- 2026-10-06. PRD: HA-11, A-39 (already in). Plan: `docs/plans/step19-profile-fields.md` (plans 6 and 7 of the Home Assistant work, delivered together).
+- Built: `picture`, `watch_in_app` and `ui_mode` per profile in `AdminState`, read from the database in `_profiles` (no cast state needed, so cold start and unreachable carry them); tests in `tests/web/api/test_state.py`; `docs/admin-api.md`.
+- Notes: `api` stays 1 and `/api/info` is unchanged. A settings change reaches the event stream at the hub's next 10 s refresh (the settings page does not call it). `/img/profile/<id>.jpg` and `/static/avatars/<key>.svg` need no login.
+- **Open:** the pytellybox 0.4.0 release and the ha-tellybox entities (separate repositories).
+
 ### Then
 (none planned after step 11)
 

@@ -109,11 +109,15 @@ def _profiles(conn: sqlite3.Connection, cast_state: dict | None) -> list[dict]:
         playing.update(x.get("profile_ids") or [])
     visible = show_access.visible_count_by_profile(conn)  # HA-10: read-only, straight from the database
     result = []
-    for r in conn.execute("SELECT id, name, avatar, allowance_mode, max_session_mode FROM profile ORDER BY sort_order, id"):
+    for r in conn.execute("SELECT id, name, avatar, picture_path, ui_mode, watch_in_app, allowance_mode, max_session_mode"
+                          " FROM profile ORDER BY sort_order, id"):
         pol, t = policies[r["id"]], timers.get(r["id"])
         remaining_s = t.get("remaining_s") if t else None
         result.append({
             "id": r["id"], "name": r["name"], "avatar": r["avatar"],
+            "picture": f"/img/profile/{r['id']}.jpg" if r["picture_path"] else None,  # HA-11, as kid.py
+            "watch_in_app": bool(r["watch_in_app"]),  # HA-11, AD-7
+            "ui_mode": r["ui_mode"],  # HA-11, KA-11
             "allowance_s": None if pol.allowance_s is None else round(pol.allowance_s),
             "allowance_source": r["allowance_mode"],  # A-23: inherit|custom|unlimited
             "extra_s": t["extra_s"] if t else None,

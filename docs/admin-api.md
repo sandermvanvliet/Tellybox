@@ -116,12 +116,47 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
 | POST | `/api/admin/overrides/block` | control | `{"profile_ids": [1]?}` | AdminState. Takes effect immediately, without grace; playback stops if a blocked profile is watching. |
 | POST | `/api/admin/overrides/stop` | control | `{}` | AdminState. Stop now: stops what's playing, without grace. |
 | DELETE | `/api/admin/overrides/today` | control | query `?profile_ids=1,3` (optional) | AdminState. Clears unlimited and block for today; extra minutes stay (HA-5). |
+| GET | `/api/admin/history` | read | query `?days=7&profile_ids=1,3` (both optional) | UsageHistory (HA-12). Daily totals and the last watched episode per profile, from the database; works while the cast service is down. Advertised by the `history` capability. |
 
 - **`profile_ids`:** 1–20 distinct existing profile ids. Leave it out (or null) for every profile.
 - **Errors:**
   - `422 {"detail": "…"}` for a bad body, minutes out of range, or bad or unknown `profile_ids`;
   - `503 {"detail": "cast_unavailable"}` when the cast service can't be reached, in which case nothing was applied.
 - **History:** each override is recorded with the token's name as its source, and the admin History page shows it as "via <name>" (HA-7).
+
+## History (HA-12, A-38)
+
+`GET /api/admin/history` (scope `read`) gives, per profile, the daily totals of the last `days` timer days and the most recent episode that profile watched, so an integration can show yesterday's time and a weekly average. It is read-only and comes straight from the database, so it answers while the cast service is down and is outside HA-8. `/api/info` lists the `history` capability; an older Tellybox answers 404.
+
+- **Query:** `days` is 1..21 (default 7), the number of timer days ending with today (the retention window of AD-5). `profile_ids` is optional, comma separated; an unknown id, or a `days` that is not an integer in range, gives `422 {"detail": "…"}`.
+- **Timer days:** days follow the reset time (WT-1, default 04:00), never the calendar day. `today` in the response is the current timer day; a day without a row counts as zeros.
+
+```jsonc
+// UsageHistory: GET /api/admin/history
+{
+  "today": "2026-10-06",                 // the timer day at the time of the request
+  "days": 7,
+  "profiles": [                          // the admin's order (sort_order, id)
+    {
+      "id": 1, "name": "Mila",
+      "days": [                          // exactly `days` entries, newest first, today first
+        {"date": "2026-10-06", "used_s": 1200, "extra_s": 0, "unlimited": false, "blocked": false},
+        {"date": "2026-10-05", "used_s": 2710, "extra_s": 900, "unlimited": false, "blocked": false}
+      ],
+      "last_watched": null | {           // her latest watch session (open or closed) inside the retention window
+        "episode_id": 4 | null,          // null once the episode is deleted
+        "title": "…" | null, "show": "…" | null,
+        "started_at": "ISO-8601 UTC", "ended_at": "ISO-8601 UTC" | null,   // null = watching now
+        "target": "tv" | "device"
+      }
+    }
+  ]
+}
+```
+
+- `used_s` is `daily_usage.seconds_used` rounded to whole seconds and `extra_s` is `extra_min` times 60. `daily_usage`, not `watch_session`, is the timer's truth: a session shared by two kids would be counted twice.
+- `last_watched` carries the episode's title and show. Any `read` token sees them (A-38), the same trust as `now_playing` in the state.
+- Nothing in this endpoint writes, plays or changes anything.
 
 ## Safety notes for integrations (HA-8)
 

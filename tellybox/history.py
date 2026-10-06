@@ -162,3 +162,52 @@ def history_days(
         ))
 
     return [by_day[d] for d in sorted(by_day, reverse=True)]
+
+
+# --- Admin API usage history (HA-12, A-38; step 20) -----------------------------------------------
+# The contract for `GET /api/admin/history` (docs/admin-api.md, "History"). `usage_history` is the query.
+
+
+@dataclass(frozen=True)
+class UsageDay:
+    date: date  # a timer day (WT-1), not a calendar day
+    used_s: int  # daily_usage.seconds_used, rounded
+    extra_s: int  # daily_usage.extra_min * 60
+    unlimited: bool
+    blocked: bool
+
+
+@dataclass(frozen=True)
+class LastWatched:
+    episode_id: int | None  # None once the episode is deleted
+    title: str | None
+    show: str | None
+    started_at: datetime
+    ended_at: datetime | None  # None while the session is open
+    target: str  # 'tv' or 'device'
+
+
+@dataclass(frozen=True)
+class ProfileUsage:
+    id: int
+    name: str
+    days: tuple[UsageDay, ...]  # exactly `days` long, newest first, today first, zeros for a day without a row
+    last_watched: LastWatched | None
+
+
+@dataclass(frozen=True)
+class UsageHistory:
+    today: date  # the current timer day
+    days: int
+    profiles: tuple[ProfileUsage, ...]  # in the admin's order (sort_order, id)
+
+
+def usage_history(
+    conn: sqlite3.Connection, now: datetime, tz: ZoneInfo, reset_time: time, days: int = 7,
+    profile_ids: list[int] | None = None,
+) -> UsageHistory:
+    """The daily totals and the last watched episode per profile (HA-12).
+
+    `days` must be 1..HISTORY_DAYS (ValueError otherwise); an unknown id in `profile_ids` raises ValueError.
+    Implemented by step 20, task T1."""
+    raise NotImplementedError

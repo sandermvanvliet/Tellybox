@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tellybox"
-version = "0.5.0"
+version = "0.6.0"
 description = "Parent-approved videos cast to the TV within a daily allowance"
 requires-python = ">=3.12"
 license = "GPL-3.0-or-later"

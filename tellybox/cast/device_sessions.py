@@ -223,6 +223,7 @@ class DeviceSessionsMixin:
         store.close_watch_session(self.conn, s.watch_session_id, reason, ended_at or now, counted)
         log.info("device %s: episode %s ended: %s at %.0f s", s.device_id, s.episode.id, reason, pos)
         self.device_sessions.pop(s.device_id, None)
+        self._emit_stopped(s.episode, s.profile_ids, "device", s.label, reason, pos)  # HA-13
         if remember:
             self._device_ended[s.device_id] = (_END_REASONS.get(reason), now)
         self.persist(now)
@@ -301,6 +302,7 @@ class DeviceSessionsMixin:
         )
         self.device_sessions[device_id] = s
         log.info("device %s: playing episode %s from %.0f s", device_id, episode.id, start_s)
+        self._emit_started(episode, profiles, "device", label)  # HA-13
         return {"session": self._device_session_state(s, now), "url": s.url, "start_s": start_s}
 
     @staticmethod

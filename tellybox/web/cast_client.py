@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 import httpx
 
 from tellybox.config import Config
+
+log = logging.getLogger(__name__)
 
 # Discovery on the cast service listens for mDNS for 8 s (pychromecast_device.discover).
 DEVICES_TIMEOUT_S = 15.0
@@ -151,3 +154,27 @@ class CastClient:
                         data = []
         except httpx.HTTPError as exc:
             raise CastUnavailable(f"GET /events: {exc!r}") from exc
+
+    async def typed_events(self) -> AsyncIterator[dict]:
+        """Typed events (HA-13) from the cast service's `GET /typed-events`; ends when the stream does.
+        Tolerant: a frame that isn't a JSON object with a `type` is skipped, never fatal."""
+        timeout = httpx.Timeout(5.0, read=EVENTS_READ_TIMEOUT_S)
+        try:
+            async with self._http.stream("GET", "/typed-events", timeout=timeout) as r:
+                if r.status_code != 200:
+                    raise CastUnavailable(f"GET /typed-events: HTTP {r.status_code}")
+                data: list[str] = []
+                async for line in r.aiter_lines():
+                    if line.startswith("data:"):
+                        data.append(line[5:].removeprefix(" "))
+                    elif not line and data:
+                        raw, data = "\n".join(data), []
+                        try:
+                            event = json.loads(raw)
+                        except ValueError:
+                            log.debug("skipping a malformed typed event frame")
+                            continue
+                        if isinstance(event, dict) and isinstance(event.get("type"), str):
+                            yield event
+        except httpx.HTTPError as exc:
+            raise CastUnavailable(f"GET /typed-events: {exc!r}") from exc

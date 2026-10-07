@@ -106,7 +106,7 @@ Behaviour:
 
 - Cast-side types: `playback_started`, `playback_stopped`, `time_up`, `last_five`, `override_applied`. The web service adds `inbox_item_arrived` and `download_ready` itself.
 - **No replay and no persistence.** A subscriber sees only events emitted while it is connected. Each subscriber has a bounded queue (100) that drops the oldest event when full, so a slow reader never blocks the controller.
-- **Ordering.** An event is emitted after the state broadcast for the same cause.
+- **Ordering.** An event is emitted after the state broadcast for the same cause. The web service reads this stream and `GET /events` separately, so the order of a state and its event is best effort once relayed (see `admin-api.md`).
 - **Edges, not levels.** `time_up` and `last_five` fire once on the false to true edge of the watching group and re-arm when the value goes false (extra minutes, the daily reset), never once per tick.
 - `override_applied.source` is the override's source verbatim (the API token's name, null for the admin pages).
 

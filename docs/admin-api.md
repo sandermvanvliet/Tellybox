@@ -169,7 +169,7 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
   data: {"type":"playback_stopped","at":"2026-10-06T18:02:11.000+00:00","profile_ids":[1],...}
   ```
 
-- **Ordering.** For one cause the event is sent after the state that reflects it, so a consumer handling an event sees state at least as new as the event. Events of different types may interleave with states in any order.
+- **Ordering.** For one cause the cast service emits the event after the state that reflects it, and the stream sends an event after a state that is already waiting, so in practice a consumer handling an event sees state at least as new as the event. This is best effort, not a guarantee: states and events travel on separate internal streams, so a client must not depend on strict ordering (an automation that needs the level should read the state, not assume it). Events of different types may interleave with states in any order.
 - **Envelope.** Every event is `{"type": str, "at": ISO-8601 UTC string, ...fields}`; `type` equals the SSE `event:` name. Clients must ignore unknown fields and unknown types.
 - **Slow clients.** Each connection has a bounded queue (100) that drops the oldest event when full. Nothing here blocks other clients or the timer.
 - **Read-only.** The stream starts nothing and changes nothing (HA-8).

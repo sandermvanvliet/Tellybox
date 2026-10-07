@@ -16,6 +16,7 @@ from pathlib import Path
 
 from tellybox import api_tokens, jobs, library, show_access, subscriptions
 from tellybox.config import Config
+from tellybox.db import to_db
 from tellybox.store import profile_policies
 
 log = logging.getLogger(__name__)
@@ -190,3 +191,28 @@ async def watch_inbox(conn: sqlite3.Connection, now, refresh, interval_s: float 
                 refresh()
         except Exception:
             log.exception("inbox watcher failed")
+
+
+async def watch_typed_events(conn: sqlite3.Connection, now, publish, interval_s: float = 2.0) -> None:
+    """HA-13: publish `inbox_item_arrived` when the inbox's latest_received_at advances and `download_ready` when
+    the held-ready count rises. Polls the database like `watch_inbox`, so they flow while the cast service is
+    down. The first reading at start-up is the baseline, not an event; a decrease is silent."""
+    inbox = subscriptions.inbox_counts(conn, now())
+    last_pending, last_latest = inbox["pending"], inbox["latest_received_at"]
+    last_ready = library.count_held_ready(conn)
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            inbox = subscriptions.inbox_counts(conn, now())
+            pending, latest = inbox["pending"], inbox["latest_received_at"]
+            if latest is not None and (last_latest is None or latest > last_latest):
+                publish({"type": "inbox_item_arrived", "at": to_db(now()), "pending": pending,
+                         "new_items": max(1, pending - last_pending), "latest_received_at": latest})
+            last_pending, last_latest = pending, latest
+            ready = library.count_held_ready(conn)
+            if ready > last_ready:
+                publish({"type": "download_ready", "at": to_db(now()), "held_ready": ready,
+                         "new_ready": max(1, ready - last_ready)})
+            last_ready = ready
+        except Exception:
+            log.exception("typed event watcher failed")

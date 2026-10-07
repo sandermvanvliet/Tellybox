@@ -166,6 +166,25 @@ def create_api(
 
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
+    @app.get("/typed-events")
+    async def typed_events() -> StreamingResponse:
+        """HA-13: discrete events (playback, timer, overrides) as ``data: <event>`` frames. No replay; the state
+        stream (``/events``) is separate and unchanged."""
+        queue = controller.subscribe_events()
+
+        async def stream():
+            try:
+                while True:
+                    try:
+                        event = await asyncio.wait_for(queue.get(), SSE_KEEPALIVE_S)
+                        yield f"data: {json.dumps(event)}\n\n"
+                    except TimeoutError:
+                        yield ": keepalive\n\n"
+            finally:
+                controller.unsubscribe_events(queue)
+
+        return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
     @app.get("/devices")
     async def devices() -> dict:
         found = await discover()

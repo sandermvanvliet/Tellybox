@@ -27,6 +27,7 @@ from tellybox.web import api, kid
 from tellybox.web.admin import mount_admin
 from tellybox.web.admin.common import AdminContext
 from tellybox.web.cast_client import CastClient
+from tellybox.web.events import EventHub
 from tellybox.web.hub import KidHub
 from tellybox.web.locale import LocaleMiddleware
 from tellybox.web.static_files import NoCacheStaticFiles
@@ -84,17 +85,24 @@ def create_app(
         refresh_s=ADMIN_REFRESH_S,
     )
 
+    event_hub = EventHub(cast)  # HA-13: typed events for the admin stream
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         hub.start()  # KA-7: relay the cast service's live state to kid pages
         admin_hub.start()  # HA-3: and to the admin API's event stream
         inbox_watcher = asyncio.create_task(
             api.watch_inbox(conn, clock.now, admin_hub.refresh, INBOX_WATCH_S), name="inbox-watch")  # HA-9
+        event_hub.start()  # HA-13: the cast service's typed events
+        typed_watcher = asyncio.create_task(
+            api.watch_typed_events(conn, clock.now, event_hub.publish, INBOX_WATCH_S), name="typed-event-watch")
         try:
             yield
         finally:
             inbox_watcher.cancel()
-            await asyncio.gather(inbox_watcher, return_exceptions=True)
+            typed_watcher.cancel()
+            await asyncio.gather(inbox_watcher, typed_watcher, return_exceptions=True)
+            await event_hub.stop()
             await admin_hub.stop()
             await hub.stop()
             if owns_cast:
@@ -105,6 +113,7 @@ def create_app(
     app = FastAPI(title="Tellybox", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.hub = hub
     app.state.admin_hub = admin_hub
+    app.state.event_hub = event_hub
     app.state.admin_counts = counts
     # A reverse proxy such as nginx on the same host may serve Tellybox over HTTPS. Trust
     # its X-Forwarded-For/-Proto, and only from 127.0.0.1: the login throttle then sees each
@@ -147,7 +156,7 @@ def create_app(
     app.include_router(kid.create_router(config, conn, cast, hub, resolve_media_file))
 
     # Admin JSON API (HA-1..HA-8); bearer tokens, no cookies.
-    app.include_router(api.create_router(config, conn, clock, cast, admin_hub, counts))
+    app.include_router(api.create_router(config, conn, clock, cast, admin_hub, counts, event_hub))
 
     def static_file(name: str, **kwargs) -> FileResponse:
         path = static_dir / name

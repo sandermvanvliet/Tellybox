@@ -17,7 +17,7 @@ def test_info_needs_no_auth(client, api):
     r = client.get("/api/info")
     assert r.status_code == 200
     assert r.json() == {"instance_id": api_tokens.instance_id(api.conn), "version": api.config.version, "api": 1,
-                        "capabilities": ["state", "events", "overrides", "profiles", "inbox", "history"]}
+                        "capabilities": ["state", "events", "overrides", "profiles", "inbox", "history", "typed_events"]}
 
 
 def test_missing_token_is_401_with_challenge(client):

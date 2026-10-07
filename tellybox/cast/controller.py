@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from tellybox import library, media_urls, show_access, store
+from tellybox.cast import events as typed
 from tellybox.cast.common import RESUME_TAIL_S, EndReason, PlayRefused, ShowNotAllowed, UnknownProfile
 from tellybox.cast.device import (
     DEFAULT_MEDIA_RECEIVER,
@@ -160,6 +161,13 @@ class CastController(DeviceSessionsMixin):
         self._last_poll = now
         self._subscribers: set[asyncio.Queue] = set()
         self._last_broadcast: dict | None = None
+        # Typed events (HA-13): queued while a cause is handled, published right after its state broadcast.
+        self._event_bus = typed.EventBus()
+        self._pending_events: list[dict] = []
+        # Edge detection for time_up / last_five, per playback key (TV or device:<id>) -> (time_up, last_five).
+        # Seeded from the state at start-up, so a group that is already time up (or in its last five) when the
+        # service starts emits nothing: events are edges seen by this process, the state carries the level.
+        self._group_flags: dict[str, tuple[bool, bool]] = {TV: self._flags(self._decision)}
         self._tasks: list[asyncio.Task] = []
         self._device_task: asyncio.Task | None = None
 
@@ -295,6 +303,7 @@ class CastController(DeviceSessionsMixin):
 
     async def stop(self) -> None:
         await self._stop_current(EndReason.STOPPED)
+        self._broadcast()  # the state first, then the playback_stopped event (HA-13)
 
     async def override(
         self,
@@ -333,7 +342,11 @@ class CastController(DeviceSessionsMixin):
                 self.timer.set_unlimited(now, p, False)
                 self.timer.set_blocked(now, p, False)
             store.log_override(self.conn, p, self.timer.usage(p).day, kind, value, now, source)
+        self._emit(typed.override_applied(
+            now, kind=kind, value=value if kind == "extra_minutes" else None, profile_ids=profiles, source=source,
+        ))
         self._decision = self.timer.tick(now)
+        self._track_group_edges(now)  # an extra-minutes override re-arms; a block is a time_up edge (HA-13)
         await self._apply_decision(self._decision)
         self._apply_device_decisions(now)  # WT-11: block at once; time up through the per-session decision
         self.persist(now)
@@ -351,6 +364,7 @@ class CastController(DeviceSessionsMixin):
         self._apply_position_shifts(now)
         self._refresh_profiles(now)
         self._decision = self.timer.tick(now)
+        self._track_group_edges(now)
         await self._check_vanished(now)
         await self._apply_decision(self._decision)
         self._tick_devices(now)  # WT-10: heartbeat gaps; WT-11: per-session limits
@@ -583,11 +597,13 @@ class CastController(DeviceSessionsMixin):
         )
         self._night_until = None  # a new load ends the night hold (CR-3)
         log.info("playing episode %s from %.0f s", episode.id, start_s)
+        self._emit_started(episode, profiles, "tv", self.device.info.name if self.device else None)
         try:
             async with self._load_lock:
                 await self._load(self.current, start_s)
         except CastCommandError:
             self._end_current(EndReason.LOAD_FAILED)
+            self._broadcast()  # the state first, then the events (HA-13)
             raise
         self._broadcast()
 
@@ -783,6 +799,9 @@ class CastController(DeviceSessionsMixin):
         log.info("episode %s ended: %s at %.0f s", c.episode.id, reason, pos)
         self.current = None
         self._rx_loading = None
+        self._emit_stopped(
+            c.episode, c.profile_ids, "tv", self.device.info.name if self.device else None, reason, pos
+        )
         self.persist(now)
 
     async def _apply_decision(self, decision: Decision) -> None:
@@ -1040,7 +1059,80 @@ class CastController(DeviceSessionsMixin):
     def unsubscribe(self, q: asyncio.Queue) -> None:
         self._subscribers.discard(q)
 
+    def subscribe_events(self) -> asyncio.Queue:
+        """A queue of typed events (HA-13): bounded, drop-oldest, no replay."""
+        return self._event_bus.subscribe()
+
+    def unsubscribe_events(self, q: asyncio.Queue) -> None:
+        self._event_bus.unsubscribe(q)
+
+    def _emit(self, event: dict) -> None:
+        """Queue a typed event; it goes out after the next state broadcast (HA-13: the state is never older)."""
+        if self._event_bus:
+            self._pending_events.append(event)
+
+    def _flush_events(self) -> None:
+        events, self._pending_events = self._pending_events, []
+        for event in events:
+            self._event_bus.publish(event)
+
+    def _show_name(self, show_id: int) -> str | None:
+        show = library.get_show(self.conn, show_id)
+        return show.name if show else None
+
+    def _emit_started(self, episode: Episode, profiles: Collection[int], target: str, label: str | None) -> None:
+        self._emit(typed.playback_started(
+            self.clock.now(), profile_ids=profiles, episode_id=episode.id, show_id=episode.show_id,
+            title=episode.title, show=self._show_name(episode.show_id), target=target, label=label,
+        ))
+
+    def _emit_stopped(
+        self, episode: Episode, profiles: Collection[int], target: str, label: str | None, reason: EndReason,
+        position_s: float,
+    ) -> None:
+        self._emit(typed.playback_stopped(
+            self.clock.now(), profile_ids=profiles, episode_id=episode.id, show_id=episode.show_id,
+            title=episode.title, show=self._show_name(episode.show_id), target=target, label=label,
+            reason=reason, position_s=position_s,
+        ))
+
+    @staticmethod
+    def _flags(d: Decision) -> tuple[bool, bool]:
+        """(time_up, last_five) of a decision, as in the state (KA-8, KA-9)."""
+        return (not d.can_start, d.remaining_s is not None and d.remaining_s <= LAST_FIVE_S)
+
+    def _track_group_edges(self, now: datetime) -> None:
+        """HA-13: time_up and last_five fire once, on the false -> true edge of a playing group's value.
+
+        Per playback (the TV and each browser session) the previous values are kept. While a playback is idle
+        the values are followed silently, so they re-arm (extra minutes, the daily reset) and a group that is
+        already time up or in its last five when a session starts or the service restarts emits nothing: the
+        state carries that level. A group that gets there while playing emits one event, however many ticks
+        it then stays there."""
+        playing = {TV: self.current is not None}
+        playing.update({s.key: True for s in self.device_sessions.values()})
+        for key in [k for k in self._group_flags if k != TV and k not in playing]:
+            del self._group_flags[key]  # a finished browser session leaves nothing behind
+        for key, active in playing.items():
+            d = self._decision if key == TV else self.timer.decision(now, key)
+            flags = self._flags(d)
+            before = self._group_flags.get(key)
+            self._group_flags[key] = flags
+            if not active or before is None:
+                continue
+            group = self.timer.watchers_of(key)
+            if flags[0] and not before[0]:
+                self._emit(typed.time_up(now, profile_ids=group, reason=d.reason or TimeUpReason.ALLOWANCE))
+            if flags[1] and not before[1]:
+                self._emit(typed.last_five(now, profile_ids=group, remaining_s=d.remaining_s or 0.0))
+
     def _broadcast(self) -> None:
+        try:
+            self._broadcast_state()
+        finally:
+            self._flush_events()
+
+    def _broadcast_state(self) -> None:
         if not self._subscribers:
             return
         snapshot = self.state()

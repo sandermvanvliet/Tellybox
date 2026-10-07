@@ -14,6 +14,8 @@ from tellybox.web.cast_client import CastUnavailable
 log = logging.getLogger(__name__)
 
 SSE_KEEPALIVE_S = 15.0
+# A cast event may overtake the state broadcast it follows (two relayed streams); give the state this long.
+EVENT_SETTLE_S = 0.05
 
 # Before the first cast state arrives nothing is known: TV unreachable, sky unknown.
 INITIAL_STATE: dict = {
@@ -171,3 +173,40 @@ async def sse_stream(hub: KidHub, keepalive_s: float = SSE_KEEPALIVE_S) -> Async
             yield f"data: {json.dumps(state)}\n\n"
     finally:
         hub.unsubscribe(q)
+
+
+async def typed_sse_stream(hub: KidHub, events, keepalive_s: float = SSE_KEEPALIVE_S,
+                           settle_s: float = EVENT_SETTLE_S) -> AsyncIterator[str]:
+    """HA-13: `sse_stream`'s frames (the state first, then one per change) with the typed events merged in as
+    named frames. An event is sent after any state that is already waiting, so a consumer handling an event sees
+    state at least as new as the event."""
+    q = hub.subscribe()
+    eq = events.subscribe()
+    state_get = asyncio.ensure_future(q.get())
+    event_get = asyncio.ensure_future(eq.get())
+    settled = False
+    try:
+        while True:
+            done, _ = await asyncio.wait({state_get, event_get}, timeout=keepalive_s,
+                                         return_when=asyncio.FIRST_COMPLETED)
+            if not done:
+                yield ": keepalive\n\n"
+                continue
+            if state_get.done():
+                state = state_get.result()
+                state_get = asyncio.ensure_future(q.get())
+                yield f"data: {json.dumps(state)}\n\n"
+                continue
+            if not settled:  # only an event: let its state, if in flight, arrive first
+                settled = True
+                await asyncio.sleep(settle_s)
+                continue
+            settled = False
+            event = event_get.result()
+            event_get = asyncio.ensure_future(eq.get())
+            yield f"event: {event['type']}\ndata: {json.dumps(event)}\n\n"
+    finally:
+        for task in (state_get, event_get):
+            task.cancel()
+        hub.unsubscribe(q)
+        events.unsubscribe(eq)

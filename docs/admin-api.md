@@ -158,6 +158,35 @@ Like everything else, it is for the LAN and Tailscale only (NF-4). Put it behind
 - `last_watched` carries the episode's title and show. Any `read` token sees them (A-38), the same trust as `now_playing` in the state.
 - Nothing in this endpoint writes, plays or changes anything.
 
+## Typed events (HA-13)
+
+`GET /api/admin/events?typed=1` (scope `read`) also delivers typed events, so an integration doesn't have to diff states. Events carry what a diff cannot know: why playback stopped, and who applied an override. They are advisory edges, not stored and not replayed: events that happen while a client is disconnected are lost, and the state (the first `data:` frame on every connect) stays the source of truth. `/api/info` lists the `typed_events` capability; an older Tellybox ignores `typed=1` and sends only states.
+
+- **Opt-in.** Without `typed=1` the stream is byte-identical to before (state frames only), so older clients keep working. With it the state frames still arrive exactly as before (default `message` event, `data: <AdminState>`), and typed events arrive as named SSE frames:
+
+  ```
+  event: playback_stopped
+  data: {"type":"playback_stopped","at":"2026-10-06T18:02:11.000+00:00","profile_ids":[1],...}
+  ```
+
+- **Ordering.** For one cause the cast service emits the event after the state that reflects it, and the stream sends an event after a state that is already waiting, so in practice a consumer handling an event sees state at least as new as the event. This is best effort, not a guarantee: states and events travel on separate internal streams, so a client must not depend on strict ordering (an automation that needs the level should read the state, not assume it). Events of different types may interleave with states in any order.
+- **Envelope.** Every event is `{"type": str, "at": ISO-8601 UTC string, ...fields}`; `type` equals the SSE `event:` name. Clients must ignore unknown fields and unknown types.
+- **Slow clients.** Each connection has a bounded queue (100) that drops the oldest event when full. Nothing here blocks other clients or the timer.
+- **Read-only.** The stream starts nothing and changes nothing (HA-8).
+
+| `type` | Fields | Fires when |
+|---|---|---|
+| `playback_started` | `profile_ids`, `episode_id`, `show_id`, `title`, `show`, `target` (`tv` or `device`), `label` (the TV's name or the browser label) | a TV or in-app session starts (autoplay-next included) |
+| `playback_stopped` | the same fields as `playback_started`, plus `reason` and `position_s` | a session ends. `reason` is one of `finished`, `replaced`, `stopped`, `parent_stop`, `time_up`, `blocked`, `taken_over`, `disconnected`, `restart`, `load_failed` |
+| `time_up` | `profile_ids` (the watching group), `reason` (`allowance`, `session_max` or `blocked`) | the group's `time_up` goes false to true. It re-arms when it goes false again (extra time, the daily reset) |
+| `last_five` | `profile_ids`, `remaining_s` | the group's `last_five` goes false to true; re-arms like `time_up` |
+| `override_applied` | `kind` (`extra_minutes`, `unlimited`, `block`, `stop_now` or `clear`), `value` (minutes for `extra_minutes`, else null), `profile_ids` (resolved: every profile when "everyone"), `source` (the token's name, or null for the admin pages) | an override was applied |
+| `inbox_item_arrived` | `pending`, `new_items` (at least 1), `latest_received_at` | `inbox.latest_received_at` advances |
+| `download_ready` | `held_ready`, `new_ready` (at least 1) | the number of held downloads waiting for approval rises |
+
+- `playback_started` and `playback_stopped` come from the cast service. For an autoplay-next, a `playback_stopped` with `reason` `finished` is followed by a `playback_started`. A pick that replaces a playing episode gives `playback_stopped` with `reason` `replaced`, then `playback_started`.
+- `inbox_item_arrived` and `download_ready` come from the web service watching the database (they don't depend on the cast service), so they keep flowing while the TV is unreachable. The timer and playback events pause while the cast service is down.
+
 ## Safety notes for integrations (HA-8)
 
 - Never cast to the Chromecast directly. Tellybox times and controls only playback it started, so Home Assistant's own Cast media player is an unmetered path: hide it from dashboards kids can reach.

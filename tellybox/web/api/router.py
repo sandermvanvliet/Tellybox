@@ -22,13 +22,14 @@ from tellybox.web.api.guard import TokenGuard
 from tellybox.web.api.state import API_VERSION, build_admin_state, unreachable
 from tellybox.web.cast_client import CastUnavailable
 from tellybox.web.hub import SSE_KEEPALIVE_S as _DEFAULT_KEEPALIVE_S
-from tellybox.web.hub import KidHub, sse_stream
+from tellybox.web.events import EventHub
+from tellybox.web.hub import KidHub, sse_stream, typed_sse_stream
 from tellybox.web.overrides import apply_override
 
 log = logging.getLogger(__name__)
 
 SSE_KEEPALIVE_S = _DEFAULT_KEEPALIVE_S
-CAPABILITIES = ["state", "events", "overrides", "profiles", "inbox", "history"]
+CAPABILITIES = ["state", "events", "overrides", "profiles", "inbox", "history", "typed_events"]
 
 
 class BadRequest(ValueError):
@@ -103,7 +104,8 @@ def _history_json(h: UsageHistory) -> dict:
     }
 
 
-def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, admin_hub: KidHub, counts) -> APIRouter:
+def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, admin_hub: KidHub, counts,
+                  event_hub: EventHub | None = None) -> APIRouter:
     router = APIRouter()
     read = Depends(TokenGuard(conn, clock, api_tokens.READ))
     control = Depends(TokenGuard(conn, clock, api_tokens.CONTROL))
@@ -142,8 +144,13 @@ def create_router(config: Config, conn: sqlite3.Connection, clock: Clock, cast, 
         return JSONResponse(_history_json(result))
 
     @router.get("/api/admin/events", dependencies=[read])
-    async def events() -> StreamingResponse:
-        return StreamingResponse(sse_stream(admin_hub, SSE_KEEPALIVE_S), media_type="text/event-stream",
+    async def events(typed: str | None = None) -> StreamingResponse:
+        # HA-13: `typed=1` adds named event frames after the unchanged state frames; without it nothing changes.
+        if event_hub is not None and typed == "1":
+            body = typed_sse_stream(admin_hub, event_hub, SSE_KEEPALIVE_S)
+        else:
+            body = sse_stream(admin_hub, SSE_KEEPALIVE_S)
+        return StreamingResponse(body, media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     async def override(request: Request, kind: str, value: int | None = None,

@@ -55,6 +55,8 @@ STRINGS: list[str] = [
     N_("processing"),
     N_("ready"),
     # split.js: the split editor
+    N_("Enter an episode length of at least %(n)d seconds, like 20:00, that gives at most %(max)d parts."),
+    N_("Replace your cuts with equal parts of this length?"),
     N_("Part %(n)d"),
     N_("Keep"),
     N_("Left out"),

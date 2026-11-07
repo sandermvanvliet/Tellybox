@@ -200,6 +200,7 @@ Every split is proposed first and must be reviewed and approved by the admin bef
 | ES-8 | On approval, episodes are cut frame-accurately (re-encoded) into separate files, and the source file is optionally deleted. | Must | v5 |
 | ES-9 | OCR reads the episode title from the title card to prefill episode names. | Could | v6 |
 | ES-10 | New compilations for a show with a saved profile are detected automatically after download and wait in the review queue. | Should | v6 |
+| ES-11 | Cuts can be generated from an episode length (equal parts from 0:00, a short rest left out). Nudging a cut can move all later cuts by the same amount. | Should | v6 |
 
 ### Admin, settings and history
 

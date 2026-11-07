@@ -97,6 +97,13 @@
 
   <div class="card split-plan">
     <h2>{{ _("Parts") }}</h2>
+    {% if proposal.editable %}
+    <div class="row split-duration">
+      <label>{{ _("Episode length") }} <input type="text" data-duration-input inputmode="numeric" placeholder="20:00" size="8"></label>
+      <button class="btn" type="button" data-action="by-duration">{{ _("Generate cuts") }}</button>
+      <label class="check"><input type="checkbox" data-ripple>{{ _("Move later cuts too") }}</label>
+    </div>
+    {% endif %}
     <ol data-split-segments></ol>
     <p data-split-status role="status" aria-live="polite" class="muted"></p>
   </div>

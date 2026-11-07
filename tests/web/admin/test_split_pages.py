@@ -188,6 +188,13 @@ def test_split_page_hides_use_chapters_without_chapters(admin, admin_env):
     assert 'data-action="use-chapters"' not in admin.get(f"/admin/sources/{sid}/split").text
 
 
+def test_split_page_offers_cuts_by_episode_length(admin, admin_env):
+    sid, _ = _source(admin_env)
+    html = admin.get(f"/admin/sources/{sid}/split").text
+    for hook in ("data-duration-input", 'data-action="by-duration"', "data-ripple"):
+        assert hook in html
+
+
 @needs_ffmpeg
 def test_split_page_shows_discard_for_a_saved_draft(admin, admin_env):
     sid, _ = _source(admin_env)

@@ -72,6 +72,9 @@ function init() {
   const estimate = document.querySelector("[data-split-estimate]");
   const cutButton = q('[data-action="cut"]');
   const chaptersButton = q('[data-action="use-chapters"]');
+  const durationButton = q('[data-action="by-duration"]');
+  const durationInput = q("[data-duration-input]");
+  const rippleBox = q("[data-ripple]");
   const markButton = q('[data-action="mark"]');
   const detectButton = q('[data-action="detect"]');
   const markBar = q("[data-mark-bar]");
@@ -181,6 +184,25 @@ function init() {
     origin = "chapters";
     detected = [];
     dirty = true;
+    render();
+    scheduleSave();
+  }
+
+  // ES-11: equal parts of the entered episode length, with later cuts following a nudge from then on.
+  function generateByDuration() {
+    if (readOnly) return;
+    const length = P.parseDuration(durationInput?.value);
+    const next = length === null ? null : P.fromDuration(length, duration);
+    if (!next) {
+      setStatus(t("Enter an episode length of at least %(n)d seconds, like 20:00, that gives at most %(max)d parts.", { n: P.MIN_KEPT_S, max: P.MAX_SEGMENTS }), "error");
+      return;
+    }
+    if (plan.length > 1 && !confirm(t("Replace your cuts with equal parts of this length?"))) return;
+    plan = next;
+    origin = "manual";
+    detected = [];
+    dirty = true;
+    if (rippleBox) rippleBox.checked = true;
     render();
     scheduleSave();
   }
@@ -300,7 +322,7 @@ function init() {
         "aria-label": delta < 0
           ? t("Move the cut back by %(amount)s s", { amount: -delta })
           : t("Move the cut forward by %(amount)s s", { amount: delta }),
-        onclick: (event) => edit(P.nudge(plan, index(event), delta)),
+        onclick: (event) => edit(P.nudge(plan, index(event), delta, Boolean(rippleBox?.checked))),
       });
     const row = el(
       "li",
@@ -633,6 +655,13 @@ function init() {
   root.querySelectorAll("[data-step]").forEach((button) => button.addEventListener("click", () => step(button.dataset.step)));
   if (cutButton) cutButton.addEventListener("click", cutHere);
   if (chaptersButton) chaptersButton.addEventListener("click", useChapters);
+  if (durationButton) durationButton.addEventListener("click", generateByDuration);
+  if (durationInput) durationInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      generateByDuration();
+    }
+  });
   if (markButton && markBar && canvas) {
     markButton.addEventListener("click", startMark);
     markBar.querySelector('[data-mark="whole"]').addEventListener("click", () => {

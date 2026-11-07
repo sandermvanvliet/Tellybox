@@ -58,8 +58,52 @@ export function moveCut(plan, i, t) {
   return plan.map((s, j) => (j === i - 1 ? seg(s.start_s, t, s.title, s.keep) : j === i ? seg(t, s.end_s, s.title, s.keep) : s));
 }
 
-export function nudge(plan, i, delta) {
-  return i >= 1 && i < plan.length ? moveCut(plan, i, plan[i].start_s + delta) : plan;
+// ES-11: moves the cut at the start of segment i by delta and every later cut by the same amount, so
+// the parts after it keep their lengths. The delta is clamped like moveCut (the cut keeps MIN_GAP_S
+// from the cut before it). Cuts that would end up within MIN_GAP_S of the end are dropped, and the
+// last part always ends where the video ends.
+export function rippleCut(plan, i, delta) {
+  if (i < 1 || i >= plan.length) return plan;
+  const duration = plan[plan.length - 1].end_s;
+  delta = ms(Math.max(delta, plan[i - 1].start_s + MIN_GAP_S - plan[i].start_s));
+  if (delta === 0) return plan;
+  const limit = duration - MIN_GAP_S + EPS;
+  const kept = plan.slice(i).filter((s) => s.start_s + delta <= limit);
+  if (!kept.length) return plan;
+  const head = plan.slice(0, i);
+  const moved = kept.map((s, j) => seg(s.start_s + delta, j === kept.length - 1 ? duration : s.end_s + delta, s.title, s.keep));
+  const before = head[i - 1];
+  return [...head.slice(0, -1), seg(before.start_s, moved[0].start_s, before.title, before.keep), ...moved];
+}
+
+export function nudge(plan, i, delta, ripple = false) {
+  if (i < 1 || i >= plan.length) return plan;
+  return ripple ? rippleCut(plan, i, delta) : moveCut(plan, i, plan[i].start_s + delta);
+}
+
+// ES-11: a plan of equal parts of episodeS seconds from 0 to the video's end, or null when episodeS is
+// shorter than MIN_KEPT_S or the video would need more than MAX_SEGMENTS parts. A rest under MIN_GAP_S
+// joins the last part; a rest shorter than half an episode becomes a part that is left out.
+export function fromDuration(episodeS, duration) {
+  if (!(episodeS >= MIN_KEPT_S) || !(duration > 0)) return null;
+  const starts = [0];
+  while (starts[starts.length - 1] + episodeS < duration - MIN_GAP_S + EPS) starts.push(ms(starts[starts.length - 1] + episodeS));
+  if (starts.length > MAX_SEGMENTS) return null;
+  const last = starts.length - 1;
+  return starts.map((start, j) => {
+    const end = j === last ? duration : starts[j + 1];
+    const rest = j === last && last > 0 && end - start < episodeS / 2;
+    return seg(start, end, "", !rest);
+  });
+}
+
+// "20:00", "1:02:30", "1200" or "20m" as seconds, or null.
+export function parseDuration(text) {
+  const value = String(text || "").trim().toLowerCase();
+  let m = value.match(/^(\d+(?:\.\d+)?)\s*(s|m|min)?$/);
+  if (m) return Number(m[1]) * (m[2] === "m" || m[2] === "min" ? 60 : 1);
+  m = value.match(/^(?:(\d+):)?(\d{1,2}):(\d{2}(?:\.\d+)?)$/);
+  return m ? Number(m[1] || 0) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null;
 }
 
 export function setTitle(plan, i, title) {

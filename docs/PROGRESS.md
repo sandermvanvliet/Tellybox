@@ -555,6 +555,12 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Built (web): `EventHub` in `tellybox/web/events.py` (bounded queues of 100, drop-oldest, one log line per overflow episode, a relay of the cast service's `GET /typed-events` with `KidHub`-style backoff); `CastClient.typed_events()` (tolerant parser; `events()` untouched); `GET /api/admin/events?typed=1` (scope `read`) sends the state frames first and exactly as before, then named `event:` frames, from one merged generator (`typed_sse_stream`); without `typed=1` the stream is byte-identical; `watch_typed_events` polls the database for `inbox_item_arrived` and `download_ready` (no event at start-up or on a decrease); the `typed_events` capability; tests in `tests/web/api/test_typed_events.py`.
 - Notes: the state and the typed events reach the web service on two relayed streams, so an event can overtake its state; the typed generator waits 50 ms (`EVENT_SETTLE_S`) before sending an event when no state is waiting, so the state goes first. Events are advisory: nothing is stored or replayed, and the timer and playback events pause while the cast service is down.
 
+### 22. Split by episode length (ES-11), built (branch `split-by-duration`)
+- 2026-11-07. PRD: ES-11. Front-end only: no migration or endpoint change.
+- Built: `fromDuration`, `rippleCut`, `parseDuration` in `split_plan.js`; an "Episode length" field with "Generate cuts" and a "Move later cuts too" toggle on the split page. Cuts start at 0:00, a rest shorter than half an episode is left out, and the toggle turns on after generating.
+- Notes: the toggle is not saved across page loads; generated plans are saved with origin `manual`. Rippled cuts lose their detection badge, like any nudge.
+- Open: the owner's check on a real compilation (desktop and phone).
+
 ### Then
 (none planned after step 11)
 

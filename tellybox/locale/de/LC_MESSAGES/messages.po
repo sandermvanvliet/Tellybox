@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-05 14:04+0200\n"
+"POT-Creation-Date: 2026-11-07 13:09+0100\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: de\n"
@@ -96,43 +96,43 @@ msgstr "Datei ist kein JPEG-, PNG- oder WebP-Bild"
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr "Aufgabe %(id)d ist %(status)s; nur fehlgeschlagene Aufgaben lassen sich wiederholen"
 
-#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:75
+#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:77
 msgid "The plan has no parts."
 msgstr "Der Plan hat keine Teile."
 
-#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:76
+#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:78
 #, python-format
 msgid "A video can be split into at most %(n)d parts."
 msgstr "Ein Video kann in höchstens %(n)d Teile geteilt werden."
 
-#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:77
+#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:79
 msgid "The first part must start at the beginning of the video."
 msgstr "Der erste Teil muss am Anfang des Videos beginnen."
 
-#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:78
+#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:80
 msgid "The last part must end at the end of the video."
 msgstr "Der letzte Teil muss am Ende des Videos enden."
 
 #: tellybox/splitting.py:119 tellybox/splitting.py:122
-#: tellybox/web/admin/js_strings.py:79
+#: tellybox/web/admin/js_strings.py:81
 msgid "Parts must follow each other without gaps."
 msgstr "Die Teile müssen lückenlos aufeinander folgen."
 
-#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:80
+#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:82
 #, python-format
 msgid "Titles can be at most %(n)d characters."
 msgstr "Titel dürfen höchstens %(n)d Zeichen lang sein."
 
-#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:81
+#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:83
 #, python-format
 msgid "Each part must be at least %(n)d seconds long."
 msgstr "Jeder Teil muss mindestens %(n)d Sekunden lang sein."
 
-#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:82
+#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:84
 msgid "Keep at least one part."
 msgstr "Behalte mindestens einen Teil."
 
-#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:83
+#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:85
 msgid "Add a cut, or leave out a part, before approving."
 msgstr "Füge einen Schnitt hinzu oder lass einen Teil weg, bevor du freigibst."
 
@@ -318,30 +318,30 @@ msgstr "Die Auswahl passt nicht zur Vorschau; lade sie neu."
 msgid "Tick at least one video to add."
 msgstr "Wähle mindestens ein Video aus."
 
-#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:100
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:102
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr "%(hours)s Std. %(minutes)s min"
 
-#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:101
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:103
 #: tellybox/web/admin/templates/history.html:42
 #, python-format
 msgid "%(minutes)s min"
 msgstr "%(minutes)s min"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:103
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:105
 msgid "KB"
 msgstr "KB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:104
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:106
 msgid "MB"
 msgstr "MB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:105
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:107
 msgid "GB"
 msgstr "GB"
 
-#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:102
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:104
 #, python-format
 msgid "%(size)s B"
 msgstr "%(size)s B"
@@ -644,139 +644,148 @@ msgstr "bereit"
 
 #: tellybox/web/admin/js_strings.py:58
 #, python-format
+msgid "Enter an episode length of at least %(n)d seconds, like 20:00, that gives at most %(max)d parts."
+msgstr "Gib eine Folgenlänge von mindestens %(n)d Sekunden an, etwa 20:00, die höchstens %(max)d Teile ergibt."
+
+#: tellybox/web/admin/js_strings.py:59
+msgid "Replace your cuts with equal parts of this length?"
+msgstr "Deine Schnitte durch gleich lange Teile dieser Länge ersetzen?"
+
+#: tellybox/web/admin/js_strings.py:60
+#, python-format
 msgid "Part %(n)d"
 msgstr "Teil %(n)d"
 
-#: tellybox/web/admin/js_strings.py:59
+#: tellybox/web/admin/js_strings.py:61
 msgid "Keep"
 msgstr "Behalten"
 
-#: tellybox/web/admin/js_strings.py:60
+#: tellybox/web/admin/js_strings.py:62
 msgid "Left out"
 msgstr "Weggelassen"
 
-#: tellybox/web/admin/js_strings.py:61
+#: tellybox/web/admin/js_strings.py:63
 #, python-format
 msgid "Cut at %(time)s"
 msgstr "Schnitt bei %(time)s"
 
-#: tellybox/web/admin/js_strings.py:62
+#: tellybox/web/admin/js_strings.py:64
 msgid "Go to"
 msgstr "Springe zu"
 
-#: tellybox/web/admin/js_strings.py:63
+#: tellybox/web/admin/js_strings.py:65
 #, python-format
 msgid "Go to part %(n)d at %(time)s"
 msgstr "Springe zu Teil %(n)d bei %(time)s"
 
-#: tellybox/web/admin/js_strings.py:64
+#: tellybox/web/admin/js_strings.py:66
 msgid "Remove cut"
 msgstr "Schnitt entfernen"
 
-#: tellybox/web/admin/js_strings.py:65
+#: tellybox/web/admin/js_strings.py:67
 #: tellybox/web/admin/templates/library.html:92
 msgid "Title"
 msgstr "Titel"
 
-#: tellybox/web/admin/js_strings.py:66
+#: tellybox/web/admin/js_strings.py:68
 msgid "Title (optional)"
 msgstr "Titel (optional)"
 
-#: tellybox/web/admin/js_strings.py:67
+#: tellybox/web/admin/js_strings.py:69
 #, python-format
 msgid "Move the cut back by %(amount)s s"
 msgstr "Schnitt %(amount)s s früher setzen"
 
-#: tellybox/web/admin/js_strings.py:68
+#: tellybox/web/admin/js_strings.py:70
 #, python-format
 msgid "Move the cut forward by %(amount)s s"
 msgstr "Schnitt %(amount)s s später setzen"
 
-#: tellybox/web/admin/js_strings.py:69
+#: tellybox/web/admin/js_strings.py:71
 msgid "Saving…"
 msgstr "Speichern…"
 
-#: tellybox/web/admin/js_strings.py:70
+#: tellybox/web/admin/js_strings.py:72
 msgid "Saved"
 msgstr "Gespeichert"
 
-#: tellybox/web/admin/js_strings.py:71
+#: tellybox/web/admin/js_strings.py:73
 msgid "Saving failed. Your changes are not saved yet."
 msgstr "Speichern fehlgeschlagen. Deine Änderungen sind noch nicht gespeichert."
 
-#: tellybox/web/admin/js_strings.py:72
+#: tellybox/web/admin/js_strings.py:74
 msgid "This plan can't be changed any more."
 msgstr "Dieser Plan kann nicht mehr geändert werden."
 
-#: tellybox/web/admin/js_strings.py:73
+#: tellybox/web/admin/js_strings.py:75
 msgid "A cut needs at least half a second on both sides."
 msgstr "Ein Schnitt braucht auf beiden Seiten mindestens eine halbe Sekunde."
 
-#: tellybox/web/admin/js_strings.py:74
+#: tellybox/web/admin/js_strings.py:76
 msgid "Replace your cuts with the video's chapters?"
 msgstr "Deine Schnitte durch die Kapitel des Videos ersetzen?"
 
-#: tellybox/web/admin/js_strings.py:85
+#: tellybox/web/admin/js_strings.py:87
 msgid "sure"
 msgstr "sicher"
 
-#: tellybox/web/admin/js_strings.py:86
+#: tellybox/web/admin/js_strings.py:88
 msgid "check"
 msgstr "prüfen"
 
-#: tellybox/web/admin/js_strings.py:87
+#: tellybox/web/admin/js_strings.py:89
 msgid "unsure"
 msgstr "unsicher"
 
-#: tellybox/web/admin/js_strings.py:88
+#: tellybox/web/admin/js_strings.py:90
 msgid "black"
 msgstr "schwarz"
 
-#: tellybox/web/admin/js_strings.py:89
+#: tellybox/web/admin/js_strings.py:91
 msgid "scene change"
 msgstr "Szenenwechsel"
 
-#: tellybox/web/admin/js_strings.py:90
+#: tellybox/web/admin/js_strings.py:92
 msgid "at the title card"
 msgstr "an der Titelkarte"
 
-#: tellybox/web/admin/js_strings.py:91
+#: tellybox/web/admin/js_strings.py:93
 msgid "Saving the title card…"
 msgstr "Titelkarte wird gespeichert…"
 
-#: tellybox/web/admin/js_strings.py:92
+#: tellybox/web/admin/js_strings.py:94
 msgid "Saving the title card failed."
 msgstr "Das Speichern der Titelkarte ist fehlgeschlagen."
 
-#: tellybox/web/admin/js_strings.py:93
+#: tellybox/web/admin/js_strings.py:95
 msgid "Title card saved."
 msgstr "Titelkarte gespeichert."
 
-#: tellybox/web/admin/js_strings.py:94
+#: tellybox/web/admin/js_strings.py:96
 msgid "Replace your cuts with the detected ones?"
 msgstr "Deine Schnitte durch die erkannten ersetzen?"
 
-#: tellybox/web/admin/js_strings.py:95
+#: tellybox/web/admin/js_strings.py:97
 msgid "Finding cuts…"
 msgstr "Schnitte werden gesucht…"
 
-#: tellybox/web/admin/js_strings.py:96
+#: tellybox/web/admin/js_strings.py:98
 msgid "Finding cuts failed."
 msgstr "Die Suche nach Schnitten ist fehlgeschlagen."
 
-#: tellybox/web/admin/js_strings.py:97
+#: tellybox/web/admin/js_strings.py:99
 msgid "No title cards found in this video."
 msgstr "Keine Titelkarten in diesem Video gefunden."
 
-#: tellybox/web/admin/js_strings.py:98
+#: tellybox/web/admin/js_strings.py:100
 msgid "Finding cuts finished without a new result. The Jobs page may say why."
 msgstr "Die Suche nach Schnitten wurde ohne neues Ergebnis beendet. Die Seite Aufgaben nennt vielleicht den Grund."
 
-#: tellybox/web/admin/js_strings.py:106
+#: tellybox/web/admin/js_strings.py:108
 msgid "TB"
 msgstr "TB"
 
-#: tellybox/web/admin/js_strings.py:111
+#: tellybox/web/admin/js_strings.py:113
 #: tellybox/web/admin/templates/add.html:137
 #: tellybox/web/admin/templates/backlog.html:24
 #, python-format
@@ -785,7 +794,7 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] "%(num)d Video hinzufügen"
 msgstr[1] "%(num)d Videos hinzufügen"
 
-#: tellybox/web/admin/js_strings.py:112
+#: tellybox/web/admin/js_strings.py:114
 #: tellybox/web/admin/templates/dashboard.html:114
 #, python-format
 msgid "%(num)d failed job"
@@ -793,14 +802,14 @@ msgid_plural "%(num)d failed jobs"
 msgstr[0] "%(num)d fehlgeschlagene Aufgabe"
 msgstr[1] "%(num)d fehlgeschlagene Aufgaben"
 
-#: tellybox/web/admin/js_strings.py:113
+#: tellybox/web/admin/js_strings.py:115
 #, python-format
 msgid "Cutting takes up to about %(num)d minute"
 msgid_plural "Cutting takes up to about %(num)d minutes"
 msgstr[0] "Das Schneiden dauert höchstens etwa %(num)d Minute"
 msgstr[1] "Das Schneiden dauert höchstens etwa %(num)d Minuten"
 
-#: tellybox/web/admin/js_strings.py:114
+#: tellybox/web/admin/js_strings.py:116
 #, python-format
 msgid "Found %(num)d cut. Check each one before approving."
 msgid_plural "Found %(num)d cuts. Check each one before approving."
@@ -2677,19 +2686,31 @@ msgstr "Einstellungen zum Aufteilen"
 msgid "Parts"
 msgstr "Teile"
 
-#: tellybox/web/admin/templates/split.html:113
+#: tellybox/web/admin/templates/split.html:102
+msgid "Episode length"
+msgstr "Folgenlänge"
+
+#: tellybox/web/admin/templates/split.html:103
+msgid "Generate cuts"
+msgstr "Schnitte erzeugen"
+
+#: tellybox/web/admin/templates/split.html:104
+msgid "Move later cuts too"
+msgstr "Spätere Schnitte mitverschieben"
+
+#: tellybox/web/admin/templates/split.html:120
 msgid "Delete the original video after cutting (it can't be split again)"
 msgstr "Originalvideo nach dem Schneiden löschen (es kann dann nicht erneut aufgeteilt werden)"
 
-#: tellybox/web/admin/templates/split.html:116
+#: tellybox/web/admin/templates/split.html:123
 msgid "Approve and cut"
 msgstr "Freigeben und schneiden"
 
-#: tellybox/web/admin/templates/split.html:120
+#: tellybox/web/admin/templates/split.html:127
 msgid "Throw away this split plan?"
 msgstr "Diesen Schnittplan verwerfen?"
 
-#: tellybox/web/admin/templates/split.html:121
+#: tellybox/web/admin/templates/split.html:128
 msgid "Discard plan"
 msgstr "Plan verwerfen"
 

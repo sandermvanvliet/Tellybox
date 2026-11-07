@@ -149,3 +149,65 @@ test("stripFrameTime shows the title card for a detected cut, else the start fra
   assert.equal(plan.stripFrameTime(detected, { start_s: 0 }, 0), 0); // the first part
   assert.equal(plan.stripFrameTime(null, { start_s: 41.6 }, 1), 41.6);
 });
+
+test("fromDuration: equal parts, a short rest is left out", () => {
+  const p = plan.fromDuration(600, 3700);
+  assert.deepEqual(starts(p), [0, 600, 1200, 1800, 2400, 3000, 3600]);
+  assert.equal(p[6].end_s, 3700);
+  assert.deepEqual(p.map((s) => s.keep), [true, true, true, true, true, true, false]);
+});
+
+test("fromDuration: a rest of half an episode or more is kept, a tiny one joins the last part", () => {
+  assert.equal(plan.fromDuration(600, 2100).at(-1).keep, true);
+  const p = plan.fromDuration(600, 1800.3);
+  assert.deepEqual(starts(p), [0, 600, 1200]);
+  assert.equal(p[2].end_s, 1800.3);
+});
+
+test("fromDuration refuses too short a length and too many parts", () => {
+  assert.equal(plan.fromDuration(4, 600), null);
+  assert.equal(plan.fromDuration(5, 5 * 201), null);
+  assert.equal(plan.fromDuration(NaN, 600), null);
+  assert.equal(plan.fromDuration(600, 600).length, 1);
+});
+
+test("rippleCut moves the cut and all later cuts by the delta", () => {
+  const p = plan.rippleCut(plan.fromDuration(600, 1800), 1, 2);
+  assert.deepEqual(starts(p), [0, 602, 1202]);
+  assert.deepEqual(p.map((s) => s.end_s), [602, 1202, 1800]);
+});
+
+test("rippleCut backwards lengthens the last part; titles and keep stay", () => {
+  let p = plan.setTitle(plan.fromDuration(600, 1800), 2, "C");
+  p = plan.setKeep(p, 1, false);
+  p = plan.rippleCut(p, 1, -3);
+  assert.deepEqual(starts(p), [0, 597, 1197]);
+  assert.equal(p[2].end_s, 1800);
+  assert.equal(p[2].title, "C");
+  assert.equal(p[1].keep, false);
+});
+
+test("rippleCut clamps against the previous cut and drops cuts past the end", () => {
+  const p = plan.fromDuration(600, 1800);
+  assert.deepEqual(starts(plan.rippleCut(p, 1, -700)), [0, 0.5, 600.5]);
+  const q = plan.rippleCut(p, 1, 700);
+  assert.deepEqual(starts(q), [0, 1300]);
+  assert.equal(q[1].end_s, 1800);
+  assert.equal(plan.rippleCut(p, 0, 5), p);
+});
+
+test("nudge ripples only when asked", () => {
+  const p = plan.fromDuration(600, 1800);
+  assert.deepEqual(starts(plan.nudge(p, 1, 1)), [0, 601, 1200]);
+  assert.deepEqual(starts(plan.nudge(p, 1, 1, true)), [0, 601, 1201]);
+});
+
+test("parseDuration", () => {
+  assert.equal(plan.parseDuration("20:00"), 1200);
+  assert.equal(plan.parseDuration("1:02:30"), 3750);
+  assert.equal(plan.parseDuration("1200"), 1200);
+  assert.equal(plan.parseDuration("20m"), 1200);
+  assert.equal(plan.parseDuration("20:30"), 1230);
+  assert.equal(plan.parseDuration("abc"), null);
+  assert.equal(plan.parseDuration(""), null);
+});

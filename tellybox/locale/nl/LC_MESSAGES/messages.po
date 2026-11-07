@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Tellybox VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-05 14:04+0200\n"
+"POT-Creation-Date: 2026-11-07 13:09+0100\n"
 "PO-Revision-Date: 2026-09-28 17:24+0200\n"
 "Last-Translator: Tellybox\n"
 "Language: nl\n"
@@ -96,43 +96,43 @@ msgstr "bestand is geen JPEG-, PNG- of WebP-afbeelding"
 msgid "job %(id)d is %(status)s, only failed jobs can be retried"
 msgstr "taak %(id)d is %(status)s; alleen mislukte taken kun je opnieuw proberen"
 
-#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:75
+#: tellybox/splitting.py:110 tellybox/web/admin/js_strings.py:77
 msgid "The plan has no parts."
 msgstr "Het plan heeft geen delen."
 
-#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:76
+#: tellybox/splitting.py:112 tellybox/web/admin/js_strings.py:78
 #, python-format
 msgid "A video can be split into at most %(n)d parts."
 msgstr "Een video kan in hoogstens %(n)d delen worden gesplitst."
 
-#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:77
+#: tellybox/splitting.py:114 tellybox/web/admin/js_strings.py:79
 msgid "The first part must start at the beginning of the video."
 msgstr "Het eerste deel moet aan het begin van de video beginnen."
 
-#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:78
+#: tellybox/splitting.py:116 tellybox/web/admin/js_strings.py:80
 msgid "The last part must end at the end of the video."
 msgstr "Het laatste deel moet aan het eind van de video eindigen."
 
 #: tellybox/splitting.py:119 tellybox/splitting.py:122
-#: tellybox/web/admin/js_strings.py:79
+#: tellybox/web/admin/js_strings.py:81
 msgid "Parts must follow each other without gaps."
 msgstr "Delen moeten zonder gaten op elkaar volgen."
 
-#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:80
+#: tellybox/splitting.py:124 tellybox/web/admin/js_strings.py:82
 #, python-format
 msgid "Titles can be at most %(n)d characters."
 msgstr "Titels mogen hoogstens %(n)d tekens hebben."
 
-#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:81
+#: tellybox/splitting.py:132 tellybox/web/admin/js_strings.py:83
 #, python-format
 msgid "Each part must be at least %(n)d seconds long."
 msgstr "Elk deel moet minstens %(n)d seconden lang zijn."
 
-#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:82
+#: tellybox/splitting.py:135 tellybox/web/admin/js_strings.py:84
 msgid "Keep at least one part."
 msgstr "Bewaar minstens één deel."
 
-#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:83
+#: tellybox/splitting.py:137 tellybox/web/admin/js_strings.py:85
 msgid "Add a cut, or leave out a part, before approving."
 msgstr "Voeg een knip toe of laat een deel weg voordat je goedkeurt."
 
@@ -318,30 +318,30 @@ msgstr "Die selectie past niet bij het voorbeeld; haal het opnieuw op."
 msgid "Tick at least one video to add."
 msgstr "Vink minstens één video aan."
 
-#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:100
+#: tellybox/web/admin/common.py:53 tellybox/web/admin/js_strings.py:102
 #, python-format
 msgid "%(hours)s h %(minutes)s min"
 msgstr "%(hours)s u %(minutes)s min"
 
-#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:101
+#: tellybox/web/admin/common.py:54 tellybox/web/admin/js_strings.py:103
 #: tellybox/web/admin/templates/history.html:42
 #, python-format
 msgid "%(minutes)s min"
 msgstr "%(minutes)s min"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:103
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:105
 msgid "KB"
 msgstr "KB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:104
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:106
 msgid "MB"
 msgstr "MB"
 
-#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:105
+#: tellybox/web/admin/common.py:65 tellybox/web/admin/js_strings.py:107
 msgid "GB"
 msgstr "GB"
 
-#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:102
+#: tellybox/web/admin/common.py:75 tellybox/web/admin/js_strings.py:104
 #, python-format
 msgid "%(size)s B"
 msgstr "%(size)s B"
@@ -644,139 +644,148 @@ msgstr "klaar"
 
 #: tellybox/web/admin/js_strings.py:58
 #, python-format
+msgid "Enter an episode length of at least %(n)d seconds, like 20:00, that gives at most %(max)d parts."
+msgstr "Geef een afleveringslengte van minstens %(n)d seconden, zoals 20:00, die hoogstens %(max)d delen oplevert."
+
+#: tellybox/web/admin/js_strings.py:59
+msgid "Replace your cuts with equal parts of this length?"
+msgstr "Je knippen vervangen door gelijke delen van deze lengte?"
+
+#: tellybox/web/admin/js_strings.py:60
+#, python-format
 msgid "Part %(n)d"
 msgstr "Deel %(n)d"
 
-#: tellybox/web/admin/js_strings.py:59
+#: tellybox/web/admin/js_strings.py:61
 msgid "Keep"
 msgstr "Houden"
 
-#: tellybox/web/admin/js_strings.py:60
+#: tellybox/web/admin/js_strings.py:62
 msgid "Left out"
 msgstr "Weggelaten"
 
-#: tellybox/web/admin/js_strings.py:61
+#: tellybox/web/admin/js_strings.py:63
 #, python-format
 msgid "Cut at %(time)s"
 msgstr "Knip op %(time)s"
 
-#: tellybox/web/admin/js_strings.py:62
+#: tellybox/web/admin/js_strings.py:64
 msgid "Go to"
 msgstr "Ga naar"
 
-#: tellybox/web/admin/js_strings.py:63
+#: tellybox/web/admin/js_strings.py:65
 #, python-format
 msgid "Go to part %(n)d at %(time)s"
 msgstr "Ga naar deel %(n)d op %(time)s"
 
-#: tellybox/web/admin/js_strings.py:64
+#: tellybox/web/admin/js_strings.py:66
 msgid "Remove cut"
 msgstr "Knip verwijderen"
 
-#: tellybox/web/admin/js_strings.py:65
+#: tellybox/web/admin/js_strings.py:67
 #: tellybox/web/admin/templates/library.html:92
 msgid "Title"
 msgstr "Titel"
 
-#: tellybox/web/admin/js_strings.py:66
+#: tellybox/web/admin/js_strings.py:68
 msgid "Title (optional)"
 msgstr "Titel (optioneel)"
 
-#: tellybox/web/admin/js_strings.py:67
+#: tellybox/web/admin/js_strings.py:69
 #, python-format
 msgid "Move the cut back by %(amount)s s"
 msgstr "Knip %(amount)s s eerder"
 
-#: tellybox/web/admin/js_strings.py:68
+#: tellybox/web/admin/js_strings.py:70
 #, python-format
 msgid "Move the cut forward by %(amount)s s"
 msgstr "Knip %(amount)s s later"
 
-#: tellybox/web/admin/js_strings.py:69
+#: tellybox/web/admin/js_strings.py:71
 msgid "Saving…"
 msgstr "Opslaan…"
 
-#: tellybox/web/admin/js_strings.py:70
+#: tellybox/web/admin/js_strings.py:72
 msgid "Saved"
 msgstr "Opgeslagen"
 
-#: tellybox/web/admin/js_strings.py:71
+#: tellybox/web/admin/js_strings.py:73
 msgid "Saving failed. Your changes are not saved yet."
 msgstr "Opslaan is mislukt. Je wijzigingen zijn nog niet opgeslagen."
 
-#: tellybox/web/admin/js_strings.py:72
+#: tellybox/web/admin/js_strings.py:74
 msgid "This plan can't be changed any more."
 msgstr "Dit plan kan niet meer worden gewijzigd."
 
-#: tellybox/web/admin/js_strings.py:73
+#: tellybox/web/admin/js_strings.py:75
 msgid "A cut needs at least half a second on both sides."
 msgstr "Een knip heeft aan beide kanten minstens een halve seconde nodig."
 
-#: tellybox/web/admin/js_strings.py:74
+#: tellybox/web/admin/js_strings.py:76
 msgid "Replace your cuts with the video's chapters?"
 msgstr "Je knippen vervangen door de hoofdstukken van de video?"
 
-#: tellybox/web/admin/js_strings.py:85
+#: tellybox/web/admin/js_strings.py:87
 msgid "sure"
 msgstr "zeker"
 
-#: tellybox/web/admin/js_strings.py:86
+#: tellybox/web/admin/js_strings.py:88
 msgid "check"
 msgstr "controleer"
 
-#: tellybox/web/admin/js_strings.py:87
+#: tellybox/web/admin/js_strings.py:89
 msgid "unsure"
 msgstr "onzeker"
 
-#: tellybox/web/admin/js_strings.py:88
+#: tellybox/web/admin/js_strings.py:90
 msgid "black"
 msgstr "zwart"
 
-#: tellybox/web/admin/js_strings.py:89
+#: tellybox/web/admin/js_strings.py:91
 msgid "scene change"
 msgstr "scèneovergang"
 
-#: tellybox/web/admin/js_strings.py:90
+#: tellybox/web/admin/js_strings.py:92
 msgid "at the title card"
 msgstr "bij de titelkaart"
 
-#: tellybox/web/admin/js_strings.py:91
+#: tellybox/web/admin/js_strings.py:93
 msgid "Saving the title card…"
 msgstr "Titelkaart opslaan…"
 
-#: tellybox/web/admin/js_strings.py:92
+#: tellybox/web/admin/js_strings.py:94
 msgid "Saving the title card failed."
 msgstr "Het opslaan van de titelkaart is mislukt."
 
-#: tellybox/web/admin/js_strings.py:93
+#: tellybox/web/admin/js_strings.py:95
 msgid "Title card saved."
 msgstr "Titelkaart opgeslagen."
 
-#: tellybox/web/admin/js_strings.py:94
+#: tellybox/web/admin/js_strings.py:96
 msgid "Replace your cuts with the detected ones?"
 msgstr "Je knippen vervangen door de gevonden knippen?"
 
-#: tellybox/web/admin/js_strings.py:95
+#: tellybox/web/admin/js_strings.py:97
 msgid "Finding cuts…"
 msgstr "Knippen zoeken…"
 
-#: tellybox/web/admin/js_strings.py:96
+#: tellybox/web/admin/js_strings.py:98
 msgid "Finding cuts failed."
 msgstr "Knippen zoeken is mislukt."
 
-#: tellybox/web/admin/js_strings.py:97
+#: tellybox/web/admin/js_strings.py:99
 msgid "No title cards found in this video."
 msgstr "Geen titelkaarten gevonden in deze video."
 
-#: tellybox/web/admin/js_strings.py:98
+#: tellybox/web/admin/js_strings.py:100
 msgid "Finding cuts finished without a new result. The Jobs page may say why."
 msgstr "Het zoeken naar knippen is klaar zonder nieuw resultaat. Op de pagina Taken staat misschien waarom."
 
-#: tellybox/web/admin/js_strings.py:106
+#: tellybox/web/admin/js_strings.py:108
 msgid "TB"
 msgstr "TB"
 
-#: tellybox/web/admin/js_strings.py:111
+#: tellybox/web/admin/js_strings.py:113
 #: tellybox/web/admin/templates/add.html:137
 #: tellybox/web/admin/templates/backlog.html:24
 #, python-format
@@ -785,7 +794,7 @@ msgid_plural "Add %(num)d videos"
 msgstr[0] "%(num)d video toevoegen"
 msgstr[1] "%(num)d video's toevoegen"
 
-#: tellybox/web/admin/js_strings.py:112
+#: tellybox/web/admin/js_strings.py:114
 #: tellybox/web/admin/templates/dashboard.html:114
 #, python-format
 msgid "%(num)d failed job"
@@ -793,14 +802,14 @@ msgid_plural "%(num)d failed jobs"
 msgstr[0] "%(num)d mislukte taak"
 msgstr[1] "%(num)d mislukte taken"
 
-#: tellybox/web/admin/js_strings.py:113
+#: tellybox/web/admin/js_strings.py:115
 #, python-format
 msgid "Cutting takes up to about %(num)d minute"
 msgid_plural "Cutting takes up to about %(num)d minutes"
 msgstr[0] "Knippen duurt maximaal ongeveer %(num)d minuut"
 msgstr[1] "Knippen duurt maximaal ongeveer %(num)d minuten"
 
-#: tellybox/web/admin/js_strings.py:114
+#: tellybox/web/admin/js_strings.py:116
 #, python-format
 msgid "Found %(num)d cut. Check each one before approving."
 msgid_plural "Found %(num)d cuts. Check each one before approving."
@@ -2677,19 +2686,31 @@ msgstr "Instellingen voor opknippen"
 msgid "Parts"
 msgstr "Delen"
 
-#: tellybox/web/admin/templates/split.html:113
+#: tellybox/web/admin/templates/split.html:102
+msgid "Episode length"
+msgstr "Afleveringslengte"
+
+#: tellybox/web/admin/templates/split.html:103
+msgid "Generate cuts"
+msgstr "Knippen maken"
+
+#: tellybox/web/admin/templates/split.html:104
+msgid "Move later cuts too"
+msgstr "Latere knippen meeschuiven"
+
+#: tellybox/web/admin/templates/split.html:120
 msgid "Delete the original video after cutting (it can't be split again)"
 msgstr "Verwijder de originele video na het knippen (hij kan dan niet opnieuw worden opgeknipt)"
 
-#: tellybox/web/admin/templates/split.html:116
+#: tellybox/web/admin/templates/split.html:123
 msgid "Approve and cut"
 msgstr "Goedkeuren en knippen"
 
-#: tellybox/web/admin/templates/split.html:120
+#: tellybox/web/admin/templates/split.html:127
 msgid "Throw away this split plan?"
 msgstr "Dit knipplan weggooien?"
 
-#: tellybox/web/admin/templates/split.html:121
+#: tellybox/web/admin/templates/split.html:128
 msgid "Discard plan"
 msgstr "Plan weggooien"
 

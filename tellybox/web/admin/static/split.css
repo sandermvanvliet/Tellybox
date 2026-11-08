@@ -41,6 +41,8 @@
 .seg.current { border-left-color: var(--yolk); background: #FFFBEA; }
 .seg.left-out { opacity: .6; background: #EEF0F5; }
 .seg.left-out input.seg-title { text-decoration: line-through; }
+.seg.locked { opacity: .65; }
+.seg.locked .seg-keep { font-style: italic; }
 .seg-head { display: flex; flex-wrap: wrap; gap: .25rem .6rem; align-items: center; }
 .seg-head .seg-range { flex: 1 1 auto; font-variant-numeric: tabular-nums; }
 .seg-keep[aria-pressed="true"] { background: #DDF3E6; border-color: var(--ok); color: var(--ok); }

@@ -442,7 +442,7 @@ def create_router(ctx: AdminContext) -> APIRouter:
         if episode.start_s is not None and source is not None:
             siblings = library.list_source_episodes(conn, episode.source_video_id)
             ids = [e.id for e in siblings]
-            part = {"n": ids.index(episode.id) + 1, "of": len(ids), "title": source["title"]}
+            part = {"n": ids.index(episode.id) + 1, "of": len(ids), "title": source["title"], "id": episode.id}
         can_split = source is not None and source["status"] == "ready" and has_file
         return {"source_id": episode.source_video_id, "part": part, "has_file": has_file,
                 "can_split": can_split and part is None}

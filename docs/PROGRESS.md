@@ -561,6 +561,12 @@ Settings page and admin API: allowance and maximum session length per profile ar
 - Notes: the toggle is not saved across page loads; generated plans are saved with origin `manual`. Rippled cuts lose their detection badge, like any nudge.
 - Open: the owner's check on a real compilation (desktop and phone).
 
+### 23. Split one part further (ES-12), built (branch `split-part-further`)
+- 2026-11-08. PRD: ES-12. Plan: diff-based publish (ingest, other agent) plus a focus mode in the editor; the stored plan stays whole-file, so `check_shape`/`validate`, the schema and the server rules are unchanged.
+- Built (editor): "Split this part further" on the episode page of a part whose original still exists, linking to `/admin/sources/{id}/split?part={episode_id}` (404 unless that episode is a part of the source). The state gains `focus {episode_id, start_s, end_s}`. With no saved plan, or a done one, `library.get_split(from_parts=True)` seeds the segments from the existing parts (gaps become left-out segments). In `split.js` the player and strip are bounded to the part, cuts at and outside its edges are locked, other parts show as "Unchanged", and "Generate cuts" (`fromDuration(episodeS, duration, start, end)`) works inside the part only. `problems()` has a client-side `focus` check. Use chapters and Find cuts are hidden in focus mode (detection stays whole-file).
+- Notes: a saved draft wins over the seed, so an old draft of the whole video shows up in focus mode too; discard it to start from the parts.
+- Open: the owner's check on a real long part (split it; the other parts keep their episodes, files and positions; the new parts play on the Chromecast).
+
 ### Then
 (none planned after step 11)
 

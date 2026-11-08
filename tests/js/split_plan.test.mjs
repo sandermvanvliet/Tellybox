@@ -211,3 +211,72 @@ test("parseDuration", () => {
   assert.equal(plan.parseDuration("abc"), null);
   assert.equal(plan.parseDuration(""), null);
 });
+
+// --- ES-12: splitting one part further (focus) ---
+
+// parts 0-600, 600-1800 (the focus), 1800-2400
+const focused = () => [
+  { start_s: 0, end_s: 600, title: "A", keep: true },
+  { start_s: 600, end_s: 1800, title: "B", keep: true },
+  { start_s: 1800, end_s: 2400, title: "C", keep: true },
+];
+const FOCUS = { start_s: 600, end_s: 1800 };
+
+test("fromDuration with a range: parts only inside it, a short rest left out", () => {
+  const p = plan.fromDuration(500, 2400, 600, 1800);
+  assert.deepEqual(starts(p), [600, 1100, 1600]);
+  assert.equal(p.at(-1).end_s, 1800);
+  assert.deepEqual(p.map((s) => s.keep), [true, true, false]); // 200 s is under half an episode
+  assert.equal(plan.fromDuration(500, 2400, 600, 600), null);
+});
+
+test("replaceRange puts the chunk between the untouched parts", () => {
+  const merged = plan.replaceRange(focused(), FOCUS, plan.fromDuration(600, 2400, 600, 1800));
+  assert.deepEqual(starts(merged), [0, 600, 1200, 1800]);
+  assert.equal(merged[0].title, "A");
+  assert.equal(merged.at(-1).title, "C");
+  assert.deepEqual(plan.problems(merged, 2400, FOCUS), []);
+});
+
+test("focus: cuts outside the range and at its edges are locked", () => {
+  const p = focused();
+  assert.equal(plan.addCut(p, 300, FOCUS), p);
+  assert.equal(plan.addCut(p, 2000, FOCUS), p);
+  assert.equal(plan.removeCut(p, 1, FOCUS), p);
+  assert.equal(plan.removeCut(p, 2, FOCUS), p);
+  assert.equal(plan.moveCut(p, 1, 650, FOCUS), p);
+  assert.equal(plan.nudge(p, 2, 1, true, FOCUS), p);
+});
+
+test("focus: cuts inside the range can be added, moved, rippled and removed", () => {
+  let p = plan.addCut(plan.addCut(focused(), 900, FOCUS), 1200, FOCUS);
+  assert.deepEqual(starts(p), [0, 600, 900, 1200, 1800]);
+  p = plan.moveCut(p, 2, 950, FOCUS);
+  assert.deepEqual(starts(p), [0, 600, 950, 1200, 1800]);
+  const r = plan.rippleCut(p, 2, 100, FOCUS);
+  assert.deepEqual(starts(r), [0, 600, 1050, 1300, 1800]);
+  assert.equal(r.at(-1).end_s, 2400);
+  const gone = plan.removeCut(p, 2, FOCUS);
+  assert.deepEqual(starts(gone), [0, 600, 1200, 1800]);
+});
+
+test("focus: rippling never moves the locked cuts after the range", () => {
+  const p = plan.addCut(focused(), 900, FOCUS);
+  const r = plan.rippleCut(p, 2, 1000, FOCUS); // would push past the range end: later in-range cuts drop
+  assert.equal(r.at(-1).start_s, 1800);
+  assert.equal(r.at(-1).end_s, 2400);
+  assert.ok(r.every((s) => s.end_s <= 1800 || s.start_s >= 1800));
+});
+
+test("focus: titles and keep only change inside the range", () => {
+  const p = focused();
+  assert.equal(plan.setTitle(p, 0, "x", FOCUS), p);
+  assert.equal(plan.setKeep(p, 2, false, FOCUS), p);
+  assert.equal(plan.setTitle(p, 1, "x", FOCUS)[1].title, "x");
+});
+
+test("problems: the focused part must stay bounded by its cuts", () => {
+  const broken = plan.removeCut(focused(), 1); // the cut at the start of the focused part is gone
+  assert.deepEqual(plan.problems(broken, 2400, FOCUS), ["focus"]);
+  assert.deepEqual(plan.problems(focused(), 2400, FOCUS), []);
+});

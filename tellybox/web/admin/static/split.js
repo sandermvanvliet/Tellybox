@@ -24,6 +24,7 @@ const PROBLEMS = {
   short: () => t("Each part must be at least %(n)d seconds long.", { n: P.MIN_KEPT_S }),
   none: () => t("Keep at least one part."),
   single: () => t("Add a cut, or leave out a part, before approving."),
+  focus: () => t("The cuts around the part you are splitting can't change."),
 };
 
 const root = document.getElementById("split-editor");
@@ -93,6 +94,10 @@ function init() {
   }
   const fps = state.fps > 0 ? state.fps : 25;
   const duration = state.duration_s;
+  // ES-12: the one part being split further; the player stays inside it and the cuts outside are locked.
+  const focus = state.focus ? { start_s: state.focus.start_s, end_s: state.focus.end_s } : null;
+  const lo = focus ? focus.start_s : 0;
+  const hi = focus ? Math.min(focus.end_s, duration) : duration;
 
   let plan = state.segments.map((s) => ({ start_s: P.ms(s.start_s), end_s: P.ms(s.end_s), title: s.title || "", keep: s.keep !== false }));
   let origin = state.origin;
@@ -120,7 +125,7 @@ function init() {
   // ---- player ----
 
   function seek(time) {
-    video.currentTime = Math.min(Math.max(0, time), Math.max(0, duration - 0.01));
+    video.currentTime = Math.min(Math.max(lo, time), Math.max(lo, hi - 0.01));
     showTime();
   }
 
@@ -139,6 +144,14 @@ function init() {
   }
 
   function showTime() {
+    if (focus) {
+      const at = video.currentTime || 0;
+      if (at < lo - 0.05 || at > hi + 0.05) return seek(at);
+      if (!video.paused && at >= hi - 0.01) {
+        video.pause();
+        return seek(hi);
+      }
+    }
     const now = video.currentTime || 0;
     if (timeOut) timeOut.textContent = fmtTime(now);
     const i = P.indexAt(plan, now);
@@ -172,13 +185,13 @@ function init() {
   function cutHere() {
     if (readOnly) return;
     const time = snap(video.currentTime);
-    const next = P.addCut(plan, time);
+    const next = P.addCut(plan, time, focus);
     if (next === plan) setStatus(t("A cut needs at least half a second on both sides."), "error");
     else edit(next);
   }
 
   function useChapters() {
-    if (readOnly || !state.chapters?.length) return;
+    if (readOnly || focus || !state.chapters?.length) return;
     if (plan.length > 1 && !confirm(t("Replace your cuts with the video's chapters?"))) return;
     plan = P.fromChapters(state.chapters, duration);
     origin = "chapters";
@@ -192,13 +205,13 @@ function init() {
   function generateByDuration() {
     if (readOnly) return;
     const length = P.parseDuration(durationInput?.value);
-    const next = length === null ? null : P.fromDuration(length, duration);
+    const next = length === null ? null : P.fromDuration(length, duration, lo, hi);
     if (!next) {
       setStatus(t("Enter an episode length of at least %(n)d seconds, like 20:00, that gives at most %(max)d parts.", { n: P.MIN_KEPT_S, max: P.MAX_SEGMENTS }), "error");
       return;
     }
-    if (plan.length > 1 && !confirm(t("Replace your cuts with equal parts of this length?"))) return;
-    plan = next;
+    if (plan.filter((s) => P.inFocus(s, focus)).length > 1 && !confirm(t("Replace your cuts with equal parts of this length?"))) return;
+    plan = focus ? P.replaceRange(plan, focus, next) : next;
     origin = "manual";
     detected = [];
     dirty = true;
@@ -296,20 +309,24 @@ function init() {
       const row = listEl.children[i];
       row.dataset.i = i;
       row.classList.toggle("left-out", !s.keep);
+      const locked = !P.inFocus(s, focus); // ES-12: another part, shown as it will stay
+      row.classList.toggle("locked", locked);
       row.querySelector(".seg-name").textContent = t("Part %(n)d", { n: i + 1 });
       row.querySelector(".seg-range").textContent = `${fmtTime(s.start_s)} – ${fmtTime(s.end_s)}`;
       const title = row.querySelector("input.seg-title");
       if (title.value !== s.title) title.value = s.title;
-      title.disabled = readOnly;
+      title.disabled = readOnly || locked;
       const keep = row.querySelector(".seg-keep");
-      keep.textContent = s.keep ? t("Keep") : t("Left out");
+      keep.textContent = locked ? t("Unchanged") : s.keep ? t("Keep") : t("Left out");
       keep.setAttribute("aria-pressed", String(s.keep));
-      keep.disabled = readOnly;
+      keep.disabled = readOnly || locked;
+      row.querySelector("[data-goto]").disabled = locked;
       const cut = row.querySelector(".seg-cut");
       if (cut) {
         row.querySelector(".seg-cut-time").textContent = t("Cut at %(time)s", { time: fmtTime(s.start_s) });
         fillDetect(row.querySelector(".seg-detect"), P.detectedAt(detected, s.start_s));
-        cut.querySelectorAll("button[data-nudge], button[data-remove]").forEach((b) => (b.disabled = readOnly));
+        const cutLocked = P.cutLocked(plan, i, focus);
+        cut.querySelectorAll("button[data-nudge], button[data-remove]").forEach((b) => (b.disabled = readOnly || cutLocked));
       }
     });
   }
@@ -322,7 +339,7 @@ function init() {
         "aria-label": delta < 0
           ? t("Move the cut back by %(amount)s s", { amount: -delta })
           : t("Move the cut forward by %(amount)s s", { amount: delta }),
-        onclick: (event) => edit(P.nudge(plan, index(event), delta, Boolean(rippleBox?.checked))),
+        onclick: (event) => edit(P.nudge(plan, index(event), delta, Boolean(rippleBox?.checked), focus)),
       });
     const row = el(
       "li",
@@ -336,7 +353,7 @@ function init() {
           type: "button", class: "small seg-keep",
           onclick: (event) => {
             const k = index(event);
-            edit(P.setKeep(plan, k, !plan[k].keep));
+            edit(P.setKeep(plan, k, !plan[k].keep, focus));
           },
         }),
       ),
@@ -344,7 +361,7 @@ function init() {
         type: "text", class: "seg-title", maxlength: P.MAX_TITLE, placeholder: t("Title (optional)"), "aria-label": t("Title"),
         oninput: (event) => {
           if (readOnly) return;
-          plan = P.setTitle(plan, index(event), event.target.value);
+          plan = P.setTitle(plan, index(event), event.target.value, focus);
           origin = "manual";
           dirty = true;
           renderApprove();
@@ -354,7 +371,7 @@ function init() {
       el(
         "div",
         { class: "seg-tools" },
-        el("button", { type: "button", class: "small", text: t("Go to"), onclick: (event) => seek(plan[index(event)].start_s) }),
+        el("button", { type: "button", class: "small", "data-goto": "", text: t("Go to"), onclick: (event) => seek(plan[index(event)].start_s) }),
       ),
     );
     if (i > 0) {
@@ -370,7 +387,7 @@ function init() {
           nudgeButton(1, "+1 s"),
           el("button", {
             type: "button", class: "small danger", "data-remove": "", text: t("Remove cut"),
-            onclick: (event) => edit(P.removeCut(plan, index(event))),
+            onclick: (event) => edit(P.removeCut(plan, index(event), focus)),
           }),
         ),
       );
@@ -395,6 +412,7 @@ function init() {
       const card = stripEl.children[i];
       card.dataset.i = i;
       card.classList.toggle("left-out", !s.keep);
+      card.hidden = !P.inFocus(s, focus); // ES-12: the strip shows only the part being split
       card.querySelector(".card-time").textContent = fmtTime(s.start_s);
       card.setAttribute("aria-label", t("Go to part %(n)d at %(time)s", { n: i + 1, time: fmtTime(s.start_s) }));
       card.querySelector(".card-n").textContent = String(i + 1);
@@ -424,7 +442,7 @@ function init() {
   }
 
   function renderApprove() {
-    const found = P.problems(plan, duration);
+    const found = P.problems(plan, duration, focus);
     const message = found.map((code) => PROBLEMS[code]()).join(" ");
     if (approve) {
       const submit = approve.querySelector('[type="submit"]');
@@ -578,7 +596,7 @@ function init() {
   // ---- finding the cuts (ES-4) ----
 
   async function findCuts() {
-    if (readOnly || detecting) return;
+    if (readOnly || detecting || focus) return;
     if (plan.length > 1 && origin !== "detected" && !confirm(t("Replace your cuts with the detected ones?"))) return;
     await flush();
     if (saveError) {
@@ -733,7 +751,7 @@ function init() {
       event.preventDefault();
       if (!readOnly) {
         await flush();
-        const found = P.problems(plan, duration);
+        const found = P.problems(plan, duration, focus);
         if (found.length || saveError) {
           setStatus(found.length ? found.map((code) => PROBLEMS[code]()).join(" ") : saveError, "error");
           return;

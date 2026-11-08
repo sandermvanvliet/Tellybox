@@ -48,6 +48,12 @@
 {% endif %}
 
 {% if proposal.has_file %}
+{% if focus %}
+<div class="card" role="note" data-focus-note>
+  <p>{{ _("You are splitting one part further. The cuts outside it are locked, and the other parts keep their episodes and watch history.") }}</p>
+  <p><a href="/admin/sources/{{ sid }}/split">{{ _("Edit the whole video instead") }}</a></p>
+</div>
+{% endif %}
 <section id="split-editor" data-editable="{{ 'true' if proposal.editable else 'false' }}" data-api="/admin/api/splits/{{ sid }}">
   <div class="card split-player">
     <div class="split-video-wrap">
@@ -65,10 +71,10 @@
     </div>
     <div class="row">
       <button class="btn primary" type="button" data-action="cut">{{ _("Cut here") }}</button>
-      {% if proposal.chapters | length >= 2 %}
+      {% if proposal.chapters | length >= 2 and not focus %}
       <button class="btn" type="button" data-action="use-chapters">{{ _("Use chapters") }}</button>
       {% endif %}
-      {% if state.profile %}<button class="btn" type="button" data-action="mark">{{ _("Mark as title card") }}</button>{% endif %}
+      {% if state.profile and not focus %}<button class="btn" type="button" data-action="mark">{{ _("Mark as title card") }}</button>{% endif %}
     </div>
     <div class="split-mark" data-mark-bar hidden>
       <p class="muted">{{ _("Drag over the part of the card that is the same in every episode, such as a logo, or use the whole frame.") }}</p>
@@ -81,7 +87,7 @@
     </div>
   </div>
 
-  {% if state.profile %}
+  {% if state.profile and not focus %}
   <div class="card split-cards">
     <h2>{{ _("Title cards") }}</h2>
     <ul class="ref-list" data-ref-list></ul>

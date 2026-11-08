@@ -83,6 +83,8 @@ STRINGS: list[str] = [
     N_("Each part must be at least %(n)d seconds long."),
     N_("Keep at least one part."),
     N_("Add a cut, or leave out a part, before approving."),
+    N_("The cuts around the part you are splitting can't change."),
+    N_("Unchanged"),
     # split.js: title cards and detected cuts (v6)
     N_("sure"),
     N_("check"),

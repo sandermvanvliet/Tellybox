@@ -666,8 +666,38 @@ def _source_for_split(conn: sqlite3.Connection, source_id: int) -> sqlite3.Row |
     ).fetchone()
 
 
-def get_split(conn: sqlite3.Connection, source_id: int) -> SplitProposal | None:
+def _plan_from_parts(conn: sqlite3.Connection, source_id: int, duration: float) -> list[splitting.Segment]:
+    """ES-12: the plan that mirrors the source's parts: each part kept and titled, the gaps between them
+    (and before and after) left out. Empty when the source has no parts."""
+    parts = [e for e in list_source_episodes(conn, source_id) if e.start_s is not None and e.end_s is not None]
+    segments: list[splitting.Segment] = []
+    at = 0.0
+    for e in parts:
+        start, end = max(float(e.start_s), at), min(float(e.end_s), duration)
+        if end <= start:
+            continue
+        if start - at > 1e-3:
+            segments.append(splitting.Segment(at, start, "", False))
+        elif segments:
+            start = at  # a hair of overlap or gap: the parts stay contiguous
+        else:
+            start = 0.0
+        segments.append(splitting.Segment(start, end, e.title, True))
+        at = end
+    if segments and duration - at > 1e-3:
+        segments.append(splitting.Segment(at, duration, "", False))
+    elif segments:
+        segments[-1] = splitting.Segment(segments[-1].start_s, duration, segments[-1].title, True)
+    if segments and segments[0].start_s > 0:
+        segments[0] = splitting.Segment(0.0, segments[0].end_s, segments[0].title, segments[0].keep)
+    return segments
+
+
+def get_split(conn: sqlite3.Connection, source_id: int, *, from_parts: bool = False) -> SplitProposal | None:
     """The source's proposal; if none is saved, one from its chapters (ES-1) or the whole video.
+
+    ``from_parts`` (ES-12, editing one part): with no saved plan, or a done one, the segments mirror the
+    source's existing parts instead, so each part is one segment.
 
     None when the source doesn't exist, isn't downloaded yet, or has no known duration.
     """
@@ -683,12 +713,17 @@ def get_split(conn: sqlite3.Connection, source_id: int) -> SplitProposal | None:
     common = dict(source_video_id=source_id, title=src["title"], duration_s=duration,
                   has_file=src["file_path"] is not None, chapters=chapters)
     row = conn.execute("SELECT * FROM split_proposal WHERE source_video_id = ?", (source_id,)).fetchone()
+    mirror = _plan_from_parts(conn, source_id, duration) if from_parts and (row is None or row["status"] == "done") else []
     if row is not None:
         return SplitProposal(
-            **common, status=row["status"], origin=row["origin"], segments=splitting.loads(row["segments_json"]),
+            **common, status=row["status"], origin="manual" if mirror else row["origin"],
+            segments=mirror or splitting.loads(row["segments_json"]),
             delete_source=bool(row["delete_source"]), error=row["error"], stored=True,
             updated_at=from_db(row["updated_at"]),
         )
+    if mirror:
+        return SplitProposal(**common, status="draft", origin="manual", segments=mirror, delete_source=False,
+                             error=None, stored=False)
     if len(chapters) >= 2:
         segments, origin = splitting.segments_from_chapters(chapters, duration), "chapters"
     else:

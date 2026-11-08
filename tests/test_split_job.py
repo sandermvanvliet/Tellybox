@@ -285,3 +285,92 @@ def test_chapters_prefill_the_split(conn, clock, runner, fake):  # ES-1, SB-1
     assert proposal.origin == "chapters"
     assert [(s.start_s, s.title) for s in proposal.segments] == [(0, "Intro"), (8, "Song")]
     assert splitting.cuts_of(proposal.segments) == [8]
+
+
+# --- Diff-based publish: only changed parts are cut ---
+
+FULL = [Segment(0, 10, "A"), Segment(10, 20.0, "B")]
+
+
+def spy_cut(monkeypatch):
+    real, calls = media_format.cut, []
+
+    def cut(src, dst, start_s, end_s, **kw):
+        calls.append((start_s, end_s))
+        return real(src, dst, start_s, end_s, **kw)
+
+    monkeypatch.setattr(media_format, "cut", cut)
+    return calls
+
+
+def test_resplit_keeps_unchanged_parts_and_cuts_only_the_new_ones(conn, clock, runner, media, monkeypatch):
+    sid = published(conn, clock, runner)
+    show = parts(conn, sid)[0].show_id
+    split(conn, clock, runner, sid, FULL)
+    a, b = parts(conn, sid)
+    profile = conn.execute("SELECT id FROM profile LIMIT 1").fetchone()[0]
+    conn.execute("INSERT INTO playback_position (profile_id, episode_id, position_s, updated_at) VALUES (?, ?, 5, 'x')",
+                 (profile, a.id))
+    last = library.add_episode(conn, show, "Last", "z.mp4", now=clock.now(), sort_order=9)
+    calls = spy_cut(monkeypatch)
+    again = [Segment(0, 10, "A"), Segment(10, 15, "B1"), Segment(15, 20.0, "B2")]
+    assert split(conn, clock, runner, sid, again).status == JobStatus.READY
+    assert calls == [(10, 15), (15, 20.0)]
+    eps = parts(conn, sid)
+    assert [e.title for e in eps] == ["A", "B1", "B2"]
+    kept = eps[0]
+    assert (kept.id, kept.file_path, kept.thumbnail_path) == (a.id, a.file_path, a.thumbnail_path)
+    assert conn.execute("SELECT position_s FROM playback_position WHERE episode_id = ?", (a.id,)).fetchone()[0] == 5
+    assert library.get_episode(conn, b.id) is None
+    assert not (media / b.file_path).exists() and not (media / b.thumbnail_path).exists()
+    assert (media / a.file_path).is_file() and (media / a.thumbnail_path).is_file()
+    shown = library.list_episodes(conn, show, include_hidden=True)
+    assert [e.title for e in shown if e.id != last] == ["A", "B1", "B2"] and shown[-1].id == last
+    assert [e.sort_order for e in shown] == list(range(len(shown)))
+    assert all((media / e.file_path).is_file() for e in eps)
+
+
+def test_resplit_defers_only_for_the_replaced_part(conn, clock, runner, monkeypatch):
+    sid = published(conn, clock, runner)
+    split(conn, clock, runner, sid, FULL)
+    a, b = parts(conn, sid)
+    again = [Segment(0, 10, "A"), Segment(10, 15, "B1"), Segment(15, 20.0, "B2")]
+    approve(conn, clock, sid, again)
+    runner.now_playing = lambda: a.id  # unchanged part playing: no reason to wait
+    assert run_next(runner, clock).status == JobStatus.READY
+
+    a, b1, b2 = parts(conn, sid)
+    approve(conn, clock, sid, FULL)  # merges B1 and B2 again
+    runner.now_playing = lambda: b1.id  # a part being replaced
+    job = run_next(runner, clock)
+    assert job.status == JobStatus.QUEUED and job.error.startswith("waiting")
+    assert [e.id for e in parts(conn, sid)] == [a.id, b1.id, b2.id]
+
+
+def test_failure_leaves_kept_episodes_files_intact(conn, clock, runner, media, monkeypatch):
+    sid = published(conn, clock, runner)
+    split(conn, clock, runner, sid, FULL)
+    a, b = parts(conn, sid)
+
+    def broken(*a_, **kw):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(library, "mark_split", lambda conn, sid, status, **kw: broken() if status == "done" else None)
+    job = split(conn, clock, runner, sid, [Segment(0, 10, "A"), Segment(10, 15, "B1"), Segment(15, 20.0, "B2")])
+    assert job.status == JobStatus.QUEUED and "disk full" in job.error
+    assert [e.id for e in parts(conn, sid)] == [a.id, b.id]
+    for e in (a, b):
+        assert (media / e.file_path).is_file() and (media / e.thumbnail_path).is_file()
+    names = {p.name for p in (media / "shows").rglob("*.mp4")}
+    assert names == {Path(e.file_path).name for e in (a, b)} | {"abc123.mp4"}  # nothing new left behind
+
+
+def test_renaming_an_unchanged_part_does_not_cut(conn, clock, runner, monkeypatch):
+    sid = published(conn, clock, runner)
+    split(conn, clock, runner, sid, FULL)
+    a, b = parts(conn, sid)
+    calls = spy_cut(monkeypatch)
+    assert split(conn, clock, runner, sid, [Segment(0, 10, "Renamed"), Segment(10, 20.0, "B")]).status == JobStatus.READY
+    assert calls == []
+    eps = parts(conn, sid)
+    assert [(e.id, e.title, e.file_path) for e in eps] == [(a.id, "Renamed", a.file_path), (b.id, "B", b.file_path)]

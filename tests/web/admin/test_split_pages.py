@@ -397,3 +397,69 @@ def test_delete_source_is_unticked_even_after_an_earlier_approval(admin, admin_e
     library.mark_split(admin_env.conn, sid, "done", now=NOW)
     html = admin.get(f"/admin/sources/{sid}/split").text
     assert 'name="delete_source" value="1">' in html
+
+
+# --------------------------------------------------------------------------- split one part further (ES-12)
+
+
+def test_episode_page_of_a_part_links_to_splitting_that_part_further(admin, admin_env):
+    sid, _ = _source(admin_env, file=False)
+    ids = _make_parts(admin_env, sid)
+    page = _body(admin.get(f"/admin/episodes/{ids[1]}").text)
+    assert f'href="/admin/sources/{sid}/split?part={ids[1]}"' in page and "Split this part further" in page
+    assert "Split again" in page
+
+
+def test_episode_page_offers_no_further_split_without_the_original_or_for_a_whole_episode(admin, admin_env):
+    sid, eid = _source(admin_env, file=False)
+    ids = _make_parts(admin_env, sid, file=False)
+    assert "Split this part further" not in _body(admin.get(f"/admin/episodes/{ids[0]}").text)
+    sid2, eid2 = _source(admin_env, ytid="other")
+    assert "Split this part further" not in _body(admin.get(f"/admin/episodes/{eid2}").text)
+
+
+def _state_of(page: str) -> dict:
+    return json.loads(re.search(r'<script type="application/json" id="split-state">(.*?)</script>', page, re.S).group(1))
+
+
+@needs_ffmpeg
+def test_split_page_with_part_focuses_it_and_mirrors_the_parts(admin, admin_env):
+    sid, _ = _source(admin_env)
+    ids = _make_parts(admin_env, sid)
+    page = admin.get(f"/admin/sources/{sid}/split?part={ids[1]}").text
+    state = _state_of(page)
+    assert state["focus"] == {"episode_id": ids[1], "start_s": 8, "end_s": 20}
+    assert [(s["start_s"], s["end_s"], s["title"], s["keep"]) for s in state["segments"]] == [
+        (0, 8, "Part 0", True), (8, 20, "Part 1", True)]
+    assert "data-focus-note" in page
+    assert _state_of(admin.get(f"/admin/sources/{sid}/split").text)["focus"] is None
+    assert admin.get(f"/admin/api/splits/{sid}?part={ids[0]}").json()["focus"]["episode_id"] == ids[0]
+
+
+@needs_ffmpeg
+def test_focused_seed_keeps_dropped_gaps_and_ignores_a_saved_draft(admin, admin_env):
+    sid, _ = _source(admin_env)
+    ids = _make_parts(admin_env, sid)
+    admin_env.conn.execute("UPDATE episode SET start_s = 2 WHERE id = ?", (ids[0],))  # 0-2 was left out
+    state = _state_of(admin.get(f"/admin/sources/{sid}/split?part={ids[1]}").text)
+    assert [(s["start_s"], s["end_s"], s["keep"]) for s in state["segments"]] == [
+        (0, 2, False), (2, 8, True), (8, 20, True)]
+    # a saved draft is the admin's work and wins over the seed
+    admin.put(f"/admin/api/splits/{sid}", json={"segments": _plan(5, 8, 12)})
+    state = _state_of(admin.get(f"/admin/sources/{sid}/split?part={ids[1]}").text)
+    assert [s["start_s"] for s in state["segments"]] == [0, 5, 8, 12]
+    # a finished split is mirrored from the episodes that exist now
+    library.mark_split(admin_env.conn, sid, "done", now=NOW)
+    state = _state_of(admin.get(f"/admin/sources/{sid}/split?part={ids[1]}").text)
+    assert [(s["start_s"], s["keep"]) for s in state["segments"]] == [(0, False), (2, True), (8, True)]
+
+
+@needs_ffmpeg
+def test_part_must_belong_to_the_source_and_be_a_part(admin, admin_env):
+    sid, eid = _source(admin_env)  # eid is the whole, unsplit episode
+    assert admin.get(f"/admin/sources/{sid}/split?part={eid}").status_code == 404
+    sid2, _ = _source(admin_env, ytid="other")
+    ids = _make_parts(admin_env, sid2)
+    assert admin.get(f"/admin/sources/{sid}/split?part={ids[0]}").status_code == 404
+    assert admin.get(f"/admin/api/splits/{sid}?part={ids[0]}").status_code == 404
+    assert admin.get(f"/admin/sources/{sid}/split?part=99999").status_code == 404

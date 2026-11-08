@@ -291,6 +291,25 @@ class Fetched:
     sb_status: str  # cut | none | unreachable | off | admin_off
 
 
+def _match_segments(existing: list, kept: list, duration: float) -> list:
+    """Per kept segment, the existing episode with exactly its bounds (unchanged part), else None."""
+    free = {e.id: e for e in existing if e.start_s is not None}
+    matches = []
+    for seg in kept:
+        found = next((e for e in free.values()
+                      if e.start_s == seg.start_s and e.end_s == min(seg.end_s, duration)), None)
+        if found is not None:
+            del free[found.id]
+        matches.append(found)
+    return matches
+
+
+def _unmatched_episodes(existing: list, matches: list) -> list:
+    """The existing episodes that no kept segment matches: the ones a split replaces."""
+    keep = {m.id for m in matches if m is not None}
+    return [e for e in existing if e.id not in keep]
+
+
 def _usable_cuts(cuts: list, duration_s: float) -> list:
     """Drop cuts that would leave a kept part shorter than MIN_KEPT_S; that part merges into the previous one."""
     kept: list = []
@@ -691,7 +710,10 @@ class JobRunner:
             jobs.fail(self.conn, job.id, error, now=now, retryable=False)
             library.mark_split(self.conn, source.id, "failed", now=now, error=error)
             return
-        episode_ids = [e.id for e in library.list_source_episodes(self.conn, source.id)]
+        existing = library.list_source_episodes(self.conn, source.id)
+        kept = [s for s in proposal.segments if s.keep]
+        # Only the episodes this plan replaces matter for playback; unchanged parts are left alone.
+        episode_ids = [e.id for e in _unmatched_episodes(existing, _match_segments(existing, kept, proposal.duration_s))]
         if self._defer_if_playing(job, episode_ids):
             return
         library.mark_split(self.conn, source.id, "cutting", now=now)
@@ -701,12 +723,16 @@ class JobRunner:
         try:
             duration = media_format.probe(src_path).duration_s or proposal.duration_s
             splitting.validate(proposal.segments, duration)  # the file may differ from what the plan was made on
-            kept = [s for s in proposal.segments if s.keep]
-            total = sum(s.length_s for s in kept)
+            matches = _match_segments(existing, kept, duration)
+            episode_ids = [e.id for e in _unmatched_episodes(existing, matches)]
+            total = sum(s.length_s for s, m in zip(kept, matches) if m is None) or 1.0
             report = self._progress(job.id)
-            parts: list[tuple[Path, Path, float]] = []  # (video, thumbnail, duration)
+            parts: list[tuple[Path, Path, float] | None] = []  # (video, thumbnail, duration); None: unchanged part
             done_s = 0.0
-            for n, seg in enumerate(kept, 1):
+            for n, (seg, match) in enumerate(zip(kept, matches), 1):
+                if match is not None:
+                    parts.append(None)
+                    continue
                 part = tmp / f"part-{n:02d}.mp4"
                 end = min(seg.end_s, duration)
                 media_format.cut(
@@ -720,7 +746,7 @@ class JobRunner:
                 done_s += seg.length_s
             if self._defer_split(job, source.id, episode_ids):  # a part may have been picked during the cut
                 return
-            self._publish_split(job, source, proposal, kept, parts, duration)
+            self._publish_split(job, source, proposal, kept, matches, parts, duration)
         except splitting.SplitInvalid as exc:
             self._split_failed(job, source.id, str(exc), retryable=False)
         except MediaError as exc:
@@ -735,9 +761,9 @@ class JobRunner:
 
     def _publish_split(
         self, job: Job, source: SourceVideo, proposal: library.SplitProposal, kept: list[splitting.Segment],
-        parts: list[tuple[Path, Path, float]], duration: float,
+        matches: list[library.Episode | None], parts: list[tuple[Path, Path, float] | None], duration: float,
     ) -> None:
-        """Move the parts into place and swap them for the source's episodes in one step (NF-8)."""
+        """Add the new parts and drop the replaced episodes in one step (NF-8); unchanged parts stay as they are."""
         now = self.clock.now()
         old = library.list_source_episodes(self.conn, source.id)
         titles = splitting.kept_titles(proposal.segments, source.title)
@@ -750,8 +776,18 @@ class JobRunner:
         self.conn.execute("BEGIN IMMEDIATE")
         try:
             (self.media_dir / rel_dir).mkdir(parents=True, exist_ok=True)
+            old_ids = {e.id for e in old}
+            if any(m is not None and m.id not in old_ids for m in matches):
+                raise RuntimeError("an episode of the source changed during the split")
             new_ids: list[int] = []
-            for n, (seg, title, (video, thumb, length)) in enumerate(zip(kept, titles, parts), 1):
+            result: list[int] = []  # episode id per kept segment, in plan order
+            for n, (seg, title, match, part) in enumerate(zip(kept, titles, matches, parts), 1):
+                if match is not None:
+                    if match.title != title:
+                        self.conn.execute("UPDATE episode SET title = ? WHERE id = ?", (title, match.id))
+                    result.append(match.id)
+                    continue
+                video, thumb, length = part
                 rel_video = rel_dir / splitting.episode_file_name(source.youtube_id, job.id, n)
                 os.chmod(video, FILE_MODE)
                 os.replace(video, self.media_dir / rel_video)
@@ -766,17 +802,39 @@ class JobRunner:
                 written.append(self.media_dir / rel_thumb)
                 self.conn.execute("UPDATE episode SET thumbnail_path = ? WHERE id = ?", (rel_thumb, episode_id))
                 new_ids.append(episode_id)
-            # The parts take the first old episode's place in the show's order.
-            old_ids = {e.id for e in old}
+                result.append(episode_id)
+            gone = [e for e in old if e.id not in {m.id for m in matches if m is not None}]
+            gone_ids = {e.id for e in gone}
+            # New parts take the show-order slot of the episode they replace, kept ones stay where they are.
             current = [r["id"] for r in self.conn.execute(
                 "SELECT id FROM episode WHERE show_id = ? ORDER BY sort_order, id", (show_id,)) if r["id"] not in new_ids]
-            first_old = next((i for i, eid in enumerate(current) if eid in old_ids), len(current))
-            order = [eid for eid in current if eid not in old_ids]
-            at = sum(1 for eid in current[:first_old] if eid not in old_ids)
-            order[at:at] = new_ids
+            slots: dict[int, list[int]] = {}  # replaced episode id -> new ids in its slot
+            loose: list[tuple[int, int]] = []  # (index in plan, new id) without an overlapping replaced episode
+            for i, (seg, eid, match) in enumerate(zip(kept, result, matches)):
+                if match is not None:
+                    continue
+                end = min(seg.end_s, duration)
+                anchor = next((g.id for g in gone if (g.start_s or 0) < end
+                               and (g.end_s if g.end_s is not None else duration) > seg.start_s), None)
+                if anchor is None:
+                    loose.append((i, eid))
+                else:
+                    slots.setdefault(anchor, []).append(eid)
+            order: list[int] = []
+            for eid in current:
+                order.append(eid)
+                order.extend(slots.get(eid, []))
+            for i, eid in loose:  # after the previous part, else before the next one, else in the old slot
+                if i > 0:
+                    order.insert(order.index(result[i - 1]) + 1, eid)
+                elif len(result) > 1:
+                    order.insert(order.index(result[1]), eid)
+                else:
+                    order.insert(next((k for k, x in enumerate(order) if x in old_ids), len(order)), eid)
+            order = [eid for eid in order if eid not in gone_ids]
             for i, eid in enumerate(order):
                 self.conn.execute("UPDATE episode SET sort_order = ? WHERE id = ?", (i, eid))
-            for eid in old_ids:
+            for eid in gone_ids:
                 self.conn.execute("DELETE FROM episode WHERE id = ?", (eid,))
             if delete_source:
                 self.conn.execute("UPDATE source_video SET file_path = NULL, updated_at = ? WHERE id = ?",
@@ -791,11 +849,11 @@ class JobRunner:
             for path in written:
                 path.unlink(missing_ok=True)
             raise
-        candidates = [p for e in old for p in (e.file_path, e.thumbnail_path) if p]
+        candidates = [p for e in gone for p in (e.file_path, e.thumbnail_path) if p]
         if delete_source and source.file_path:
             candidates.append(source.file_path)
         library._remove_unreferenced(self.conn, self.media_dir, candidates)
-        log.info("job %d: split source video %d into %d episodes%s", job.id, source.id, len(kept),
+        log.info("job %d: split source video %d into %d episodes (%d new)%s", job.id, source.id, len(kept), len(new_ids),
                  " (hidden)" if hidden else "")
 
     # ------------------------------------------------------------ title-card detection (ES-4..ES-9)

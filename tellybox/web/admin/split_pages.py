@@ -73,7 +73,16 @@ def create_router(ctx: AdminContext) -> APIRouter:
                            for r in profile.references],
         }
 
-    def split_state(proposal: library.SplitProposal) -> dict:
+    def focus_of(source_id: int, part: int | None) -> dict | None:
+        """ES-12: the part being split further, or None. 404 unless it is a part of this source."""
+        if part is None:
+            return None
+        for e in library.list_source_episodes(conn, source_id):
+            if e.id == part and e.start_s is not None and e.end_s is not None:
+                return {"episode_id": e.id, "start_s": e.start_s, "end_s": e.end_s}
+        raise HTTPException(404)
+
+    def split_state(proposal: library.SplitProposal, focus: dict | None = None) -> dict:
         sid = proposal.source_video_id
         row = conn.execute("SELECT file_path, awaiting_split FROM source_video WHERE id = ?", (sid,)).fetchone()
         rel, awaiting = row["file_path"], row["awaiting_split"]
@@ -94,19 +103,20 @@ def create_router(ctx: AdminContext) -> APIRouter:
             "detected": library.get_detected(conn, sid),
             "awaiting_split": bool(awaiting),
             "detect_job": pending_job(sid, JobType.DETECT),
+            "focus": focus,
         }
 
-    def page_context(proposal: library.SplitProposal, **extra) -> dict:
+    def page_context(proposal: library.SplitProposal, focus: dict | None = None, **extra) -> dict:
         return {
-            "nav": "library", "proposal": proposal, "state": split_state(proposal),
+            "nav": "library", "proposal": proposal, "state": split_state(proposal, focus), "focus": focus,
             "episodes": library.list_source_episodes(conn, proposal.source_video_id),
             "kept": sum(1 for s in proposal.segments if s.keep),
             "can_discard": proposal.stored and proposal.status in ("draft", "review", "failed"),
             "waiting": proposal.status in ("approved", "cutting"), **extra,
         }
 
-    def proposal_or_404(source_id: int) -> library.SplitProposal:
-        proposal = library.get_split(conn, source_id)
+    def proposal_or_404(source_id: int, *, from_parts: bool = False) -> library.SplitProposal:
+        proposal = library.get_split(conn, source_id, from_parts=from_parts)
         if proposal is None:
             raise HTTPException(404)
         return proposal
@@ -129,8 +139,10 @@ def create_router(ctx: AdminContext) -> APIRouter:
     # --------------------------------------------------------------------- API
 
     @router.get("/admin/api/splits/{source_id}")
-    def get_state(source_id: int) -> JSONResponse:
-        return JSONResponse(split_state(proposal_or_404(source_id)), headers=NO_STORE)
+    def get_state(source_id: int, part: int | None = None) -> JSONResponse:
+        focus = focus_of(source_id, part)
+        return JSONResponse(split_state(proposal_or_404(source_id, from_parts=focus is not None), focus),
+                            headers=NO_STORE)
 
     @router.put("/admin/api/splits/{source_id}")
     async def put_state(request: Request, source_id: int) -> JSONResponse:
@@ -240,8 +252,9 @@ def create_router(ctx: AdminContext) -> APIRouter:
     # --------------------------------------------------------------------- page
 
     @router.get("/admin/sources/{source_id}/split")
-    def split_page(request: Request, source_id: int) -> Response:
-        return render(request, "split.html", **page_context(proposal_or_404(source_id)))
+    def split_page(request: Request, source_id: int, part: int | None = None) -> Response:
+        focus = focus_of(source_id, part)
+        return render(request, "split.html", **page_context(proposal_or_404(source_id, from_parts=focus is not None), focus))
 
     @router.post("/admin/sources/{source_id}/split/approve")
     def approve(request: Request, source_id: int, delete_source: str = Form("")) -> Response:
